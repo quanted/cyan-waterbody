@@ -18,7 +18,7 @@ import sqlite3
 IMAGES_DIR = "D:\data\cyan_rare\RARE\L20203412020347.L3m_7D_CYAN_CI_cyano_CYAN_CONUS_300m"
 WATERBODY_DBF = "D:\data\cyan_rare\RARE\lakes-conus\LakeswithStats11_14.dbf"
 DB_FILE = ".\\waterbody-data.db"
-
+N_VALUES = 255
 
 def get_images(image_dir: str, mosaic: bool = False):
     if mosaic:
@@ -138,8 +138,9 @@ def get_tiles_by_comid(comid: str, image_base: str, image_dir: str):
     return images
 
 
-def aggregate(mosaic: bool = False, save: bool = False, plot: bool = False, comid: str = None, mapped_tiles: bool = False):
-    image_dir = IMAGES_DIR
+def aggregate(image_dir: str = None, mosaic: bool = False, save: bool = False, plot: bool = False, comid: str = None, mapped_tiles: bool = False):
+    if not image_dir:
+        image_dir = IMAGES_DIR
     images = get_images(image_dir, mosaic)
     features, crs = get_waterbody(comid)
     f_results = {}
@@ -223,10 +224,65 @@ def set_geometry_tiles():
     conn.close()
 
 
+def get_waterbody_data(comid: str, start_year: int = None, start_day: int = None, end_year: int = None, end_day: int = None, ranges: list = None):
+    """
+    Regenerate histogram data from database for a provided waterbody comid.
+    :param comid: NHDPlus waterbody comid
+    :param start_year: optional start year for histogram
+    :param start_day: optional start day for histogram
+    :param end_year: optional end year for histogram
+    :param end_day: optional end day for histogram
+    :param ranges: optional histogram ranges, can correspond to user specified thresholds. Must be formated as a 2d array.
+        i.e: [[0:10],[11:100],[101:200],[201:255]].
+    :return: a dictionary of dates, year and day of year, and an array with 255 values of cell counts, or the cell counts for the ranges.
+    """
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT * FROM WeeklyData WHERE comid=?"
+    values = [comid]
+    if start_year:
+        query = query + " AND year >= ?"
+        values.append(start_year)
+    if start_day:
+        query = query + " AND day >= ?"
+        values.append(start_day)
+    if end_year:
+        query = query + " AND year <= ?"
+        values.append(end_year)
+    if end_day:
+        query = query + " AND day <= ?"
+        values.append(end_day)
+    cur.execute(query, tuple(values))
+    data_rows = cur.fetchall()
+    data = {}
+    for r in data_rows:
+        day = str(r[0]) + " " + str(r[1])
+        if day not in data.keys():
+            histogram = np.zeros(N_VALUES)
+            data[day] = histogram
+        data[day][r[3]] = r[4]
+    cur.close()
+    if ranges:
+        range_data = {}
+        for r in ranges:
+            for date in data.keys():
+                if date in range_data.keys():
+                    range_data[date].append(int(np.sum(data[date][r[0]:r[1]])))
+                else:
+                    range_data[date] = [int(np.sum(data[date][r[0]:r[1]]))]
+        data = range_data
+    return data
+
+
 if __name__ == '__main__':
-    year = 2021
-    day = 47
+    # year = 2021
+    # day = 47
     comid = "166757656"
+    test_range = [[0, 50], [50, 100], [100, 150], [150, 200], [200, 255]]
+
+    images_dir = "D:\data\cyan_rare\RARE\L20201872020193.L3m_7D_CYAN_CI_cyano_CYAN_CONUS_300m"
+    year = 2020
+    day = 193
 
     t0 = time.time()
 
@@ -237,10 +293,26 @@ if __name__ == '__main__':
     # data = aggregate(mosaic=True)
 
     # runtime 177.2146 sec, 40218
-    data = aggregate(mapped_tiles=True)
+    # data = aggregate(image_dir=images_dir, mapped_tiles=True)
+    # save_data(year, day, data)
 
-    save_data(year, day, data)
+    # comid_data = get_waterbody_data(comid, ranges=test_range)
+    end_year = 2020
+    comid_data = get_waterbody_data(comid, ranges=test_range, end_year=end_year)
 
     # compare_histograms(".\\166757656-histogram-data.csv")
     t1 = time.time()
     print("Runtime: {} sec".format(round(t1-t0, 4)))
+
+#
+# Bare DB		0.60Mb		0mb
+# Weekly +1	    2.06Mb		2.0Mb
+# Weekly +2	    3.67Mb		1.61Mb
+# Weekly +3	    5.83Mb		2.16Mb
+# Weekly +4	    7.10Mb		1.27Mb
+#
+# round to ~2Mb a date.
+#
+# Weekly data would ~ be 104Mb/year
+# Daily data would ~ be 730Mb/year
+
