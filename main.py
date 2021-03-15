@@ -12,6 +12,7 @@ import fiona
 import pandas as pd
 import geopandas as gpd
 from pathlib import Path
+from shapely.geometry import Point, Polygon, MultiPolygon
 import matplotlib.pyplot as plt
 import sqlite3
 
@@ -19,6 +20,7 @@ IMAGES_DIR = "D:\data\cyan_rare\RARE\L20203412020347.L3m_7D_CYAN_CI_cyano_CYAN_C
 WATERBODY_DBF = "D:\data\cyan_rare\RARE\lakes-conus\LakeswithStats11_14.dbf"
 DB_FILE = ".\\waterbody-data.db"
 N_VALUES = 255
+
 
 def get_images(image_dir: str, mosaic: bool = False):
     if mosaic:
@@ -274,6 +276,44 @@ def get_waterbody_data(comid: str, start_year: int = None, start_day: int = None
     return data
 
 
+def get_waterbody_bypoint(lat: float, lng: float, brute: bool=True):
+    if not brute:
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.cursor()
+        query = "SELECT COMID FROM LakeBounds WHERE lat_ul>=? AND lng_ul<=? AND lat_br<=? AND lng_br>=?"
+        values = (lat, lng, lat, lng,)
+        cur.execute(query, values)
+        lakes = cur.fetchall()
+        crs = None
+        if len(lakes) > 0:
+            features = []
+            for lake in lakes:
+                w = get_waterbody(str(lake[0]))
+                features.append(w[0][0])
+                crs = w[1]
+            wb = (features, crs)
+        else:
+            return None
+    else:
+        wb = get_waterbody()
+    comid = None
+    point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
+    for features in wb[0]:
+        if features["geometry"]["type"] == "MultiPolygon":
+            poly_geos = []
+            for p in features["geometry"]["coordinates"]:
+                poly_geos.append(Polygon(p[0]))
+            poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=wb[1])
+        else:
+            poly = gpd.GeoSeries(Polygon(features["geometry"]["coordinates"][0]), crs=wb[1])
+        in_wb = poly.contains(point)
+        if in_wb.loc[0]:
+            comid = features["properties"]["COMID"]
+            break
+    return comid
+
+
+
 if __name__ == '__main__':
     # year = 2021
     # day = 47
@@ -298,11 +338,19 @@ if __name__ == '__main__':
 
     # comid_data = get_waterbody_data(comid, ranges=test_range)
     end_year = 2020
-    comid_data = get_waterbody_data(comid, ranges=test_range, end_year=end_year)
+    # comid_data = get_waterbody_data(comid, ranges=test_range, end_year=end_year)
 
     # compare_histograms(".\\166757656-histogram-data.csv")
+    lat = 27.0
+    lng = -80.8
+    comid = get_waterbody_bypoint(lat, lng)
+    print("Point({},{}) is in COMID: {}".format(lat, lng, comid))
     t1 = time.time()
     print("Runtime: {} sec".format(round(t1-t0, 4)))
+    comid = get_waterbody_bypoint(lat, lng, brute=False)
+    t2 = time.time()
+    print("Point({},{}) is in COMID: {}".format(lat, lng, comid))
+    print("Runtime: {} sec".format(round(t2-t1, 4)))
 
 #
 # Bare DB		0.60Mb		0mb
