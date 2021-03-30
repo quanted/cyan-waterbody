@@ -1,0 +1,269 @@
+import os
+import sqlite3
+import numpy as np
+import geopandas as gpd
+from shapely.geometry import Point, Polygon, MultiPolygon
+from flaskr.geometry import get_waterbody
+from flaskr.raster import get_images, clip_raster
+import datetime
+from tqdm import tqdm
+import multiprocessing as mp
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("cyan-waterbody")
+
+IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
+DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data.sqlite")
+N_VALUES = 255
+
+
+def get_conn():
+    conn = sqlite3.connect(DB_FILE)
+    return conn
+
+
+def get_tiles_by_objectid(objectid: str, image_base: str):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT tileName FROM GeometryTile WHERE OBJECTID=?"
+    values = (objectid,)
+    cur.execute(query, values)
+    tiles = cur.fetchall()
+    cur.close()
+    images = []
+    for i in tiles:
+        images.append(os.path.join(IMAGE_DIR, image_base + "_" + i[0] + ".tif"))
+    return images
+
+
+def get_waterbody_data(objectid: str, daily: bool = True, start_year: int = None, start_day: int = None, end_year: int = None, end_day: int = None, ranges: list = None):
+    """
+    Regenerate histogram data from database for a provided waterbody objectid.
+    :param objectid: NHD HR waterbody OBJECTID
+    :param start_year: optional start year for histogram
+    :param start_day: optional start day for histogram
+    :param end_year: optional end year for histogram
+    :param end_day: optional end day for histogram
+    :param ranges: optional histogram ranges, can correspond to user specified thresholds. Must be formated as a 2d array.
+        i.e: [[0:10],[11:100],[101:200],[201:255]].
+    :return: a dictionary of dates, year and day of year, and an array with 255 values of cell counts, or the cell counts for the ranges.
+    """
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    if daily:
+        query = "SELECT * FROM DailyData WHERE OBJECTID=?"
+    else:
+        query = "SELECT * FROM WeeklyData WHERE OBJECTID=?"
+    values = [objectid]
+    if start_year:
+        query = query + " AND year >= ?"
+        values.append(start_year)
+    if start_day:
+        query = query + " AND day >= ?"
+        values.append(start_day)
+    if end_year:
+        query = query + " AND year <= ?"
+        values.append(end_year)
+    if end_day:
+        query = query + " AND day <= ?"
+        values.append(end_day)
+    cur.execute(query, tuple(values))
+    data_rows = cur.fetchall()
+    data = {}
+    for r in data_rows:
+        day = str(r[0]) + " " + str(r[1])
+        if day not in data.keys():
+            histogram = np.zeros(N_VALUES)
+            data[day] = histogram
+        data[day][r[3]] = r[4]
+    cur.close()
+    if ranges:
+        range_data = {}
+        for r in ranges:
+            for date in data.keys():
+                if date in range_data.keys():
+                    range_data[date].append(int(np.sum(data[date][r[0]:r[1]])))
+                else:
+                    range_data[date] = [int(np.sum(data[date][r[0]:r[1]]))]
+        data = range_data
+    results = {}
+    for date, array in data.items():
+        results[date] = np.array(array).tolist()
+    return results
+
+
+def get_waterbody_bypoint(lat: float, lng: float):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT OBJECTID FROM WaterbodyBounds WHERE y_max>=? AND x_min<=? AND y_min<=? AND x_max>=?"
+    values = (lat, lng, lat, lng,)
+    cur.execute(query, values)
+    lakes = cur.fetchall()
+    crs = None
+    if len(lakes) > 0:
+        features = []
+        for lake in lakes:
+            w = get_waterbody(int(lake[0]))
+            features.append(w[0][0])
+            crs = w[1]
+        wb = (features, crs)
+    else:
+        return None
+    objectid = None
+    point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
+    for features in wb[0]:
+        if features["geometry"]["type"] == "MultiPolygon":
+            poly_geos = []
+            for p in features["geometry"]["coordinates"]:
+                poly_geos.append(Polygon(p[0]))
+            poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=wb[1])
+        else:
+            poly = gpd.GeoSeries(Polygon(features["geometry"]["coordinates"][0]), crs=wb[1])
+        in_wb = poly.contains(point)
+        if in_wb.loc[0]:
+            objectid = features["properties"]["OBJECTID"]
+            break
+    return objectid
+
+
+def save_data(year, day, data, daily: bool = True):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("BEGIN")
+    insert_i = 1
+    max_i = 400
+    objectids = list(data.keys())
+    for i in tqdm(range(len(objectids)), desc="Saving aggregation data to database...", ascii=False):
+        c = objectids[i]
+        d = data[c][0]
+        status = data[c][1]
+        message = data[c][2]
+        update_status(cur, year=year, day=day, objectid=c, daily=daily, status=status, comments=message)
+        insert_i += 1
+        if status == "FAILED":
+            continue
+        elif status == "PROCESSED":
+            for i in range(1, d.size - 1):
+                if d[i] > 0:
+                    if daily:
+                        query = "INSERT OR REPLACE INTO DailyData(year, day, OBJECTID, value, count) VALUES(?,?,?,?,?)"
+                    else:
+                        query = "INSERT OR REPLACE INTO WeeklyData(year, day, OBJECTID, value, count) VALUES(?,?,?,?,?)"
+                    values = (year, day, c, i, int(d[i]),)
+                    cur.execute(query, values)
+                if insert_i % max_i == 0:
+                    cur.execute("COMMIT")
+                    cur.execute("BEGIN")
+                    insert_i = 1
+                else:
+                    insert_i += 1
+    cur.execute("COMMIT")
+    conn.close()
+
+
+def set_geometry_tiles(year: int, day: int):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    # clear existing GeometryTile table
+    cur.execute("DELETE FROM GeometryTile")
+    cur.execute("COMMIT")
+    cur.execute("BEGIN")
+    features, crs = get_waterbody()
+    images = get_images(year, day)
+    insert_i = 1
+    max_i = 400
+    for i in tqdm(range(len(features)), desc="Settings geometry to tiff tile mappings...", ascii=False):
+        f = features[i]
+        objectid = int(f["properties"]["OBJECTID"])
+        if f["geometry"]["type"] == "MultiPolygon":
+            poly_geos = []
+            for p in f["geometry"]["coordinates"]:
+                poly_geos.append(Polygon(p[0]))
+            poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
+        else:
+            poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
+        for i in images:
+            data = clip_raster(i, poly, boundary_crs=crs)
+            if data is not None:
+                tile_parts = i.split("_")
+                tile_name = (tile_parts[-2] + "_" + tile_parts[-1]).split(".")[0]
+                query = "INSERT INTO GeometryTile(OBJECTID, tileName) VALUES(?,?)"
+                values = (objectid, tile_name,)
+                cur.execute(query, values)
+            if insert_i % max_i == 0:
+                cur.execute("COMMIT")
+                cur.execute("BEGIN")
+                insert_i = 1
+            else:
+                insert_i += 1
+    cur.execute("COMMIT")
+    conn.close()
+
+
+def p_set_geometry_tiles(year: int, day: int, objectid: int = None):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    # clear existing GeometryTile table
+    cur.execute("DELETE FROM GeometryTile")
+    cur.execute("COMMIT")
+    cur.execute("BEGIN")
+    if objectid:
+        features, crs = get_waterbody(objectid=objectid)
+    else:
+        features, crs = get_waterbody()
+    images = get_images(year, day)
+
+    cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    pool = mp.Pool(cpus)
+    logger.info("Running async, cores: {}".format(cpus))
+
+    results_objects = [pool.apply_async(p_set_tiles, args=(f, crs, images)) for f in features]
+    results = []
+    for i in tqdm(range(len(results_objects)), desc="Searching for geometry and tif overlapping...", ascii=False):
+        results.append(results_objects[i].get())
+    insert_i = 1
+    max_i = 400
+    for i in tqdm(range(len(results)), desc="Uploading tile to geometry mapping to DB...", ascii=False):
+        r = results[i]
+        for img in r[1]:
+            query = "INSERT INTO GeometryTile(OBJECTID, tileName) VALUES(?,?)"
+            values = (r[0], img,)
+            cur.execute(query, values)
+            if insert_i % max_i == 0:
+                cur.execute("COMMIT")
+                cur.execute("BEGIN")
+                insert_i = 1
+            else:
+                insert_i += 1
+    cur.execute("COMMIT")
+    conn.close()
+
+
+def p_set_tiles(feature, crs, images: list):
+    objectid = int(feature["properties"]["OBJECTID"])
+    if feature["geometry"]["type"] == "MultiPolygon":
+        poly_geos = []
+        for p in feature["geometry"]["coordinates"]:
+            poly_geos.append(Polygon(p[0]))
+        poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
+    else:
+        poly = gpd.GeoSeries(Polygon(feature["geometry"]["coordinates"][0]), crs=crs)
+    image_tiles = []
+    for i in images:
+        data = clip_raster(i, poly, boundary_crs=crs)
+        if data is not None:
+            tile_parts = i.split("_")
+            tile_name = (tile_parts[-2] + "_" + tile_parts[-1]).split(".")[0]
+            image_tiles.append(tile_name)
+    return objectid, image_tiles
+
+
+def update_status(cur, year: int, day: int, objectid: str, daily: bool, status: str, comments: str = None):
+    timestamp = datetime.datetime.utcnow()
+    if daily:
+        query = "INSERT OR REPLACE INTO DailyStatus(year, day, OBJECTID, status, timestamp, comments) VALUES(?,?,?,?,?,?)"
+    else:
+        query = "INSERT OR REPLACE INTO WeeklyStatus(year, day, OBJECTID, status, timestamp, comments) VALUES(?,?,?,?,?,?)"
+    values = (year, day, objectid, status, timestamp, comments)
+    cur.execute(query, values)
