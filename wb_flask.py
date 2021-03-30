@@ -41,7 +41,7 @@ def get_data():
         end_day = int(args["end_day"])
     daily = True
     if "daily" in args:
-        daily = bool(args["daily"])
+        daily = (args["daily"] == "True")
     ranges = None
     if "ranges" in args:
         ranges = json.loads(args["ranges"])
@@ -83,7 +83,7 @@ def aggregate():
     if "day" in args:
         day = int(args["day"])
     if "daily" in args:
-        daily = bool(args["daily"])
+        daily = (args["daily"] == "True")
     error = []
     if year is None:
         error.append("Missing required year parameter 'year'")
