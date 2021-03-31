@@ -3,6 +3,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint
+from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from main import async_aggregate, async_retry
 import threading
 import logging
@@ -44,9 +45,23 @@ def get_data():
         daily = (args["daily"] == "True")
     ranges = None
     if "ranges" in args:
-        ranges = json.loads(args["ranges"])
+        try:
+            ranges = json.loads(args["ranges"])
+        except Exception as e:
+            logger.info("Unable to load provided ranges object, error: {}".format(e))
+    geojson = None
+    if "geojson" in args:
+        try:
+            geojson = json.loads(args["geojson"])
+        except Exception as e:
+            message = "Unable to load provided geojson, error: {}".format(e)
+            logger.info(message)
+            return message, 200
+    # if geojson is not None:
+    #     data = get_custom_waterbody_data(geojson=geojson, daily=daily, start_year=start_year, start_day=start_day,
+    #                                      end_year=end_year, end_day=end_day, ranges=ranges)
     data = get_waterbody_data(objectid=objectid, daily=daily, start_year=start_year, start_day=start_day,
-                              end_year=end_year, end_day=end_day, ranges=ranges)
+                                  end_year=end_year, end_day=end_day, ranges=ranges)
     results = {"OBJECTID": objectid, "daily": daily, "data": data}
     return results, 200
 
@@ -56,20 +71,42 @@ def get_objectid():
     args = request.args
     lat = None
     lng = None
+    gnis = None
     if "lat" in args:
         lat = float(args["lat"])
     if "lng" in args:
         lng = float(args["lng"])
+    if "name" in args:
+        gnis = str(args["name"])
     error = []
     if lat is None:
         error.append("Missing required latitude parameter 'lat'")
     if lng is None:
         error.append("Missing required longitude parameter 'lng'")
+    if gnis is not None:
+        error = []
     if len(error) > 0:
         return ", ".join(error), 200
-    data = get_waterbody_bypoint(lat=lat, lng=lng)
-    results = {"lat": lat, "lng": lng, "OBJECTID": int(data) if data is not None else "NA"}
+    if gnis is not None:
+        data = get_waterbody_byname(gnis_name=gnis)
+        results = {"waterbodies": data if len(data) > 0 else "NA"}
+    else:
+        data = get_waterbody_bypoint(lat=lat, lng=lng)
+        results = {"lat": lat, "lng": lng, "OBJECTID": int(data) if data is not None else "NA"}
     return results, 200
+
+
+@app.route('/waterbody/properties/')
+def get_properties():
+    args = request.args
+    objectid = None
+    if "OBJECTID" in args:
+        objectid = int(args["OBJECTID"])
+    else:
+        return "Missing required waterbody objectid parameter 'OBJECTID'", 200
+    data = get_waterbody_properties(objectid=objectid)
+    result = {"objectid": objectid, "properties": data}
+    return result, 200
 
 
 @app.route('/waterbody/aggregate/')

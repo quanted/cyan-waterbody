@@ -3,7 +3,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import argparse
 import time
-from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data
+from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds
 from flaskr.aggregate import aggregate, retry_failed, p_aggregate
 import logging
 
@@ -12,6 +12,7 @@ logger = logging.getLogger("cyan-waterbody")
 
 parser = argparse.ArgumentParser(description="CyAN Waterbody data database management functions.")
 parser.add_argument('--set_tiles', default=False, type=bool, help='Reset the geometry to tiles mapping.')
+parser.add_argument('--set_tile_bounds', default=False, type=bool, help='Set the bounds for the raster tifs')
 parser.add_argument('--get_data', default=False, type=bool, help='Get all data from the database for a specified OBJECTID')
 parser.add_argument('--year', default=None, type=int, help="Year of data image to process.")
 parser.add_argument('--day', default=None, type=int, help="Day of the year of the data image to process.")
@@ -83,6 +84,11 @@ if __name__ == "__main__":
         retry_failed()
         retry_failed(daily=False)
         logger.info("Completed retry failed aggregations.")
+    elif args.set_tile_bounds:
+        if args.year is None or args.day is None:
+            print("Setting tile bounds requires reference tif, determined by year and day parameters.")
+            exit()
+        set_tile_bounds(int(args.year), int(args.day))
     else:
         print("")
         logger.info("Invalid input arguments\n")

@@ -2,14 +2,14 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
-from rasterio import mask
+from rasterio import mask, warp
 import rasterio
 import geopandas as gpd
 import os
 import datetime
 
 
-IMAGE_DIR = os.getenv('IMAGE_DIR', os.path.join(".", "images"))
+IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
 
 
 def get_images(year: int, day: int, daily: bool=True):
@@ -30,6 +30,25 @@ def get_images(year: int, day: int, daily: bool=True):
 
     image_files = [str(os.path.join(IMAGE_DIR, f)) for f in os.listdir(IMAGE_DIR) if
                    (".tif" in f and base_image_name in f)]
+    return image_files
+
+
+def get_images_by_tile(tile: list, n_limit: int = 90):
+    """
+    Returns the list of images in the IMAGE_DIR for the specified tile going back n_limit days from current date.
+    :param tile: Tiles of the images to collect, example [1_2, 1_3]
+    :param n_limit: The number of days from the current date to get available images for.
+    :return: A list of paths to .tif images in the IMAGE_DIR directory.
+    """
+    n_date = datetime.datetime.utcnow() + datetime.timedelta(days=(-1 * n_limit) - 1)
+    image_files = []
+    for f in os.listdir(IMAGE_DIR):
+        if any(t in f for t in tile) and ".tif" in f and "DAY" in f:
+            i_year = f[1:5]
+            i_yday = f[5:9]
+            date0 = datetime.date(int(i_year), 1, 1) + datetime.timedelta(days=int(i_yday)-1)
+            if date0 >= n_date:
+                image_files.append(str(os.path.join(IMAGE_DIR, f)))
     return image_files
 
 
@@ -85,3 +104,12 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         clipped = clipped[0]
 
     return clipped, affine, raster.crs
+
+
+def get_raster_bounds(image_path):
+    dst_crs = 'EPSG:4326'
+    raster = rasterio.open(image_path)
+    bounds = warp.transform_bounds(src_crs=raster.crs, dst_crs=dst_crs, left=raster.bounds.left,
+                                   bottom=raster.bounds.bottom, right=raster.bounds.right, top=raster.bounds.top)
+    return bounds
+

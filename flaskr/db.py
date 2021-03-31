@@ -2,9 +2,9 @@ import os
 import sqlite3
 import numpy as np
 import geopandas as gpd
-from shapely.geometry import Point, Polygon, MultiPolygon
+from shapely.geometry import Point, Polygon, MultiPolygon, shape
 from flaskr.geometry import get_waterbody
-from flaskr.raster import get_images, clip_raster
+from flaskr.raster import get_images, clip_raster, get_images_by_tile, get_raster_bounds
 import datetime
 from tqdm import tqdm
 import multiprocessing as mp
@@ -78,6 +78,44 @@ def get_waterbody_data(objectid: str, daily: bool = True, start_year: int = None
             data[day] = histogram
         data[day][r[3]] = r[4]
     cur.close()
+    if ranges:
+        range_data = {}
+        for r in ranges:
+            for date in data.keys():
+                if date in range_data.keys():
+                    range_data[date].append(int(np.sum(data[date][r[0]:r[1]])))
+                else:
+                    range_data[date] = [int(np.sum(data[date][r[0]:r[1]]))]
+        data = range_data
+    results = {}
+    for date, array in data.items():
+        results[date] = np.array(array).tolist()
+    return results
+
+
+def get_custon_waterbody_data(geojson, daily: bool = True, start_year: int = None, start_day: int = None, end_year: int = None, end_day: int = None, ranges: list = None):
+    """
+    Process histogram data for a provided geojson.
+    :param geojson: User provided geojson
+    :param start_year: optional start year for histogram
+    :param start_day: optional start day for histogram
+    :param end_year: optional end year for histogram
+    :param end_day: optional end day for histogram
+    :param ranges: optional histogram ranges, can correspond to user specified thresholds. Must be formated as a 2d array.
+        i.e: [[0:10],[11:100],[101:200],[201:255]].
+    :return: a dictionary of dates, year and day of year, and an array with 255 values of cell counts, or the cell counts for the ranges.
+    """
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    try:
+        poly = shape(geojson)
+    except Exception as e:
+        logger.fatal("Unable to convert geojson to polygon. Error: {}".format(e))
+        return None
+    data = {}
+    # TODO: 1. Add function for getting the tiles which contain the polygon (may have to create polygon boxes from tileBounds and check each if there is any overlap
+    # TODO: 2. Get images for the tiles listed using function get_images_by_tile()
+    # TODO: 3. Iterate over list of images and aggregate.
     if ranges:
         range_data = {}
         for r in ranges:
@@ -267,3 +305,21 @@ def update_status(cur, year: int, day: int, objectid: str, daily: bool, status: 
         query = "INSERT OR REPLACE INTO WeeklyStatus(year, day, OBJECTID, status, timestamp, comments) VALUES(?,?,?,?,?,?)"
     values = (year, day, objectid, status, timestamp, comments)
     cur.execute(query, values)
+
+
+def set_tile_bounds(year: int, day: int):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("BEGIN")
+    cur.execute("DELETE FROM TileBounds")
+    images = get_images(year, day)
+    for i in images:
+        tile_parts = i.split("_")
+        tile_name = (tile_parts[-2] + "_" + tile_parts[-1]).split(".")[0]
+        bounds = get_raster_bounds(i)
+        query = "INSERT INTO TileBounds(tile, x_min, x_max, y_min, y_max) VALUES(?,?,?,?,?)"
+        values = (tile_name, bounds[0], bounds[2], bounds[1], bounds[3])
+        cur.execute(query, values)
+    cur.execute("COMMIT")
+
+

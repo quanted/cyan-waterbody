@@ -23,3 +23,24 @@ def get_waterbody(objectid: int = None, objectids: list = None):
             else:
                 features.append(f)
     return features, crs
+
+
+def get_waterbody_byname(gnis_name: str):
+    gnis_name = gnis_name.replace('\'', "").replace('\"', "")
+    waterbody = []
+    with fiona.open(WATERBODY_DBF) as waterbodies:
+        for f in waterbodies:
+            if gnis_name.lower() in f["properties"]["GNIS_NAME"].lower():
+                wb = {"name": f["properties"]["GNIS_NAME"], "objectid": int(f["properties"]["OBJECTID"])}
+                waterbody.append(wb)
+    return waterbody
+
+
+def get_waterbody_properties(objectid: int):
+    metadata = {}
+    with fiona.open(WATERBODY_DBF) as waterbodies:
+        for f in waterbodies:
+            if objectid == int(f["properties"]["OBJECTID"]):
+                metadata = f["properties"]
+                break
+    return metadata
