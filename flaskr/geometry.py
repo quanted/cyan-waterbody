@@ -4,7 +4,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import fiona
 import os
 
-WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "waterbodies_2.dbf")
+WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "waterbodies_4.dbf")
 
 
 def get_waterbody(objectid: int = None, objectids: list = None):
@@ -31,7 +31,12 @@ def get_waterbody_byname(gnis_name: str):
     with fiona.open(WATERBODY_DBF) as waterbodies:
         for f in waterbodies:
             if gnis_name.lower() in f["properties"]["GNIS_NAME"].lower():
-                wb = {"name": f["properties"]["GNIS_NAME"], "objectid": int(f["properties"]["OBJECTID"])}
+                wb = {
+                    "name": f["properties"]["GNIS_NAME"],
+                    "objectid": int(f["properties"]["OBJECTID"]),
+                    "centroid_lat": float(f["properties"]["c_lat"]),
+                    "centroid_lng": float(f["properties"]["c_lng"]),
+                }
                 waterbody.append(wb)
     return waterbody
 
