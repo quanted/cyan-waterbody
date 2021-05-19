@@ -149,6 +149,7 @@ def get_waterbody_bypoint(lat: float, lng: float):
     else:
         return None
     objectid = None
+    gnis_name = None
     point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
     for features in wb[0]:
         if features["geometry"]["type"] == "MultiPolygon":
@@ -161,8 +162,9 @@ def get_waterbody_bypoint(lat: float, lng: float):
         in_wb = poly.contains(point)
         if in_wb.loc[0]:
             objectid = features["properties"]["OBJECTID"]
+            gnis_name = features["properties"]["GNIS_NAME"]
             break
-    return objectid
+    return objectid, gnis_name
 
 
 def save_data(year, day, data, daily: bool = True):

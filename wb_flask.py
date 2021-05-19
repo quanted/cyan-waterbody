@@ -91,8 +91,13 @@ def get_objectid():
         data = get_waterbody_byname(gnis_name=gnis)
         results = {"waterbodies": data if len(data) > 0 else "NA"}
     else:
-        data = get_waterbody_bypoint(lat=lat, lng=lng)
-        results = {"lat": lat, "lng": lng, "OBJECTID": int(data) if data is not None else "NA"}
+        objectid, gnis = get_waterbody_bypoint(lat=lat, lng=lng)
+        if objectid is not None and gnis is not None:
+            data = get_waterbody_byname(gnis)
+            results = {"lat": lat, "lng": lng,
+                       "waterbodies": data if len(data) > 0 else "NA"}
+        else:
+            results = {"lat": lat, "lng": lng, "OBJECTID": int(objectid) if objectid is not None else "NA"}
     return results, 200
 
 
