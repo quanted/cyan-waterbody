@@ -2,7 +2,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request
-from flaskr.db import get_waterbody_data, get_waterbody_bypoint
+from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from main import async_aggregate, async_retry
 import threading
@@ -107,11 +107,28 @@ def get_properties():
     objectid = None
     if "OBJECTID" in args:
         objectid = int(args["OBJECTID"])
+    elif "objectid" in args:
+        objectid = int(args["objectid"])
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
     data = get_waterbody_properties(objectid=objectid)
     result = {"objectid": objectid, "properties": data}
     return result, 200
+
+
+@app.route('/waterbody/geometry/')
+def get_geometry():
+    args = request.args
+    objectid = None
+    if "OBJECTID" in args:
+        objectid = int(args["OBJECTID"])
+    elif "objectid" in args:
+        objectid = int(args["objectid"])
+    else:
+        return "Missing required waterbody objectid parameter 'OBJECTID'", 200
+    data = get_waterbody(objectid=objectid)
+    results = {"objectid": objectid, "geojson": data}
+    return results, 200
 
 
 @app.route('/waterbody/aggregate/')
