@@ -147,7 +147,7 @@ def get_waterbody_bypoint(lat: float, lng: float):
             crs = w[1]
         wb = (features, crs)
     else:
-        return None
+        return None, None
     objectid = None
     gnis_name = None
     point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
