@@ -64,6 +64,8 @@ def get_waterbody_byname(gnis_name: str):
                     "objectid": int(f["properties"]["OBJECTID"]),
                     "centroid_lat": float(f["properties"]["c_lat"]),
                     "centroid_lng": float(f["properties"]["c_lng"]),
+                    "areasqkm": float(f["properties"]["AREASQKM"]),
+                    "state_abbr": f["properties"]["STATE_ABBR"]
                 }
                 waterbody.append(wb)
     return waterbody
