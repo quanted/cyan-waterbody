@@ -325,3 +325,30 @@ def set_tile_bounds(year: int, day: int):
     cur.execute("COMMIT")
 
 
+def set_index(objectid_i: list):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("BEGIN")
+    cur.execute("DELETE FROM GeometryIndex")
+    for entity in objectid_i:
+        objectid = int(entity[0])
+        gnis = entity[1]
+        index = entity[2]
+        query = "INSERT INTO GeometryIndex VALUES (?,?,?)"
+        values = (objectid, gnis, index,)
+        cur.execute(query, values)
+    cur.execute("COMMIT")
+
+
+def get_object_index(objectid: int = None, gnis: str = None):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    if objectid:
+        query = "SELECT idx FROM GeometryIndex WHERE OBJECTID=?"
+        values = (objectid,)
+    else:
+        query = "SELECT idx FROM GeometryIndex WHERE GNIS_NAME=?"
+        values = (gnis,)
+    cur.execute(query, values)
+    index = cur.fetchall()[0]
+    return index

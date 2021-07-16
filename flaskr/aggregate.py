@@ -1,12 +1,13 @@
 import numpy as np
 from pathlib import PurePath
-from flaskr.raster import get_images, clip_raster
+from flaskr.raster import get_images, clip_raster, mosaic_rasters
 from flaskr.geometry import get_waterbody
 from flaskr.db import get_tiles_by_objectid, get_conn, save_data
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
 import multiprocessing as mp
 import logging
+import time
 from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
@@ -157,4 +158,30 @@ def retry_failed(daily: bool = True):
         day = int(f['day'])
         data = aggregate(year=year, day=day, daily=daily, objectid=f['objectid'])[0]
         save_data(year=year, day=day, data=data, daily=daily)
+
+
+def get_waterbody_raster(objectid: int, year: int, day: int):
+    t0 = time.time()
+    features, crs = get_waterbody(objectid=objectid)
+    images = get_images(year=year, day=day, daily=True)
+    image_base = PurePath(images[0]).parts[-1].split(".tif")
+    image_base = "_".join(image_base[0].split("_")[:-2])
+    f = features[0]
+    objectid = f["properties"]["OBJECTID"]
+    if f["geometry"]["type"] == "MultiPolygon":
+        poly_geos = []
+        for p in f["geometry"]["coordinates"]:
+            poly_geos.append(Polygon(p[0]))
+        poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
+    else:
+        poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
+    f_images = get_tiles_by_objectid(objectid, image_base)
+    if len(f_images) > 1:
+        mosaic, out_trans = mosaic_rasters(f_images)
+    else:
+        mosaic = f_images[0]
+    data = clip_raster(mosaic, poly, boundary_crs=crs)
+    t1 = time.time()
+    print(f"runtime: {round(t1-t0, 5)} sec")
+    return data
 

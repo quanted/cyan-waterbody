@@ -37,19 +37,22 @@ def get_waterbody(objectid: int = None, objectids: list = None, tojson: bool = F
                 geojson.append(poly.to_json())
             return geojson
     else:
+        i = 0
         with fiona.open(WATERBODY_DBF) as waterbodies:
             crs = waterbodies.crs
             for f in waterbodies:
+                i += 1
                 if objectid:
                     if objectid == f["properties"]["OBJECTID"]:
                         features.append(f)
-                        continue
+                        break
                 elif objectids:
                     if f["properties"]["OBJECTID"] in objectids:
                         features.append(f)
                         continue
                 else:
                     features.append(f)
+        print(f"ObjectID: {objectid}, index: {i-1}")
         return features, crs
 
 
@@ -79,3 +82,4 @@ def get_waterbody_properties(objectid: int):
                 metadata = f["properties"]
                 break
     return metadata
+

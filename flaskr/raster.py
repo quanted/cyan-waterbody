@@ -3,6 +3,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
 from rasterio import mask, warp
+from rasterio.merge import merge
+from rasterio.io import MemoryFile
 import rasterio
 import geopandas as gpd
 import os
@@ -91,6 +93,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
     if not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
         boundary = boundary.to_crs(crs=raster.crs)
     coords = [boundary.geometry]
+    # print(f"Band Count: {raster.count}")
 
     # mask/clip the raster using rasterio.mask
     try:
@@ -113,3 +116,22 @@ def get_raster_bounds(image_path):
                                    bottom=raster.bounds.bottom, right=raster.bounds.right, top=raster.bounds.top)
     return bounds
 
+
+def mosaic_rasters(images):
+    mosaic, out_trans = merge(images)
+    return mosaic, out_trans
+
+
+# def to_geotiff(data, trans, crs):
+#     geotiff = None
+#     height = data.shape[0]
+#     width = data.shape[1]
+#     profile = rasterio.profiles.DefaultGTiffProfile(count=1)
+#     profile.update(transform=trans, driver='GTiff', height=height, width=width, crs=crs)
+#     data = data.reshape(1, height, width)
+#     with MemoryFile() as memfile:
+#         with memfile.open(**profile) as dataset:
+#             dataset.write(data)
+#         memfile.seek(0)
+#         geotiff = memfile.getbuffer()
+#     return geotiff

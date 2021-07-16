@@ -1,13 +1,18 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from flask import Flask, request
+from flask import Flask, request, send_file, Response
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
+from flaskr.aggregate import get_waterbody_raster
 from main import async_aggregate, async_retry
+from io import BytesIO
 import threading
 import logging
 import json
+
+import rasterio
+from rasterio.io import MemoryFile
 
 app = Flask(__name__)
 
@@ -129,6 +134,47 @@ def get_geometry():
     data = get_waterbody(objectid=objectid)
     results = {"objectid": objectid, "geojson": data}
     return results, 200
+
+
+@app.route('/waterbody/image/')
+def get_image():
+    args = request.args
+    objectid = None
+    year = None
+    day = None
+    missing = []
+    if "OBJECTID" in args:
+        objectid = int(args["OBJECTID"])
+    elif "objectid" in args:
+        objectid = int(args["objectid"])
+    else:
+        missing.append("Missing required waterbody objectid parameter 'OBJECTID'")
+    if "year" in args:
+        year = int(args["year"])
+    else:
+        missing.append("Missing required year parameter 'year'")
+    if "day" in args:
+        day = int(args["day"])
+    else:
+        missing.append("Missing required day parameter 'day'")
+    if len(missing) > 0:
+        return ", ".join(missing), 200
+    data, trans, crs = get_waterbody_raster(objectid=objectid, year=year, day=day)
+    height = data.shape[0]
+    width = data.shape[1]
+    profile = rasterio.profiles.DefaultGTiffProfile(count=1)
+    profile.update(transform=trans, driver='GTiff', height=height, width=width, crs=crs)
+    data = data.reshape(1, height, width)
+    with MemoryFile() as memfile:
+        with memfile.open(**profile) as dataset:
+            dataset.write(data)
+        memfile.seek(0)
+        return send_file(
+            BytesIO(memfile.read()),
+            as_attachment=True,
+            attachment_filename=f"{objectid}_{year}-{day}.tiff",
+            mimetype='image/tiff'
+        )
 
 
 @app.route('/waterbody/aggregate/')
