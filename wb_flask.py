@@ -174,6 +174,8 @@ def get_image():
     if 'use_bin' in args:
         use_custom = True
     raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day)
+    if raster is None:
+        return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
     data, trans, crs = raster
     height = data.shape[0]
     width = data.shape[1]

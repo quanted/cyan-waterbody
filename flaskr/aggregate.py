@@ -163,7 +163,11 @@ def retry_failed(daily: bool = True):
 def get_waterbody_raster(objectid: int, year: int, day: int):
     t0 = time.time()
     features, crs = get_waterbody(objectid=objectid)
+    if len(features) == 0:
+        return None, None
     images = get_images(year=year, day=day, daily=True)
+    if len(images) == 0:
+        return None, None
     image_base = PurePath(images[0]).parts[-1].split(".tif")
     image_base = "_".join(image_base[0].split("_")[:-2])
     f = features[0]
