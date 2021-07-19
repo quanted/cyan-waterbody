@@ -1,6 +1,6 @@
 import numpy as np
 from pathlib import PurePath
-from flaskr.raster import get_images, clip_raster, mosaic_rasters
+from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap
 from flaskr.geometry import get_waterbody
 from flaskr.db import get_tiles_by_objectid, get_conn, save_data
 import geopandas as gpd
@@ -180,8 +180,9 @@ def get_waterbody_raster(objectid: int, year: int, day: int):
         mosaic, out_trans = mosaic_rasters(f_images)
     else:
         mosaic = f_images[0]
+    colormap = get_colormap(f_images[0])
     data = clip_raster(mosaic, poly, boundary_crs=crs)
     t1 = time.time()
     print(f"runtime: {round(t1-t0, 5)} sec")
-    return data
+    return data, colormap
 

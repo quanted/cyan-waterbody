@@ -122,6 +122,11 @@ def mosaic_rasters(images):
     return mosaic, out_trans
 
 
+def get_colormap(image):
+    raster = rasterio.open(image)
+    return raster.colormap(1)
+
+
 # def to_geotiff(data, trans, crs):
 #     geotiff = None
 #     height = data.shape[0]

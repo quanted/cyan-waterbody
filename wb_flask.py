@@ -5,6 +5,7 @@ from flask import Flask, request, send_file, Response
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
+from flaskr.utils import get_colormap
 from main import async_aggregate, async_retry
 from io import BytesIO
 import threading
@@ -159,15 +160,32 @@ def get_image():
         missing.append("Missing required day parameter 'day'")
     if len(missing) > 0:
         return ", ".join(missing), 200
-    data, trans, crs = get_waterbody_raster(objectid=objectid, year=year, day=day)
+    colors = {}
+    use_custom = False
+    if 'low' in args:
+        use_custom = True
+        colors['low'] = int(args['low'])
+    if 'med' in args:
+        use_custom = True
+        colors['med'] = int(args['med'])
+    if 'high' in args:
+        use_custom = True
+        colors['high'] = int(args['high'])
+    if 'use_bin' in args:
+        use_custom = True
+    raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day)
+    data, trans, crs = raster
     height = data.shape[0]
     width = data.shape[1]
+    if use_custom:
+        colormap = get_colormap(**colors)
     profile = rasterio.profiles.DefaultGTiffProfile(count=1)
     profile.update(transform=trans, driver='GTiff', height=height, width=width, crs=crs)
     data = data.reshape(1, height, width)
     with MemoryFile() as memfile:
         with memfile.open(**profile) as dataset:
             dataset.write(data)
+            dataset.write_colormap(1, colormap)
         memfile.seek(0)
         return send_file(
             BytesIO(memfile.read()),
