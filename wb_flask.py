@@ -182,6 +182,8 @@ def get_image():
         return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
     data, trans, crs = raster
 
+    colormap[0] = (0, 0, 0, 0)
+    colormap[255] = (0, 0, 0, 0)
     converted_data = [[None for i in range(data.shape[1])] for j in range(data.shape[0])]
     for y in range(0, data.shape[1]):
         for x in range(0, data.shape[0]):
@@ -193,7 +195,7 @@ def get_image():
     png_img.save(png_file, 'PNG')
     png_file.seek(0)
 
-    png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
+    # png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
 
     return send_file(
         png_file,
