@@ -1,4 +1,7 @@
 import warnings
+
+import numpy as np
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, Response
@@ -7,6 +10,7 @@ from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.utils import get_colormap
 from main import async_aggregate, async_retry
+from PIL import Image, ImageCms
 from io import BytesIO
 import threading
 import logging
@@ -177,24 +181,46 @@ def get_image():
     if raster is None:
         return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
     data, trans, crs = raster
-    height = data.shape[0]
-    width = data.shape[1]
-    if use_custom:
-        colormap = get_colormap(**colors)
-    profile = rasterio.profiles.DefaultGTiffProfile(count=1)
-    profile.update(transform=trans, driver='GTiff', height=height, width=width, crs=crs)
-    data = data.reshape(1, height, width)
-    with MemoryFile() as memfile:
-        with memfile.open(**profile) as dataset:
-            dataset.write(data)
-            dataset.write_colormap(1, colormap)
-        memfile.seek(0)
-        return send_file(
-            BytesIO(memfile.read()),
-            as_attachment=True,
-            attachment_filename=f"{objectid}_{year}-{day}.tiff",
-            mimetype='image/tiff'
-        )
+
+    converted_data = [[None for i in range(data.shape[1])] for j in range(data.shape[0])]
+    for y in range(0, data.shape[1]):
+        for x in range(0, data.shape[0]):
+            converted_data[x][y] = list(colormap[data[x][y]])
+
+    converted_data = np.array(converted_data, dtype=np.uint8)
+    png_img = Image.fromarray(converted_data, mode='RGBA')
+    png_file = BytesIO()
+    png_img.save(png_file, 'PNG')
+    png_file.seek(0)
+
+    png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
+
+    return send_file(
+        png_file,
+        as_attachment=True,
+        attachment_filename=f"{objectid}_{year}-{day}.png",
+        mimetype='image/png'
+    )
+
+    # RETURN GEOTiFF
+    # height = data.shape[0]
+    # width = data.shape[1]
+    # if use_custom:
+    #     colormap = get_colormap(**colors)
+    # profile = rasterio.profiles.DefaultGTiffProfile(count=1)
+    # profile.update(transform=trans, driver='GTiff', height=height, width=width, crs=crs)
+    # data = data.reshape(1, height, width)
+    # with MemoryFile() as memfile:
+    #     with memfile.open(**profile) as dataset:
+    #         dataset.write(data)
+    #         dataset.write_colormap(1, colormap)
+    #     memfile.seek(0)
+    #     return send_file(
+    #         BytesIO(memfile.read()),
+    #         as_attachment=True,
+    #         attachment_filename=f"{objectid}_{year}-{day}.tiff",
+    #         mimetype='image/tiff'
+    #     )
 
 
 @app.route('/waterbody/aggregate/')
