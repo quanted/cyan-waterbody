@@ -185,7 +185,7 @@ def get_waterbody_raster(objectid: int, year: int, day: int):
     else:
         mosaic = f_images[0]
     colormap = get_colormap(f_images[0])
-    data = clip_raster(mosaic, poly, boundary_crs=crs)
+    data = clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'})
     t1 = time.time()
     print(f"runtime: {round(t1-t0, 5)} sec")
     return data, colormap

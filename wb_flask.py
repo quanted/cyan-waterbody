@@ -195,7 +195,7 @@ def get_image():
     png_img.save(png_file, 'PNG')
     png_file.seek(0)
 
-    # png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
+    png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
 
     return send_file(
         png_file,

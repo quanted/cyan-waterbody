@@ -2,9 +2,10 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
-from rasterio import mask, warp
+from rasterio import mask, warp, crs
 from rasterio.merge import merge
-from rasterio.io import MemoryFile
+from rasterio.enums import Resampling
+import copy
 import rasterio
 import geopandas as gpd
 import os
@@ -54,7 +55,7 @@ def get_images_by_tile(tile: list, n_limit: int = 90):
     return image_files
 
 
-def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbose: bool = False):
+def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbose: bool = False, raster_crs: dict = None):
     """Clip the raster to the given boundary.
 
     Parameters
@@ -92,12 +93,14 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
 
     if not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
         boundary = boundary.to_crs(crs=raster.crs)
+        raster_crs = raster.crs
+
     coords = [boundary.geometry]
     # print(f"Band Count: {raster.count}")
 
     # mask/clip the raster using rasterio.mask
     try:
-        clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True)
+        clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True, )
     except Exception as e:
         if verbose:
             print("ERROR: {}".format(e))
@@ -106,7 +109,14 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
     if len(clipped.shape) >= 3:
         clipped = clipped[0]
 
-    return clipped, affine, raster.crs
+    if raster_crs:
+        crs = rasterio.crs.CRS.from_dict(raster_crs)
+        reproject_raster = copy.copy(clipped)
+        reproject_raster, reproject_affine = warp.reproject(clipped, reproject_raster, src_transform=affine, src_crs=raster.crs, dst_crs=crs, resampling=Resampling.nearest)
+        clipped = reproject_raster
+        affine = reproject_affine
+
+    return clipped, affine, raster_crs
 
 
 def get_raster_bounds(image_path):
