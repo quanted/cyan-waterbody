@@ -4,7 +4,7 @@ import numpy as np
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from flask import Flask, request, send_file, Response
+from flask import Flask, request, send_file, make_response
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
@@ -180,7 +180,7 @@ def get_image():
     raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day)
     if raster is None:
         return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
-    data, trans, crs = raster
+    data, trans, crs, bounds = raster
 
     colormap[0] = (0, 0, 0, 0)
     colormap[255] = (0, 0, 0, 0)
@@ -195,14 +195,18 @@ def get_image():
     png_img.save(png_file, 'PNG')
     png_file.seek(0)
 
-    png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
+    # png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
 
-    return send_file(
-        png_file,
-        as_attachment=True,
-        attachment_filename=f"{objectid}_{year}-{day}.png",
-        mimetype='image/png'
+    response = make_response(
+        send_file(
+            png_file,
+            as_attachment=True,
+            attachment_filename=f"{objectid}_{year}-{day}.png",
+            mimetype='image/png'
+        )
     )
+    response.headers['BBOX'] = json.dumps(bounds)
+    return response
 
     # RETURN GEOTiFF
     # height = data.shape[0]

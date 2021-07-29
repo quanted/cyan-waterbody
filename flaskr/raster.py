@@ -5,6 +5,8 @@ from pathlib import Path
 from rasterio import mask, warp, crs
 from rasterio.merge import merge
 from rasterio.enums import Resampling
+from pyproj import Proj
+from pyproj import transform as pyt
 import copy
 import rasterio
 import geopandas as gpd
@@ -109,6 +111,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
     if len(clipped.shape) >= 3:
         clipped = clipped[0]
 
+    bbox = None
     if raster_crs:
         crs = rasterio.crs.CRS.from_dict(raster_crs)
         reproject_raster = copy.copy(clipped)
@@ -125,10 +128,12 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         )
         clipped = reproject_raster
         affine = reproject_affine
-        bounds = rasterio.transform.array_bounds(height=reproject_raster.shape[1], width=reproject_raster.shape[0], transform=reproject_affine)
-        test = 1
+        bounds = rasterio.transform.array_bounds(height=height, width=width, transform=reproject_affine)
+        proj0 = Proj(crs)
+        proj1 = Proj('epsg:4326')
+        bbox = [pyt(proj0, proj1, bounds[2], bounds[1]), pyt(proj0, proj1, bounds[0], bounds[3])]
 
-    return clipped, affine, raster_crs
+    return clipped, affine, raster_crs, bbox
 
 
 def get_raster_bounds(image_path):
