@@ -112,10 +112,20 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
     if raster_crs:
         crs = rasterio.crs.CRS.from_dict(raster_crs)
         reproject_raster = copy.copy(clipped)
-        reproject_raster, reproject_affine = warp.reproject(clipped, reproject_raster, src_transform=affine, src_crs=raster.crs, dst_crs=crs, resampling=Resampling.nearest)
+        transform, width, height = warp.calculate_default_transform(
+            raster.crs, crs, raster.width, raster.height, *raster.bounds)
+        reproject_raster, reproject_affine = warp.reproject(
+            clipped,
+            reproject_raster,
+            src_transform=affine,
+            src_crs=raster.crs,
+            dst_tranform=transform,
+            dst_crs=crs,
+            resampling=Resampling.nearest
+        )
         clipped = reproject_raster
         affine = reproject_affine
-        bounds = rasterio.transform.array_bounds(height=reproject_raster.shape[0], width=reproject_raster.shape[1], transform=reproject_affine)
+        bounds = rasterio.transform.array_bounds(height=reproject_raster.shape[1], width=reproject_raster.shape[0], transform=reproject_affine)
         test = 1
 
     return clipped, affine, raster_crs
