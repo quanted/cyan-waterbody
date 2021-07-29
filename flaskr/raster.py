@@ -93,7 +93,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
 
     if not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
         boundary = boundary.to_crs(crs=raster.crs)
-        raster_crs = raster.crs
+        # raster_crs = raster.crs
 
     coords = [boundary.geometry]
     # print(f"Band Count: {raster.count}")
@@ -115,6 +115,8 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         reproject_raster, reproject_affine = warp.reproject(clipped, reproject_raster, src_transform=affine, src_crs=raster.crs, dst_crs=crs, resampling=Resampling.nearest)
         clipped = reproject_raster
         affine = reproject_affine
+        bounds = rasterio.transform.array_bounds(height=reproject_raster.shape[0], width=reproject_raster.shape[1], transform=reproject_affine)
+        test = 1
 
     return clipped, affine, raster_crs
 
