@@ -128,7 +128,11 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         )
         clipped = reproject_raster
         affine = reproject_affine
-        bounds = rasterio.transform.array_bounds(height=height, width=width, transform=reproject_affine)
+        bounds = rasterio.transform.array_bounds(
+            height=reproject_raster.shape[0],
+            width=reproject_raster.shape[1],
+            transform=reproject_affine
+        )
         proj0 = Proj(crs)
         proj1 = Proj('epsg:4326')
         bbox = [pyt(proj0, proj1, bounds[2], bounds[1]), pyt(proj0, proj1, bounds[0], bounds[3])]

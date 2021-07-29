@@ -182,7 +182,7 @@ def get_image():
         return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
     data, trans, crs, bounds = raster
 
-    colormap[0] = (0, 0, 0, 0)
+    # colormap[0] = (0, 0, 0, 0)
     colormap[255] = (0, 0, 0, 0)
     converted_data = [[None for i in range(data.shape[1])] for j in range(data.shape[0])]
     for y in range(0, data.shape[1]):
