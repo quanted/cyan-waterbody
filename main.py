@@ -4,7 +4,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import argparse
 import time
 from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds, set_index
-from flaskr.utils import update_geometry_bounds
+from flaskr.utils import update_geometry_bounds, p_update_geometry_bounds
 from flaskr.aggregate import aggregate, retry_failed, p_aggregate
 import logging
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         if args.year is None or args.day is None:
             print("Setting waterbody bounds requires reference tif, determined by year and day parameters.")
             exit()
-        update_geometry_bounds(day=args.day, year=args.year)
+        p_update_geometry_bounds(day=args.day, year=args.year)
         logger.info("Completed updating waterbody geometry bounds")
     elif args.set_tile_bounds:
         if args.year is None or args.day is None:

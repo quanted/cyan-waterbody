@@ -166,7 +166,6 @@ def get_raster_bounds(image_path):
 
 
 def mosaic_rasters(images):
-    #REPROJECT IMAGES then set merge, will know what the crs is then
     src_crs = rasterio.open(images[0]).crs
     mosaic, out_trans = merge(images)
     mosaic, out_trans = warp.reproject(

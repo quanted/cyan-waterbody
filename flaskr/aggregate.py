@@ -161,7 +161,6 @@ def retry_failed(daily: bool = True):
 
 
 def get_waterbody_raster(objectid: int, year: int, day: int):
-    # t0 = time.time()
     features, crs = get_waterbody(objectid=objectid)
     if len(features) == 0:
         return None, None
@@ -182,13 +181,9 @@ def get_waterbody_raster(objectid: int, year: int, day: int):
     f_images = get_tiles_by_objectid(objectid, image_base)
     if len(f_images) > 1:
         mosaic = mosaic_rasters(f_images)
-        test = 1
-        # mosaic = get_dataset_reader(mosaic, out_trans)
     else:
         mosaic = f_images[0]
     colormap = get_colormap(f_images[0])
     data = clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'})
-    # t1 = time.time()
-    # print(f"runtime: {round(t1-t0, 5)} sec")
     return data, colormap
 

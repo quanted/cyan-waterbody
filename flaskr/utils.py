@@ -2,7 +2,13 @@ import copy
 import os
 import sqlite3
 from tqdm import tqdm
+import multiprocessing as mp
 from flaskr.aggregate import get_waterbody_raster
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("cyan-waterbody")
 
 # Default colormap
 colormap = {
@@ -38,7 +44,7 @@ def get_colormap(low: int = 100, med: int = 140, high: int = 183):
 def update_geometry_bounds(day: int, year: int):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    query = "SELECT OBJECTID FROM WaterbodyBounds"
+    query = "SELECT OBJECTID FROM GeometryIndex"
     cur.execute(query)
     objectids = cur.fetchall()
     cur.execute("BEGIN")
@@ -50,3 +56,40 @@ def update_geometry_bounds(day: int, year: int):
         values = (bounds[1][1], bounds[0][1], bounds[0][0], bounds[1][0], objectid,)
         cur.execute(query, values)
     cur.execute("COMMIT")
+
+
+def p_update_geometry_bounds(day: int, year: int):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT OBJECTID FROM GeometryIndex"
+    cur.execute(query)
+    objectids = cur.fetchall()
+
+    cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    pool = mp.Pool(cpus)
+    logger.info("Running async, cores: {}".format(cpus))
+    results = {}
+    results_objects = [pool.apply_async(p_get_geometry_bounds, args=(objectid[0], day, year)) for objectid in objectids]
+    for i in tqdm(range(len(results_objects)), desc="Settings geometry bounds in db...", ascii=False):
+        r = results_objects[i].get()
+        results[r[4]] = [r[0], r[1], r[2], r[3]]
+    cur.execute("BEGIN")
+    i = 0
+    for objectid, bounds in results.items():
+        query = "UPDATE WaterbodyBounds Set x_min=?, x_max=?, y_min=?, y_max=? WHERE OBJECTID=?"
+        values = (bounds[0], bounds[1], bounds[2], bounds[3], objectid,)
+        cur.execute(query, values)
+        if i % 400 == 0:
+            cur.execute("COMMIT")
+            cur.execute("BEGIN")
+        i += 1
+    cur.execute("COMMIT")
+
+
+def p_get_geometry_bounds(objectid, day, year):
+    data, cm = get_waterbody_raster(objectid=objectid, day=day, year=year)
+    raster, trans, crs, bounds = data
+    values = (bounds[1][1], bounds[0][1], bounds[0][0], bounds[1][0], objectid,)
+    return values
+
+
