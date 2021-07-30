@@ -352,3 +352,4 @@ def get_object_index(objectid: int = None, gnis: str = None):
     cur.execute(query, values)
     index = cur.fetchall()[0]
     return index
+

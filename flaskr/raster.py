@@ -2,11 +2,13 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
-from rasterio import mask, warp, crs
+from rasterio import mask, warp, crs, MemoryFile
 from rasterio.merge import merge
 from rasterio.enums import Resampling
+from rasterio.profiles import DefaultGTiffProfile
 from pyproj import Proj
 from pyproj import transform as pyt
+import types
 import copy
 import rasterio
 import geopandas as gpd
@@ -15,6 +17,7 @@ import datetime
 
 
 IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
+DST_CRS = 'EPSG:4326'
 
 
 def get_images(year: int, day: int, daily: bool=True):
@@ -85,7 +88,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
                 reference system of the raster.
 
     """
-
+    crs_0 = None
     if isinstance(raster, Path):
         raster = str(raster)
     if isinstance(raster, str):
@@ -93,16 +96,30 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
     if isinstance(boundary, dict):
         boundary = gpd.GeoDataFrame(boundary).set_geometry('geometry')
 
-    if not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
+    if isinstance(raster, types.GeneratorType):
+        crs_0 = DST_CRS
+        boundary = boundary.to_crs(crs=DST_CRS)
+    elif not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
+        crs_0 = raster.crs
         boundary = boundary.to_crs(crs=raster.crs)
-        # raster_crs = raster.crs
 
-    coords = [boundary.geometry]
-    # print(f"Band Count: {raster.count}")
+    height, width = None, None
+    bounds = None
 
     # mask/clip the raster using rasterio.mask
+    clipped, affine = None, None
     try:
-        clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True, )
+        if isinstance(raster, types.GeneratorType):
+            for r in raster:
+                bounds = r.bounds
+                height = r.height
+                width = r.width
+                clipped, affine = mask.mask(dataset=r, shapes=boundary, crop=True, )
+        else:
+            bounds = raster.bounds
+            height = raster.height
+            width = raster.width
+            clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True, )
     except Exception as e:
         if verbose:
             print("ERROR: {}".format(e))
@@ -116,12 +133,12 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         crs = rasterio.crs.CRS.from_dict(raster_crs)
         reproject_raster = copy.copy(clipped)
         transform, width, height = warp.calculate_default_transform(
-            raster.crs, crs, raster.width, raster.height, *raster.bounds)
+            crs_0, crs, width, height, *bounds)
         reproject_raster, reproject_affine = warp.reproject(
             clipped,
             reproject_raster,
             src_transform=affine,
-            src_crs=raster.crs,
+            src_crs=crs_0,
             dst_tranform=transform,
             dst_crs=crs,
             resampling=Resampling.nearest
@@ -149,8 +166,18 @@ def get_raster_bounds(image_path):
 
 
 def mosaic_rasters(images):
+    #REPROJECT IMAGES then set merge, will know what the crs is then
+    src_crs = rasterio.open(images[0]).crs
     mosaic, out_trans = merge(images)
-    return mosaic, out_trans
+    mosaic, out_trans = warp.reproject(
+        source=mosaic,
+        src_crs=src_crs,
+        src_transform=out_trans,
+        dst_crs=DST_CRS,
+        resampling=Resampling.nearest
+    )
+    mosaic_reader_gen = get_dataset_reader(mosaic, out_trans, crs=DST_CRS)
+    return mosaic_reader_gen
 
 
 def get_colormap(image):
@@ -158,16 +185,15 @@ def get_colormap(image):
     return raster.colormap(1)
 
 
-# def to_geotiff(data, trans, crs):
-#     geotiff = None
-#     height = data.shape[0]
-#     width = data.shape[1]
-#     profile = rasterio.profiles.DefaultGTiffProfile(count=1)
-#     profile.update(transform=trans, driver='GTiff', height=height, width=width, crs=crs)
-#     data = data.reshape(1, height, width)
-#     with MemoryFile() as memfile:
-#         with memfile.open(**profile) as dataset:
-#             dataset.write(data)
-#         memfile.seek(0)
-#         geotiff = memfile.getbuffer()
-#     return geotiff
+def get_dataset_reader(data, transform, crs):
+    profile = DefaultGTiffProfile(count=1)
+    profile.update(transform=transform, height=data.shape[1], width=data.shape[2], crs=crs)
+    dataset_reader = None
+    with MemoryFile() as memfile:
+        with memfile.open(**profile) as dataset:
+            dataset.write(data)
+            del data
+        with memfile.open() as dataset:
+            # dataset_reader = dataset
+            yield dataset
+    # return dataset_reader

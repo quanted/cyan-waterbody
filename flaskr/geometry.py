@@ -52,7 +52,7 @@ def get_waterbody(objectid: int = None, objectids: list = None, tojson: bool = F
                         continue
                 else:
                     features.append(f)
-        print(f"ObjectID: {objectid}, index: {i-1}")
+        # print(f"ObjectID: {objectid}, index: {i-1}")
         return features, crs
 
 
@@ -82,4 +82,3 @@ def get_waterbody_properties(objectid: int):
                 metadata = f["properties"]
                 break
     return metadata
-

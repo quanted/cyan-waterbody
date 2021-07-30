@@ -1,6 +1,6 @@
 import numpy as np
 from pathlib import PurePath
-from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap
+from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_dataset_reader
 from flaskr.geometry import get_waterbody
 from flaskr.db import get_tiles_by_objectid, get_conn, save_data
 import geopandas as gpd
@@ -161,7 +161,7 @@ def retry_failed(daily: bool = True):
 
 
 def get_waterbody_raster(objectid: int, year: int, day: int):
-    t0 = time.time()
+    # t0 = time.time()
     features, crs = get_waterbody(objectid=objectid)
     if len(features) == 0:
         return None, None
@@ -181,12 +181,14 @@ def get_waterbody_raster(objectid: int, year: int, day: int):
         poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
     f_images = get_tiles_by_objectid(objectid, image_base)
     if len(f_images) > 1:
-        mosaic, out_trans = mosaic_rasters(f_images)
+        mosaic = mosaic_rasters(f_images)
+        test = 1
+        # mosaic = get_dataset_reader(mosaic, out_trans)
     else:
         mosaic = f_images[0]
     colormap = get_colormap(f_images[0])
     data = clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'})
-    t1 = time.time()
-    print(f"runtime: {round(t1-t0, 5)} sec")
+    # t1 = time.time()
+    # print(f"runtime: {round(t1-t0, 5)} sec")
     return data, colormap
 
