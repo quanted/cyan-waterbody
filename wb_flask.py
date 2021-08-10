@@ -5,7 +5,7 @@ import numpy as np
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, make_response
-from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody
+from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.utils import get_colormap
@@ -258,6 +258,29 @@ def aggregate_retry():
     th = threading.Thread(target=async_retry)
     th.start()
     return "Initiated retry for dialy and weekly aggregations...", 200
+
+
+@app.route('/waterbody/aggregate/status/')
+def aggregate_status():
+    args = request.args
+    year = None
+    day = None
+    daily = True
+    if "year" in args:
+        year = int(args["year"])
+    if "day" in args:
+        day = int(args["day"])
+    if "daily" in args:
+        daily = (args["daily"] == "True")
+    error = []
+    if year is None:
+        error.append("Missing required year parameter 'year'")
+    if day is None:
+        error.append("Missing required day parameter 'day'")
+    if len(error) > 0:
+        return ", ".join(error), 200
+    results = check_status(day=day, year=year, daily=daily)
+    return results
 
 
 if __name__ == "__main__":
