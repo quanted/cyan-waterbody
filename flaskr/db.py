@@ -353,3 +353,36 @@ def get_object_index(objectid: int = None, gnis: str = None):
     index = cur.fetchall()[0]
     return index
 
+
+def check_status(day: int, year: int, daily: bool = True):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    if daily:
+        query = "SELECT * FROM DailyStatus WHERE year=? AND day=?"
+    else:
+        query = "SELECT * FROM WeeklyStatus WHERE year=? AND day=?"
+    values = (year, day,)
+    cur.execute(query, values)
+    processed = 0
+    total = 0
+    fails = []
+    for r in cur:
+        status = r[3]
+        if status == "FAILED":
+            fails.append(r[2])
+        else:
+            processed += 1
+        total += 1
+    completed = round(100 * processed/total, 2) if total > 0 else 0
+    status = "COMPLETED" if processed == total and total > 0 else "INCOMPLETED" if 100 > completed > 0 else "UNKNOWN"
+    status = "FAILED" if len(fails) == total and total > 0 else status
+    results = {
+        "day": day,
+        "year": year,
+        "daily": daily,
+        "total": total,
+        "completed": f"{completed}%",
+        "failed": fails,
+        "status": status
+    }
+    return results
