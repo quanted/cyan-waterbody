@@ -357,6 +357,9 @@ def get_object_index(objectid: int = None, gnis: str = None):
 def check_status(day: int, year: int, daily: bool = True):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
+    n_query = "SELECT COUNT(ObjectID) FROM WaterbodyBounds"
+    cur.execute(n_query)
+    n = cur.fetchall()[0]
     if daily:
         query = "SELECT * FROM DailyStatus WHERE year=? AND day=?"
     else:
@@ -374,7 +377,7 @@ def check_status(day: int, year: int, daily: bool = True):
             processed += 1
         total += 1
     completed = round(100 * processed/total, 2) if total > 0 else 0
-    status = "COMPLETED" if processed == total and total > 0 else "INCOMPLETED" if 100 > completed > 0 else "UNKNOWN"
+    status = "COMPLETED" if processed == total and total == n else "INCOMPLETED" if 100 > completed > 0 else "UNKNOWN"
     status = "FAILED" if len(fails) == total and total > 0 else status
     results = {
         "day": day,
