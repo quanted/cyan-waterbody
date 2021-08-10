@@ -403,3 +403,10 @@ def check_overall_status(start_day: int, start_year: int, end_day: int, end_year
             results[f"{year} {day}"] = day_results
     return results
 
+
+def check_images(year: int, day: int, daily: bool=True):
+    images = get_images(year=year, day=day, daily=daily)
+    if len(images) > 0:
+        return True
+    else:
+        return False

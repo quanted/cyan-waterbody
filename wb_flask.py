@@ -5,7 +5,7 @@ import numpy as np
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, make_response
-from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status
+from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, check_images
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.utils import get_colormap
@@ -248,9 +248,13 @@ def aggregate():
         error.append("Missing required day parameter 'day'")
     if len(error) > 0:
         return ", ".join(error), 200
-    th = threading.Thread(target=async_aggregate, args=(year, day, daily))
-    th.start()
-    return "Waterbody aggregation initiated for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"), 200
+    if check_images(year=year, day=day, daily=daily):
+        th = threading.Thread(target=async_aggregate, args=(year, day, daily))
+        th.start()
+        result = "Waterbody aggregation initiated for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"), 200
+    else:
+        result = "Unable to execute waterbody aggregation for year: {}, day: {}, {}, no images found".format(year, day, "daily" if daily else "weekly"), 200
+    return result
 
 
 @app.route('/waterbody/aggregate/retry/')
