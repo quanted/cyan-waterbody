@@ -5,7 +5,7 @@ import numpy as np
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, make_response
-from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status
+from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.utils import get_colormap
@@ -280,6 +280,39 @@ def aggregate_status():
     if len(error) > 0:
         return ", ".join(error), 200
     results = check_status(day=day, year=year, daily=daily)
+    return results
+
+
+@app.route('/waterbody/aggregate/overall_status/')
+def aggregate_overall_status():
+    args = request.args
+    s_year = None
+    s_day = None
+    e_year = None
+    e_day = None
+    daily = True
+    if "start_year" in args:
+        s_year = int(args["start_year"])
+    if "start_day" in args:
+        s_day = int(args["start_day"])
+    if "end_year" in args:
+        e_year = int(args["end_year"])
+    if "end_day" in args:
+        e_day = int(args["end_day"])
+    if "daily" in args:
+        daily = (args["daily"] == "True")
+    error = []
+    if s_year is None:
+        error.append("Missing required year parameter 'start_year'")
+    if s_day is None:
+        error.append("Missing required day parameter 'start_day'")
+    if e_year is None:
+        error.append("Missing required year parameter 'end_year'")
+    if e_day is None:
+        error.append("Missing required day parameter 'end_day'")
+    if len(error) > 0:
+        return ", ".join(error), 200
+    results = check_overall_status(start_day=s_day, start_year=s_year, end_day=e_day, end_year=e_year, daily=daily)
     return results
 
 
