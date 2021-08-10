@@ -357,6 +357,9 @@ def get_object_index(objectid: int = None, gnis: str = None):
 def check_status(day: int, year: int, daily: bool = True):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
+    n_query = "SELECT COUNT(ObjectID) FROM WaterbodyBounds"
+    cur.execute(n_query)
+    n = cur.fetchall()[0]
     if daily:
         query = "SELECT * FROM DailyStatus WHERE year=? AND day=?"
     else:
@@ -374,7 +377,7 @@ def check_status(day: int, year: int, daily: bool = True):
             processed += 1
         total += 1
     completed = round(100 * processed/total, 2) if total > 0 else 0
-    status = "COMPLETED" if processed == total and total > 0 else "INCOMPLETED" if 100 > completed > 0 else "UNKNOWN"
+    status = "COMPLETED" if processed == total and total == n else "INCOMPLETED" if 100 > completed > 0 else "UNKNOWN"
     status = "FAILED" if len(fails) == total and total > 0 else status
     results = {
         "day": day,
@@ -386,3 +389,27 @@ def check_status(day: int, year: int, daily: bool = True):
         "status": status
     }
     return results
+
+
+def check_overall_status(start_day: int, start_year: int, end_day: int, end_year: int, daily: bool = True):
+    results = {}
+    for year in range(start_year, end_year + 1):
+        day0 = 1
+        day1 = 365
+        leap = 1 if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0) else 0
+        if year == start_year:
+            day0 = start_day
+        if year == end_year:
+            day1 = end_day
+        for day in range(day0, day1 + 1 + leap):
+            day_results = check_status(day=day, year=year, daily=daily)
+            results[f"{year} {day}"] = day_results
+    return results
+
+
+def check_images(year: int, day: int, daily: bool=True):
+    images = get_images(year=year, day=day, daily=daily)
+    if len(images) > 0:
+        return True
+    else:
+        return False
