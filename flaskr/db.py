@@ -3,7 +3,7 @@ import sqlite3
 import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point, Polygon, MultiPolygon, shape
-from flaskr.geometry import get_waterbody
+from flaskr.geometry import get_waterbody, get_waterbody_count
 from flaskr.raster import get_images, clip_raster, get_images_by_tile, get_raster_bounds
 import datetime
 from tqdm import tqdm
@@ -357,9 +357,9 @@ def get_object_index(objectid: int = None, gnis: str = None):
 def check_status(day: int, year: int, daily: bool = True):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    n_query = "SELECT COUNT(ObjectID) FROM WaterbodyBounds"
-    cur.execute(n_query)
-    n = cur.fetchall()[0]
+    # n_query = "SELECT COUNT(ObjectID) FROM WaterbodyBounds"
+    # cur.execute(n_query)
+    n = get_waterbody_count()
     if daily:
         query = "SELECT * FROM DailyStatus WHERE year=? AND day=?"
     else:
