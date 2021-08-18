@@ -5,6 +5,7 @@ volumes:
 
 services:
   cyan-wb:
+    restart: unless-stopped
     container_name: cyan-wb
     build: .
     ports:
