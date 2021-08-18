@@ -60,13 +60,13 @@ def aggregate(year: int, day: int, daily: bool = True, objectid: str = None, off
             poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
         f_images = get_tiles_by_objectid(objectid, image_base)
         if len(f_images) == 0:
-            f_results[objectid] = [np.zeros(255), "FAILED", "No images found for provided OBJECTID"]
+            f_results[objectid] = [np.zeros(256), "FAILED", "No images found for provided OBJECTID"]
             continue
-        results = np.zeros(255)
+        results = np.zeros(256)
         for i in f_images:
             data = clip_raster(i, poly, boundary_crs=crs)
             if data:
-                results = np.add(results, np.histogram(data[0], bins=255)[0])
+                results = np.add(results, np.histogram(data[0], bins=256)[0])
         f_results[objectid] = [results, "PROCESSED", ""]
     return f_results, offset, completed
 

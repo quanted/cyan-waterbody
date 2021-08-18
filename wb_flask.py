@@ -320,6 +320,59 @@ def aggregate_overall_status():
     return results
 
 
+@app.route('/waterbody/report/')
+def get_report():
+    args = request.args
+    region = None
+    county = None
+    tribe = None
+    state = None
+    conus = False
+    objectids = None
+    year = None
+    day = None
+    missing = []
+    if "region" in args:
+        region = list(args["region"].split(","))
+    if "conus" in args:
+        conus = True
+    if "county" in args:
+        county = list(args["county"].split(","))
+    if "tribe" in args:
+        tribe = list(args["tribe"].split(","))
+    if "state" in args:
+        state = list(args["state"].split(","))
+    if "objectids" in args:
+        objectids = list(args["objectids"].split(","))
+    if not any([region, conus, county, tribe, state, objectids]):
+        missing.append("Missing required spatial area of interest. Options include: region, county, tribe, state, conus or objectids")
+    if "year" in args:
+        year = int(args["year"])
+    else:
+        missing.append("Missing required year parameter 'year'")
+    if "day" in args:
+        day = int(args["day"])
+    else:
+        missing.append("Missing required day parameter 'day'")
+    colors = {}
+    use_custom = False
+    if 'low' in args:
+        use_custom = True
+        colors['low'] = int(args['low'])
+    if 'med' in args:
+        use_custom = True
+        colors['med'] = int(args['med'])
+    if 'high' in args:
+        use_custom = True
+        colors['high'] = int(args['high'])
+    if 'high' not in args or 'med' not in args or 'low' not in args:
+        missing.append("Missing bin categories for data. Requires high, med and low.")
+    if len(missing) > 0:
+        return ", ".join(missing), 200
+
+
+
+
 if __name__ == "__main__":
     logging.info("Starting up CyAN waterbody flask app")
     app.run(debug=True, host='0.0.0.0', port=8080)
