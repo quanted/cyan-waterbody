@@ -15,7 +15,7 @@ logger = logging.getLogger("cyan-waterbody")
 
 IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
 DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data.sqlite")
-N_VALUES = 255
+N_VALUES = 256
 
 
 def get_conn():
@@ -184,7 +184,7 @@ def save_data(year, day, data, daily: bool = True):
         if status == "FAILED":
             continue
         elif status == "PROCESSED":
-            for i in range(1, d.size - 1):
+            for i in range(0, d.size):
                 if d[i] > 0:
                     if daily:
                         query = "INSERT OR REPLACE INTO DailyData(year, day, OBJECTID, value, count) VALUES(?,?,?,?,?)"
