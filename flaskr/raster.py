@@ -2,12 +2,13 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
-from rasterio import mask, warp, crs, MemoryFile
+from rasterio import mask, warp, crs, MemoryFile, features
 from rasterio.merge import merge
 from rasterio.enums import Resampling
 from rasterio.profiles import DefaultGTiffProfile
 from pyproj import Proj
 from pyproj import transform as pyt
+import numpy as np
 import types
 import copy
 import rasterio
@@ -60,7 +61,7 @@ def get_images_by_tile(tile: list, n_limit: int = 90):
     return image_files
 
 
-def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbose: bool = False, raster_crs: dict = None):
+def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbose: bool = False, raster_crs: dict = None, histogram: bool = True):
     """Clip the raster to the given boundary.
 
     Parameters
@@ -114,12 +115,16 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
                 bounds = r.bounds
                 height = r.height
                 width = r.width
-                clipped, affine = mask.mask(dataset=r, shapes=boundary, crop=True, )
+                clipped, affine = mask.mask(dataset=r, shapes=boundary, crop=True,)
+                if histogram:
+                    clipped = rasterize_boundary(clipped, boundary=boundary, affine=affine, crs=r.crs)
         else:
             bounds = raster.bounds
             height = raster.height
             width = raster.width
-            clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True, )
+            clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True,)
+            if histogram:
+                clipped = rasterize_boundary(clipped, boundary=boundary, affine=affine, crs=raster.crs)
     except Exception as e:
         if verbose:
             print("ERROR: {}".format(e))
@@ -154,7 +159,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         proj1 = Proj('epsg:4326')
         bbox = [pyt(proj0, proj1, bounds[2], bounds[1]), pyt(proj0, proj1, bounds[0], bounds[3])]
 
-    return clipped, affine, raster_crs, bbox
+    return clipped, affine, raster_crs, bbox, boundary
 
 
 def get_raster_bounds(image_path):
@@ -177,6 +182,15 @@ def mosaic_rasters(images):
     )
     mosaic_reader_gen = get_dataset_reader(mosaic, out_trans, crs=DST_CRS)
     return mosaic_reader_gen
+
+
+def rasterize_boundary(image, boundary, affine, crs, value: int=256):
+    boundary = boundary.to_crs(crs)
+    image = image.astype(np.int16)
+    rasterized = features.rasterize(boundary, fill=value, all_touched=True, out_shape=image[0].shape, transform=affine)
+    result = np.where(rasterized < value, image[0], value)
+    combined = np.reshape(result, (1, result.shape[0], result.shape[1]))
+    return combined
 
 
 def get_colormap(image):

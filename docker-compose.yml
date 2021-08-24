@@ -15,8 +15,9 @@ services:
 #    entrypoint:
 #      - echo
 #      - $CONDA_DEFAULT_ENV
-    deploy:
-      resources:
-        limits:
-          cpus: 2
-          memory: 2Gb
+#    deploy:
+#      resources:
+#        limits:
+#          cpus: 2
+#          memory: 2Gb
+

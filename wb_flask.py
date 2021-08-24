@@ -180,7 +180,7 @@ def get_image():
     raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day)
     if raster is None:
         return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
-    data, trans, crs, bounds = raster
+    data, trans, crs, bounds, geom = raster
 
     colormap[0] = (0, 0, 0, 0)
     colormap[255] = (0, 0, 0, 0)
