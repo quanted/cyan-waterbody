@@ -167,6 +167,16 @@ def get_waterbody_bypoint(lat: float, lng: float):
     return objectid, gnis_name
 
 
+def get_waterbody_bounds(objectid: str):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT * FROM WaterbodyBounds WHERE OBJECTID=?"
+    values = (objectid,)
+    cur.execute(query, values)
+    bounds = cur.fetchone()
+    return bounds
+
+
 def save_data(year, day, data, daily: bool = True):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()

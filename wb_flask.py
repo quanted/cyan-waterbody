@@ -5,10 +5,11 @@ import numpy as np
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, make_response
-from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, check_images
+from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, check_images, get_waterbody_bounds
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.utils import get_colormap
+from flask_cors import CORS
 from main import async_aggregate, async_retry
 from PIL import Image, ImageCms
 from io import BytesIO
@@ -24,6 +25,8 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("cyan-waterbody")
 logger.info("CyAN Waterbody Flask App")
+
+cors = CORS(app, origins=["http://localhost:4200"])
 
 
 @app.route('/')
@@ -122,6 +125,14 @@ def get_properties():
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
     data = get_waterbody_properties(objectid=objectid)
+
+    bounds = get_waterbody_bounds(objectid)
+
+    data["x_min"] = bounds[1]
+    data["x_max"] = bounds[2]
+    data["y_min"] = bounds[3]
+    data["y_max"] = bounds[4]
+
     result = {"objectid": objectid, "properties": data}
     return result, 200
 
@@ -205,6 +216,9 @@ def get_image():
             mimetype='image/png'
         )
     )
+
+    response.headers.add("Access-Control-Allow-Headers", "BBOX")
+    response.headers.add("Access-Control-Expose-Headers", "BBOX")
     response.headers['BBOX'] = json.dumps(bounds)
     return response
 
