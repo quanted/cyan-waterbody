@@ -2,21 +2,14 @@ services:
   cyan-wb:
     build: .
     ports:
-      - "8080:8080"
+      - "8085:8080"
     volumes:
-      - /d/data/cyan_rare/mounts/images:/mnts/images
-      - /d/data/cyan_rare/mounts/database:/mnts/database
-      - /d/data/cyan_rare/mounts/geometry:/mnts/geometry
+      - ./cyan_rare/mounts/images:/mnts/images
+      - ./cyan_rare/mounts/database:/mnts/database
+      - ./cyan_rare/mounts/geometry:/mnts/geometry
+      - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
       - WATERBODY_DB=/mnts/database
       - WATERBODY_DBF=/mnts/geometry
       - FLASK_APP=wb_flask.py
-#    entrypoint:
-#      - echo
-#      - $CONDA_DEFAULT_ENV
-    deploy:
-      resources:
-        limits:
-          cpus: 2
-          memory: 2Gb
