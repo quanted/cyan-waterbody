@@ -1,6 +1,6 @@
 import numpy as np
 from pathlib import PurePath
-from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_dataset_reader
+from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_dataset_reader, rasterize_boundary
 from flaskr.geometry import get_waterbody
 from flaskr.db import get_tiles_by_objectid, get_conn, save_data
 import geopandas as gpd
@@ -8,6 +8,9 @@ from shapely.geometry import Polygon, MultiPolygon
 import multiprocessing as mp
 import logging
 import time
+import pandas as pd
+import copy
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
@@ -47,6 +50,7 @@ def aggregate(year: int, day: int, daily: bool = True, objectid: str = None, off
     f_results = {}
     image_base = PurePath(images[0]).parts[-1].split(".tif")
     image_base = "_".join(image_base[0].split("_")[:-2])
+    df_data = []
     for i in tqdm(range(len(features)), desc="Aggregating waterbodies..."):
         f = features[i]
         objectid = f["properties"]["OBJECTID"]
@@ -60,14 +64,19 @@ def aggregate(year: int, day: int, daily: bool = True, objectid: str = None, off
             poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
         f_images = get_tiles_by_objectid(objectid, image_base)
         if len(f_images) == 0:
-            f_results[objectid] = [np.zeros(256), "FAILED", "No images found for provided OBJECTID"]
+            f_results[objectid] = [np.zeros(257), "FAILED", "No images found for provided OBJECTID"]
             continue
-        results = np.zeros(256)
+        results = np.zeros(257)
         for i in f_images:
             data = clip_raster(i, poly, boundary_crs=crs)
             if data:
-                results = np.add(results, np.histogram(data[0], bins=256)[0])
+                results = np.add(results, np.histogram(data[0], bins=257)[0])
         f_results[objectid] = [results, "PROCESSED", ""]
+        # df_data.append(list([objectid, f['properties']['AREASQKM'], np.sum(poly.area) * 10**4, round(np.sum(results) * 0.03, 4)]))
+    # columns = ["objectid", "wb_area", "wb_geo_area", "wb_pixel_area"]
+    # df = pd.DataFrame(df_data, columns=columns)
+    # df.plot(x='wb_area', y=['wb_geo_area', 'wb_pixel_area'])
+    # plt.show()
     return f_results, offset, completed
 
 
@@ -115,7 +124,7 @@ def p_aggregate(year: int, day: int, daily: bool = True, objectid: str = None, o
 
 def p_feature_aggregate(feature, image_base, crs):
     objectid = feature["properties"]["OBJECTID"]
-    results = np.zeros(255)
+    results = np.zeros(257)
     f_images = get_tiles_by_objectid(objectid, image_base)
     if len(f_images) == 0:
         return objectid, results, "FAILED", "No images found for the objectID"
@@ -131,7 +140,7 @@ def p_feature_aggregate(feature, image_base, crs):
     for i in f_images:
         data = clip_raster(i, poly, boundary_crs=crs)
         if data:
-            results = np.add(results, np.histogram(data[0], bins=255)[0])
+            results = np.add(results, np.histogram(data[0], bins=257)[0])
     return objectid, results, "PROCESSED", ""
 
 
@@ -184,6 +193,6 @@ def get_waterbody_raster(objectid: int, year: int, day: int):
     else:
         mosaic = f_images[0]
     colormap = get_colormap(f_images[0])
-    data = clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'})
+    data = list(clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'}, histogram=False))
     return data, colormap
 

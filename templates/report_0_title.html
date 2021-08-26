@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{TITLE}}</title>
+    <link rel="stylesheet" type="text/css" href="{{STATIC_ROOT}}cyan_report.css">
+</head>
+<body>
+<div id="footer_content"> <pdf:pagenumber/> of <pdf:pagecount/> </div>
+<pdf:nexttemplate name="title" />
+<div class="title-page page">
+    <div class="epa-logo-holder">
+        <div class="epa-logo">
+            <img src="{{STATIC_ROOT}}epa_logo_vert_white.png" class="epa-logo-png" alt="EPA">
+        </div>
+    </div>
+    <div class="cyan-logo-holder">
+        <div class="cyan-logo">
+            <img src="{{STATIC_ROOT}}cyan_primary_gi.png" class="cyan-logo-png" alt="CyAN">
+        </div>
+    </div>
+    <div class="title-block">
+        <div class="report-title">{{TITLE}}</div>
+    </div>
+    <div class="location-title-block">
+        <div class="separator">for</div>
+        <div class="location-title">{{LOCATION_TITLE}}</div>
+    </div>
+    <div class="date-block">
+        <div class="separator">on</div>
+        <div class="report-date">{{DATE}}</div>
+    </div>
+    <div class="report-version">{{VERSION}}</div>
+</div>
+<pdf:nextpage />
+<pdf:nexttemplate name="disclaimer" />
+<div class="disclaimer">
+    <div class="disclaimer-title">EPA Disclaimers</div>
+    {% for disclaimer_line in DISCLAIMER %}
+        <p>{{disclaimer_line}}</p>
+    {% endfor %}
+</div>
+<pdf:nextpage />

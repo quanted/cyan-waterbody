@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyan-waterbody")
 
 IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
-DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data.sqlite")
+DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data_0.2.sqlite")
 N_VALUES = 256
 
 
@@ -194,7 +194,7 @@ def save_data(year, day, data, daily: bool = True):
         if status == "FAILED":
             continue
         elif status == "PROCESSED":
-            for i in range(0, d.size):
+            for i in range(0, d.size-1):
                 if d[i] > 0:
                     if daily:
                         query = "INSERT OR REPLACE INTO DailyData(year, day, OBJECTID, value, count) VALUES(?,?,?,?,?)"
@@ -423,3 +423,74 @@ def check_images(year: int, day: int, daily: bool=True):
         return True
     else:
         return False
+
+
+def get_conus_objectids():
+    results = {}
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT STUSPS FROM WaterBodyState"
+    cur.execute(query)
+    states = sorted(cur.fetchall())
+    for state in states:
+        query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE STUSPS=?"
+        value = (state,)
+        cur.execute(query, value)
+        results[state] = list(cur.fetchall())
+    return results
+
+
+def get_eparegion_objectids(regions: list):
+    results = {}
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    regions = sorted(regions)
+    for region in regions:
+        query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE EPAREGION=?"
+        value = (region,)
+        cur.execute(query, value)
+        results[region] = list(cur.fetchall())
+    return results
+
+
+def get_state_objectids(states: list):
+    results = {}
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    states = sorted(states)
+    for state in states:
+        query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE STUSPS=?"
+        value = (state,)
+        cur.execute(query, value)
+        results[state] = list(cur.fetchall())
+    return results
+
+
+def get_tribe_objectids(tribes: list):
+    results = {}
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    tribes = sorted(tribes)
+    for tribe in tribes:
+        query = "SELECT DISTINCT OBJECTID FROM WaterBodyTribe WHERE NAME=?"
+        value = (tribe,)
+        cur.execute(query, value)
+        results[tribe] = list(cur.fetchall())
+    return results
+
+
+def get_county_objectids(counties: list):
+    results = {}
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    for county in counties:
+        query = "SELECT DISTINCT NAMELSAD FROM WaterBodyCounty WHERE GEOID=?"
+        value = (county,)
+        cur.execute(query, value)
+        county_name = cur.fetchone()[0]
+        query = "SELECT DISTINCT OBJECTID FROM WaterBodyCounty WHERE GEOID=?"
+        value = (county,)
+        cur.execute(query, value)
+        results[county_name] = list(cur.fetchall())
+    results = sorted(results)
+    return results

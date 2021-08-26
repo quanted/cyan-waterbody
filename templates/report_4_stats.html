@@ -1,0 +1,16 @@
+<div class="waterbody-block">
+    <div class="waterbody-title">
+        {{ WATER_BODY_NAME }}
+    </div>
+    <div class="waterbody-stats-block">
+        {% for stat_k, stat_v in WATER_BODY_STATS.items() %}
+            <div class="waterbody-stat-name">{{stat_k}}</div>
+            <div class="waterbody-stat-value">{{stat_v}}</div>
+        {% endfor %}
+    </div>
+    <div class="waterbody-lastest-raster">
+        <div class="waterbody-raster-title">Waterbody Satellite data for {{REPORT_DATE}}</div>
+        <img src="{{REPORT_ROOT}}{{WATERBODY_RASTER}}" class="waterbody-raster-png" alt="Waterbody satellite imagery for report date.">
+    </div>
+    <div class="waterbody-stats-divider"></div>
+</div>
