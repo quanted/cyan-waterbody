@@ -16,7 +16,7 @@ from io import BytesIO
 import threading
 import logging
 import json
-
+import base64
 import rasterio
 from rasterio.io import MemoryFile
 
@@ -189,6 +189,9 @@ def get_image():
     if 'use_bin' in args:
         use_custom = True
     raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day)
+
+    logging.warning("RASTER: {}".format(raster))
+
     if raster is None:
         return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
     data, trans, crs, bounds, geom = raster
@@ -208,19 +211,23 @@ def get_image():
 
     # png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
 
-    response = make_response(
-        send_file(
-            png_file,
-            as_attachment=True,
-            attachment_filename=f"{objectid}_{year}-{day}.png",
-            mimetype='image/png'
-        )
-    )
+    image_str = base64.b64encode(png_file.read()).decode("utf-8")
 
-    response.headers.add("Access-Control-Allow-Headers", "BBOX")
-    response.headers.add("Access-Control-Expose-Headers", "BBOX")
-    response.headers['BBOX'] = json.dumps(bounds)
-    return response
+    return {"image": image_str, "bounds": bounds}, 200
+
+    # RETURN IMAGE AND BBOX IN HEADER:
+    # response = make_response(
+    #     send_file(
+    #         png_file,
+    #         as_attachment=True,
+    #         attachment_filename=f"{objectid}_{year}-{day}.png",
+    #         mimetype='image/png'
+    #     )
+    # )
+    # response.headers.add("Access-Control-Allow-Headers", "BBOX")
+    # response.headers.add("Access-Control-Expose-Headers", "BBOX")
+    # response.headers['BBOX'] = json.dumps(bounds)
+    # return response
 
     # RETURN GEOTiFF
     # height = data.shape[0]
