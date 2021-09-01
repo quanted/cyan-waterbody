@@ -12,6 +12,7 @@ dependencies:
   - tqdm=4.59.0
   - fiona=1.8.18
   - libspatialindex=1.9.3
+  - flask-cors=3.0.10
   - xhtml2pdf
   - plotly
   - kaleido

@@ -1,4 +1,5 @@
 __pycache__/
-.idea/
-cyan_rare/
 env/
+*.pyc
+cyan_rare/
+.idea/

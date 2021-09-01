@@ -1,5 +1,4 @@
 import warnings
-
 import numpy as np
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -10,6 +9,7 @@ from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, 
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.report import generate_report, get_report_path
+from flask_cors import CORS
 from main import async_aggregate, async_retry
 from PIL import Image, ImageCms
 from io import BytesIO
@@ -17,15 +17,18 @@ import threading
 import logging
 import json
 import uuid
-
+import base64
 import rasterio
 from rasterio.io import MemoryFile
+
 
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("cyan-waterbody")
 logger.info("CyAN Waterbody Flask App")
+
+cors = CORS(app, origins=["http://localhost:4200"])
 
 
 @app.route('/')
@@ -124,6 +127,14 @@ def get_properties():
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
     data = get_waterbody_properties(objectid=objectid)
+
+    bounds = get_waterbody_bounds(objectid)
+
+    data["x_min"] = bounds[1]
+    data["x_max"] = bounds[2]
+    data["y_min"] = bounds[3]
+    data["y_max"] = bounds[4]
+
     result = {"objectid": objectid, "properties": data}
     return result, 200
 
@@ -180,6 +191,7 @@ def get_image():
     if 'use_bin' in args:
         use_custom = True
     raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day)
+
     if raster is None:
         return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
     data, trans, crs, bounds, geom = raster
@@ -199,16 +211,23 @@ def get_image():
 
     # png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
 
-    response = make_response(
-        send_file(
-            png_file,
-            as_attachment=True,
-            attachment_filename=f"{objectid}_{year}-{day}.png",
-            mimetype='image/png'
-        )
-    )
-    response.headers['BBOX'] = json.dumps(bounds)
-    return response
+    image_str = base64.b64encode(png_file.read()).decode("utf-8")
+
+    return {"image": image_str, "bounds": bounds}, 200
+
+    # RETURN IMAGE AND BBOX IN HEADER:
+    # response = make_response(
+    #     send_file(
+    #         png_file,
+    #         as_attachment=True,
+    #         attachment_filename=f"{objectid}_{year}-{day}.png",
+    #         mimetype='image/png'
+    #     )
+    # )
+    # response.headers.add("Access-Control-Allow-Headers", "BBOX")
+    # response.headers.add("Access-Control-Expose-Headers", "BBOX")
+    # response.headers['BBOX'] = json.dumps(bounds)
+    # return response
 
     # RETURN GEOTiFF
     # height = data.shape[0]
