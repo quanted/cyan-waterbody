@@ -14,3 +14,4 @@ dependencies:
   - libspatialindex=1.9.3
   - xhtml2pdf
   - plotly
+  - kaleido

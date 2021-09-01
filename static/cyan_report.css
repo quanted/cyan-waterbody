@@ -23,6 +23,7 @@
 @page body{
     size: a4 portrait;
     margin: 2cm;
+
     @frame header_frame {           /* Static Frame */
         -pdf-frame-content: header_content;
         left: 50pt; width: 512pt; top: 50pt; height: 40pt;
@@ -72,6 +73,12 @@
     text-align: center;
     font-size: 14px;
 }
+.report-version {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 25px;
+}
 .separator {
     text-align: center;
     font-size: 12px;
@@ -85,4 +92,164 @@
     text-align: center;
     vertical-align: center;
     margin-bottom: 15px;
+}
+
+pdftoc {
+    color: #666;
+}
+pdftoc.pdftoclevel0 {
+    font-weight: bold;
+    margin-top: 0.5em;
+}
+pdftoc.pdftoclevel1 {
+    margin-left: 1em;
+}
+pdftoc.pdftoclevel2 {
+    margin-left: 2em;
+    font-style: italic;
+}
+.waterbody-header {
+    width: 512px;
+    margin-bottom: 20px;
+    border-top: 1px lightgray solid;
+    padding-top: 10px;
+}
+.waterbody-title-block {
+    text-align: center;
+    background-color: #205493;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+.waterbody-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    padding-top: 10px;
+    vertical-align: center;
+}
+.waterbody-stats-block {
+    /*width: 200px;*/
+    /*border-bottom: 1px lightgray solid;*/
+    /*border-top: 1px lightgray solid;*/
+
+}
+.waterbody-stat-table {
+    /*width: 256px;*/
+    text-align: center;
+    padding-top: 5px;
+    margin-bottom: 10px;
+
+}
+.group-stat-table {
+    /*width: 256px;*/
+    text-align: center;
+    padding-top: 5px;
+    margin-bottom: 10px;
+
+}
+.waterbody-stat-table-row {
+    padding: 1px;
+    padding-top: 2px;
+    width: 600px;
+    border: none;
+}
+.waterbody-stat-name {
+    /*width: 80px;*/
+    background-color: darkgray;
+    font-weight: bold;
+    border: none;
+}
+.waterbody-stat-value {
+    /*width: 120px;*/
+    /*background-color: darkgray;*/
+    border: none;
+}
+.group-stat-table-row {
+    padding: 1px;
+    padding-top: 2px;
+    width: 600px;
+    border: none;
+}
+.group-stat-name {
+    /*width: 80px;*/
+    background-color: darkgray;
+    font-weight: bold;
+    border: none;
+}
+.group-stat-value {
+    font-size: 10px;
+    border: none;
+}
+.group-raster-image1 {
+    width: 512px;
+    margin-top: 5px;
+    margin-left: 225px;
+}
+.group-raster-image2 {
+    width: 512px;
+    margin-left: 225px;
+}
+.waterbody-column-left {
+    /*width: 200px;*/
+    width: 400px;
+}
+.waterbody-stat-image {
+    width: 516px;
+    text-align: center;
+}
+.waterbody-stat-image1 {
+    width: 516px;
+    text-align: center;
+    margin-left: 200px;
+}
+.waterbody-stat-image2 {
+    width: 516px;
+    text-align: center;
+    margin-left: 200px;
+}
+.waterbody-stat-image3 {
+    width: 516px;
+    text-align: center;
+    margin-left: 200px;
+}
+.waterbody-column-right {
+    text-align: center;
+    border-left: 1px lightgray solid;
+    width: 400px;
+}
+.waterbody-lastest-raster {
+    width: 200px;
+    text-align: center;
+}
+.waterbody-raster-title {
+    font-size: 12px;
+    text-align: center;
+    margin-bottom: -10px;
+}
+.stats-table-row {
+    /*width: 512px;*/
+}
+.waterbody-stats-table {
+    /*width: 512px;*/
+}
+.group-plot-table {
+    -pdf-keep-in-frame-mode: shrink;
+    /*border-top: 1px lightgray solid;*/
+    width: 512px;
+}
+.waterbody-plot-table {
+    -pdf-keep-in-frame-mode: shrink;
+    /*border-top: 1px lightgray solid;*/
+    width: 512px;
+}
+.waterbody-pie-plot-png {
+    width: 1000px;
+}
+.table-top-row {
+    /*border-top: 1px lightgray solid;*/
+    width: 512px;
+}
+.waterbody-histogram-plot-png {
+    width: 1000px;
+    /*height: 400px;*/
 }

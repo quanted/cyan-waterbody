@@ -4,17 +4,19 @@ import numpy as np
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from flask import Flask, request, send_file, make_response
-from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, check_images
+from flask import Flask, request, send_file, make_response, send_from_directory
+from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, \
+    check_images, get_all_states, get_all_state_counties, get_all_tribes
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
-from flaskr.utils import get_colormap
+from flaskr.report import generate_report, get_report_path
 from main import async_aggregate, async_retry
 from PIL import Image, ImageCms
 from io import BytesIO
 import threading
 import logging
 import json
+import uuid
 
 import rasterio
 from rasterio.io import MemoryFile
@@ -247,7 +249,7 @@ def aggregate():
     if day is None:
         error.append("Missing required day parameter 'day'")
     if len(error) > 0:
-        return ", ".join(error), 200
+        return "; ".join(error), 200
     if check_images(year=year, day=day, daily=daily):
         th = threading.Thread(target=async_aggregate, args=(year, day, daily))
         th.start()
@@ -282,7 +284,7 @@ def aggregate_status():
     if day is None:
         error.append("Missing required day parameter 'day'")
     if len(error) > 0:
-        return ", ".join(error), 200
+        return "; ".join(error), 200
     results = check_status(day=day, year=year, daily=daily)
     return results
 
@@ -315,7 +317,7 @@ def aggregate_overall_status():
     if e_day is None:
         error.append("Missing required day parameter 'end_day'")
     if len(error) > 0:
-        return ", ".join(error), 200
+        return "; ".join(error), 200
     results = check_overall_status(start_day=s_day, start_year=s_year, end_day=e_day, end_year=e_year, daily=daily)
     return results
 
@@ -323,29 +325,20 @@ def aggregate_overall_status():
 @app.route('/waterbody/report/')
 def get_report():
     args = request.args
-    region = None
     county = None
-    tribe = None
-    state = None
-    conus = False
+    tribes = None
     objectids = None
     year = None
     day = None
     missing = []
-    if "region" in args:
-        region = list(args["region"].split(","))
-    if "conus" in args:
-        conus = True
     if "county" in args:
         county = list(args["county"].split(","))
     if "tribe" in args:
-        tribe = list(args["tribe"].split(","))
-    if "state" in args:
-        state = list(args["state"].split(","))
+        tribes = list(args["tribe"].split(","))
     if "objectids" in args:
         objectids = list(args["objectids"].split(","))
-    if not any([region, conus, county, tribe, state, objectids]):
-        missing.append("Missing required spatial area of interest. Options include: region, county, tribe, state, conus or objectids")
+    if not any([county, tribes, objectids]):
+        missing.append("Missing required spatial area of interest. Options include: county, tribe or objectids")
     if "year" in args:
         year = int(args["year"])
     else:
@@ -365,12 +358,60 @@ def get_report():
     if 'high' in args:
         use_custom = True
         colors['high'] = int(args['high'])
-    if 'high' not in args or 'med' not in args or 'low' not in args:
+    ranges = None
+    if ('high' not in args or 'med' not in args or 'low' not in args) and use_custom:
         missing.append("Missing bin categories for data. Requires high, med and low.")
+    if use_custom:
+        ranges = [[[1, colors['low']], [colors['low'], colors['med']], [colors['med'], colors['high']]]]
     if len(missing) > 0:
-        return ", ".join(missing), 200
+        return "; ".join(missing), 200
+    report_id = uuid.uuid4()
+    th = threading.Thread(target=generate_report, kwargs={'year': year, 'day': day, 'objectids': objectids,
+                                                          'tribes': tribes, 'counties': county, 'ranges': ranges,
+                                                          'report_id': report_id})
+    th.start()
+    return {
+        'year': year, 'day': day, 'objectids': objectids, 'tribes': tribes,
+        'counties': county, 'ranges': ranges, 'report_id': report_id
+           }, 200
 
 
+@app.route('/waterbody/report/download/')
+def download_report():
+    args = request.args
+    report_id = None
+    if 'report_id' in args:
+        report_id = str(args["report_id"])
+    if not report_id:
+        return "Missing required report_id", 200
+    report_path = get_report_path(report_id=report_id)
+    if not report_path:
+        return "Report has not completed or does not exist", 404
+    return send_file(report_path, as_attachment=True)
+
+
+@app.route('/waterbody/report_form/states/')
+def get_report_states():
+    states = get_all_states()
+    return {"states": states}, 200
+
+
+@app.route('/waterbody/report_form/counties/')
+def get_report_counties():
+    args = request.args
+    state = None
+    if "state" in args:
+        state = str(args["state"])
+    if not state:
+        return "Missing required state argument, using STUSPS value."
+    counties = get_all_state_counties(state=state)
+    return {"counties": counties}, 200
+
+
+@app.route('/waterbody/report_form/tribes/')
+def get_report_tribes():
+    tribes = get_all_tribes()
+    return {"tribes": tribes}, 200
 
 
 if __name__ == "__main__":

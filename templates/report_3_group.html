@@ -1,10 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+<div class="waterbody-block">
+    <div class="waterbody-title-block">
+        <h3 class="waterbody-title">{{GROUP_TYPE}}{% if GROUP_NAME %}: {{GROUP_NAME}}{% endif %}{% if STATE %}, {{STATE}}{% endif %}</h3>
+    </div>
+    <div class="group-summary-block">
+        <table class="group-stat-table">
+            {% for stat_k, stat_v in GROUP_PROPERTIES.items() %}
+            {% if loop.index is even %}
+            <tr class="group-stat-table-row">
+                <td class="group-stat-name">{{stat_k}}</td>
+                <td class="group-stat-value">{{stat_v}}</td>
+                {% else %}
+                <td class="group-stat-name">{{stat_k}}</td>
+                <td class="group-stat-value">{{stat_v}}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            </tr>
+        </table>
+    </div>
+    <div class="group-raster-block">
+        <table class="group-plot-table">
+            <tr class="group-raster-image1">
+                <td class="waterbody-stat-image">
+                    <img src="{{GROUP_RASTER}}" class="group-raster-png1" alt="Group waterbody status.">
+                </td>
+            </tr>
+            <tr class="group-raster-image2">
+                <td class="waterbody-stat-image">
+                    <img src="{{GROUP_30}}" class="group-raster-png2" alt="Group waterbody status.">
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<pdf:nextpage/>

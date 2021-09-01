@@ -1,16 +1,58 @@
 <div class="waterbody-block">
-    <div class="waterbody-title">
-        {{ WATER_BODY_NAME }}
+    <div class="waterbody-title-block">
+        <h4 class="waterbody-title">
+            {{ WATER_BODY_NAME }} - {{STATE}}
+        </h4>
     </div>
     <div class="waterbody-stats-block">
-        {% for stat_k, stat_v in WATER_BODY_STATS.items() %}
-            <div class="waterbody-stat-name">{{stat_k}}</div>
-            <div class="waterbody-stat-value">{{stat_v}}</div>
-        {% endfor %}
+        <table class="waterbody-stat-table">
+            {% for stat_k, stat_v in WATER_BODY_STATS.items() %}
+                {% if loop.index is even %}
+                    <tr class="waterbody-stat-table-row">
+                        <td class="waterbody-stat-name">{{stat_k}}</td>
+                        <td class="waterbody-stat-value">{{stat_v}}</td>
+                {% else %}
+                        <td class="waterbody-stat-name">{{stat_k}}</td>
+                        <td class="waterbody-stat-value">{{stat_v}}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+            </tr>
+        </table>
     </div>
-    <div class="waterbody-lastest-raster">
-        <div class="waterbody-raster-title">Waterbody Satellite data for {{REPORT_DATE}}</div>
-        <img src="{{REPORT_ROOT}}{{WATERBODY_RASTER}}" class="waterbody-raster-png" alt="Waterbody satellite imagery for report date.">
-    </div>
-    <div class="waterbody-stats-divider"></div>
+    <div class="waterbody-raster-title">Waterbody satellite imagery summary for {{REPORT_DATE}}</div>
+    <table class="waterbody-header">
+        <tr>
+            <td class="waterbody-column-left">
+                <img src="{{WATERBODY_RASTER}}" class="waterbody-raster-png"
+                     alt="Waterbody satellite imagery for report date.">
+            </td>
+            <td class="waterbody-column-right">
+                <img src="{{CURRENT_PIE}}" class="waterbody-pie-plot-png waterbody-state-image"
+                     alt="Waterbody pie chart">
+            </td>
+        </tr>
+    </table>
+    <table class="waterbody-plot-table">
+        <tr class="waterbody-stat-image1">
+            <td class="waterbody-stat-image">
+                <img src="{{CURRENT_HISTOGRAM}}" class="waterbody-histogram-plot-png waterbody-stat-image"
+                     alt="Waterbody current histogram">
+            </td>
+        </tr>
+    </table>
+    <pdf:nextpage/>
+    <table class="waterbody-plot-table">
+        <tr class="waterbody-stat-image2">
+            <td class="waterbody-stat-image">
+                <img src="{{STACKED30}}" class="waterbody-30day-plot-png waterbody-state-image" alt="30 Day historic data">
+            </td>
+        </tr>
+        <tr class="waterbody-stat-image3">
+            <td class="waterbody-stat-image">
+                <img src="{{HISTORIC_LINE}}" class="waterbody-historic-plot-png waterbody-state-image" alt="Waterbody historic data">
+            </td>
+        </tr>
+    </table>
 </div>
+<pdf:nextpage/>

@@ -7,6 +7,7 @@ import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
 
 WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "waterbodies_4.dbf")
+COUNTY_DBF = os.path.join(os.getenv("COUNTY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_county_500k.dbf")
 
 
 def get_waterbody(objectid: int = None, objectids: list = None, tojson: bool = False):
@@ -89,3 +90,12 @@ def get_waterbody_count():
     with fiona.open(WATERBODY_DBF) as waterbodies:
         n = len(waterbodies)
     return n
+
+
+def get_county_boundary(geoid):
+    with fiona.open(COUNTY_DBF) as counties:
+        crs = counties.crs
+        for c in counties:
+            if geoid == c["properties"]["GEOID"]:
+                return c, crs
+    return None, None

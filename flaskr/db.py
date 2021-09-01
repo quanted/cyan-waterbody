@@ -30,14 +30,15 @@ def get_tiles_by_objectid(objectid: str, image_base: str):
     values = (objectid,)
     cur.execute(query, values)
     tiles = cur.fetchall()
-    cur.close()
+    conn.close()
     images = []
     for i in tiles:
         images.append(os.path.join(IMAGE_DIR, image_base + "_" + i[0] + ".tif"))
     return images
 
 
-def get_waterbody_data(objectid: str, daily: bool = True, start_year: int = None, start_day: int = None, end_year: int = None, end_day: int = None, ranges: list = None):
+def get_waterbody_data(objectid: str, daily: bool = True, start_year: int = None, start_day: int = None,
+                       end_year: int = None, end_day: int = None, ranges: list = None, non_blooms: bool = False):
     """
     Regenerate histogram data from database for a provided waterbody objectid.
     :param objectid: NHD HR waterbody OBJECTID
@@ -77,15 +78,24 @@ def get_waterbody_data(objectid: str, daily: bool = True, start_year: int = None
             histogram = np.zeros(N_VALUES)
             data[day] = histogram
         data[day][r[3]] = r[4]
-    cur.close()
+    conn.close()
     if ranges:
         range_data = {}
+        ranges.append([ranges[-1][1], 254])
+        count_test = {}
         for r in ranges:
             for date in data.keys():
+                count_test[date] = np.sum(data[date][1:254])
                 if date in range_data.keys():
                     range_data[date].append(int(np.sum(data[date][r[0]:r[1]])))
                 else:
                     range_data[date] = [int(np.sum(data[date][r[0]:r[1]]))]
+        if non_blooms:
+            # Add count values for DN=0, DN=254 and DN=255, after the bloom values, so are in indices 4, 5, and 6
+            for date in data.keys():
+                range_data[date].append(int(data[date][0]))
+                range_data[date].append(int(data[date][254]))
+                range_data[date].append(int(data[date][255]))
         data = range_data
     results = {}
     for date, array in data.items():
@@ -164,6 +174,7 @@ def get_waterbody_bypoint(lat: float, lng: float):
             objectid = features["properties"]["OBJECTID"]
             gnis_name = features["properties"]["GNIS_NAME"]
             break
+    conn.close()
     return objectid, gnis_name
 
 
@@ -323,6 +334,7 @@ def set_tile_bounds(year: int, day: int):
         values = (tile_name, bounds[0], bounds[2], bounds[1], bounds[3])
         cur.execute(query, values)
     cur.execute("COMMIT")
+    conn.close()
 
 
 def set_index(objectid_i: list):
@@ -338,6 +350,7 @@ def set_index(objectid_i: list):
         values = (objectid, gnis, index,)
         cur.execute(query, values)
     cur.execute("COMMIT")
+    conn.close()
 
 
 def get_object_index(objectid: int = None, gnis: str = None):
@@ -351,6 +364,7 @@ def get_object_index(objectid: int = None, gnis: str = None):
         values = (gnis,)
     cur.execute(query, values)
     index = cur.fetchall()[0]
+    conn.close()
     return index
 
 
@@ -388,6 +402,7 @@ def check_status(day: int, year: int, daily: bool = True):
         "failed": fails,
         "status": status
     }
+    conn.close()
     return results
 
 
@@ -426,7 +441,10 @@ def get_conus_objectids():
         query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE STUSPS=?"
         value = (state,)
         cur.execute(query, value)
-        results[state] = list(cur.fetchall())
+        results[state] = []
+        for w in cur.fetchall():
+            results[state].append(w[0])
+    conn.close()
     return results
 
 
@@ -439,7 +457,10 @@ def get_eparegion_objectids(regions: list):
         query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE EPAREGION=?"
         value = (region,)
         cur.execute(query, value)
-        results[region] = list(cur.fetchall())
+        results[region] = []
+        for w in cur.fetchall():
+            results[region].append(w[0])
+    conn.close()
     return results
 
 
@@ -452,7 +473,10 @@ def get_state_objectids(states: list):
         query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE STUSPS=?"
         value = (state,)
         cur.execute(query, value)
-        results[state] = list(cur.fetchall())
+        results[state] = []
+        for w in cur.fetchall():
+            results[state].append(w[0])
+    conn.close()
     return results
 
 
@@ -462,10 +486,13 @@ def get_tribe_objectids(tribes: list):
     cur = conn.cursor()
     tribes = sorted(tribes)
     for tribe in tribes:
-        query = "SELECT DISTINCT OBJECTID FROM WaterBodyTribe WHERE NAME=?"
+        query = "SELECT DISTINCT OBJECTID FROM WaterBodyTribe WHERE GEOID=?"
         value = (tribe,)
         cur.execute(query, value)
-        results[tribe] = list(cur.fetchall())
+        results[tribe] = []
+        for w in cur.fetchall():
+            results[tribe].append(w[0])
+    conn.close()
     return results
 
 
@@ -481,6 +508,83 @@ def get_county_objectids(counties: list):
         query = "SELECT DISTINCT OBJECTID FROM WaterBodyCounty WHERE GEOID=?"
         value = (county,)
         cur.execute(query, value)
-        results[county_name] = list(cur.fetchall())
-    results = sorted(results)
+        results[county_name] = []
+        for w in cur.fetchall():
+            results[county_name].append(w[0])
+    conn.close()
     return results
+
+
+def get_group_metrics(objectids: list, year: int, day: int, ranges: dict, p_days: int = 7):
+    results = {}
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    objectid_tuple = tuple(objectids) if len(objectids) > 1 else f"({objectids[0]})"
+
+    for r, indx in ranges.items():
+        current_date0 = datetime.datetime(year=year, month=1, day=1) + datetime.timedelta(days=day - 1)
+        results[r] = {}
+        for i in range(0, p_days):
+            current_date = current_date0 - datetime.timedelta(days=i)
+            i_year = current_date.year
+            i_day = current_date.timetuple().tm_yday
+            date_key = f"{i_year} {i_day}"
+            # the number of waterbodies with any detected cyano  'OBJECTID': {value: count}
+            query = f"SELECT DISTINCT OBJECTID FROM DailyData WHERE count>0 AND value>=? AND value<? AND year=? AND day=? AND OBJECTID IN {objectid_tuple}"
+            values = (indx[0], indx[1], i_year, i_day,)
+            cur.execute(query, values)
+            results[r][date_key] = []
+            for r0 in cur.fetchall():
+                results[r][date_key].append(r0[0])
+    conn.close()
+    return results
+
+
+def get_county_state(county_id: int):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT S.Name FROM WaterBodyState AS S INNER JOIN WaterBodyCounty AS C WHERE S.STUSPS=C.STUSPS AND C.GEOID=?"
+    value = (county_id,)
+    cur.execute(query, value)
+    results = cur.fetchall()
+    conn.close()
+    return results[0][0]
+
+
+def get_all_states():
+    results = []
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT Name, STUSPS FROM WaterBodyState"
+    cur.execute(query)
+    for c in cur.fetchall():
+        results.append(list(c))
+    conn.close()
+    return results
+
+
+def get_all_state_counties(state: str):
+    results = []
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT GEOID, NAMELSAD FROM WaterBodyCounty WHERE STUSPS=?"
+    value = (state,)
+    cur.execute(query, value)
+    for c in cur.fetchall():
+        results.append(list(c))
+    conn.close()
+    return results
+
+
+def get_all_tribes():
+    results = []
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT GEOID, Name FROM WaterBodyTribe"
+    cur.execute(query)
+    for c in cur.fetchall():
+        results.append(list(c))
+    conn.close()
+    return results
+
+
