@@ -17,3 +17,4 @@ services:
       - WATERBODY_DB=/mnts/database
       - WATERBODY_DBF=/mnts/geometry
       - FLASK_APP=wb_flask.py
+      - COUNTY_DBF=/mnts/geometry
