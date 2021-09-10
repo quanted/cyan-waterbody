@@ -8,6 +8,8 @@ from shapely.geometry import Polygon, MultiPolygon
 
 WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "waterbodies_4.dbf")
 COUNTY_DBF = os.path.join(os.getenv("COUNTY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_county_500k.dbf")
+STATE_DBF = os.path.join(os.getenv("STATE_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_state_500k.dbf")
+TRIBE_DBF = os.path.join(os.getenv("TRIBE_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_aiannh_500k.dbf")
 
 
 def get_waterbody(objectid: int = None, objectids: list = None, tojson: bool = False):
@@ -92,10 +94,30 @@ def get_waterbody_count():
     return n
 
 
-def get_county_boundary(geoid):
+def get_county_boundary(geoid, retry: bool = False):
+    geoid_alt = f"0{geoid}"
     with fiona.open(COUNTY_DBF) as counties:
         crs = counties.crs
         for c in counties:
-            if geoid == c["properties"]["GEOID"]:
+            if geoid == c["properties"]["GEOID"] or geoid_alt == c["properties"]["GEOID"]:
+                return c, crs
+    return None, None
+
+
+def get_state_boundary(state):
+    with fiona.open(STATE_DBF) as states:
+        crs = states.crs
+        for c in states:
+            if state == c["properties"]["STUSPS"]:
+                return c, crs
+    return None, None
+
+
+def get_tribe_boundary(tribe):
+    tribe_alt = f"0{tribe}"
+    with fiona.open(TRIBE_DBF) as tribes:
+        crs = tribes.crs
+        for c in tribes:
+            if tribe == c["properties"]["GEOID"] or tribe_alt == c["properties"]["GEOID"]:
                 return c, crs
     return None, None

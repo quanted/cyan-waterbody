@@ -2,12 +2,14 @@ import jinja2
 from datetime import datetime, timedelta, date
 from xhtml2pdf import pisa
 from pathlib import Path
-from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_boundary
+from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_boundary, get_state_boundary, \
+    get_tribe_boundary
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.db import get_conus_objectids, get_eparegion_objectids, get_state_objectids, get_tribe_objectids, \
-    get_county_objectids, get_waterbody_data, get_group_metrics, get_county_state
+    get_county_objectids, get_waterbody_data, get_group_metrics, get_county_state, get_county_geoid, \
+    get_all_state_counties, get_tribe_geoid, get_state_name
 from flaskr.raster import rasterize_boundary
-from flaskr.utils import DEFAULT_RANGE, get_colormap, rgb
+from flaskr.utils import DEFAULT_RANGE, get_colormap, rgb, convert_dn
 import rasterio.plot
 import plotly.graph_objects as go
 import plotly.express as px
@@ -27,6 +29,7 @@ import logging
 
 STATIC_ROOT = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "static")
 DISCLAIMER_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "templates", "disclaimer.txt")
+REFERENCES_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "templates", "references.txt")
 DEBUG = False
 
 VERSION = "Proof of Concept Draft"
@@ -89,25 +92,64 @@ def generate_report(
         "Contiguous United States" if conus else \
             f"EPA Region{s}: " + ", ".join(regions) if regions else \
                 f"State{s}: " + ",".join(states) if states else \
-                    f"Tribe{s}: " + ",".join(tribes) if tribes else f"County: " + ",".join(waterbodies.keys())
+                    f"Tribe{s}: " + ",".join(waterbodies.keys())if tribes else f"County: " + ",".join(waterbodies.keys())
     logging.info(f"Generating new report, day: {day}, year: {year}, type: {group_type}, report_id: {report_id}")
     logging.info(f"Report: {report_id}, location: {location_title}, # of groups: {len(waterbodies)}")
+
+    color_mapping = {
+        "no detection": '#3388ff',
+        "low": '#008000',
+        "medium": '#c8c800',
+        "high": '#ffa500',
+        "very high": '#ff0000'
+    }
+
     html = get_title(year=year, day=day, j_env=j_env, title=title, location_title=location_title)
-    html += get_toc(j_env=j_env)
-    html += get_description(j_env=j_env)
-    i = 0
-    for k, ids in waterbodies.items():
-        group_id = counties[i] if group_type == "County" else uuid.uuid4()
-        if len(ids) > 1:
-            html += get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type, group_name=k,
-                                    objectids=ids, ranges=ranges, j_env=j_env, group_id=group_id)
-        logging.info(f"Report: {report_id}, group: {k}, # of waterbodies: {len(ids)}")
-        for objectid in ids:
-            html += get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id), j_env=j_env,
-                                        ranges=ranges)
-        logging.info(f"Report: {report_id}, completed group: {k}")
-        # Add refs
-        i += 1
+    # html += get_toc(j_env=j_env)
+    html += get_description(ranges=ranges, color_mapping=color_mapping, j_env=j_env)
+
+    if group_type == "State":
+        for k, ids in waterbodies.items():
+            all_ids = get_state_objectids(states=[k], with_counties=False)
+            logging.info(f"Report: {report_id}, State: {k}, # of waterbodies: {len(all_ids[k])}")
+            html += get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type,
+                                    group_name=get_state_name(k),
+                                    objectids=all_ids[k], ranges=ranges, j_env=j_env, group_id=k,
+                                    color_mapping=color_mapping)
+            i = 1
+            for county, wbs in ids.items():
+                # if len(ids) > 1:
+                county_geoid = get_county_geoid(county_name=county, state=k)[0]
+                html += get_group_block(report_id=str(report_id), year=year, day=day, group_type="County", group_name=county,
+                                        objectids=wbs, ranges=ranges, j_env=j_env, group_id=county_geoid,
+                                        color_mapping=color_mapping)
+                logging.info(f"Report: {report_id}, State: {k}, County: {county}, i/n: {i}/{len(ids.keys())}, # of waterbodies: {len(wbs)}")
+                for objectid in wbs:
+                    html += get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id), j_env=j_env,
+                                                ranges=ranges)
+                i += 1
+            logging.info(f"Report: {report_id}, completed group: {k}")
+            # Add refs
+    else:
+        i = 0
+        for k, ids in waterbodies.items():
+            group_id = uuid.uuid4()
+            if group_type == "County":
+                group_id = counties[i]
+            elif group_type == "Tribe":
+                group_id = get_tribe_geoid(k)
+            if len(ids) > 1:
+                html += get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type, group_name=k,
+                                        objectids=ids, ranges=ranges, j_env=j_env, group_id=group_id,
+                                        color_mapping=color_mapping)
+            logging.info(f"Report: {report_id}, group: {k}, # of waterbodies: {len(ids)}")
+            for objectid in ids:
+                html += get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id), j_env=j_env,
+                                            ranges=ranges)
+            logging.info(f"Report: {report_id}, completed group: {k}")
+            # Add refs
+            i += 1
+    html += get_references(j_env=j_env)
     html += get_closing(j_env=j_env)
     report_path = os.path.join("..", "outputs")
     if os.path.exists(report_path):
@@ -118,6 +160,7 @@ def generate_report(
     pisa_status = pisa.CreatePDF(html, dest=report_file)
     report_file.close()
     shutil.rmtree(report_root)
+    # os.rmdir(report_root)
     t1 = time.time()
     logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1-t0, 4)} secs")
     # email report/delete report temp directory
@@ -128,7 +171,6 @@ def get_title(year: int, day: int, j_env=None, title: str = None, page_title: st
         j_env = get_env()
     report_datetime = date(year=year, month=1, day=1) + timedelta(days=day - 1)
     report_date = report_datetime.strftime("%d %B %Y")
-    disclaimer_text = open(DISCLAIMER_PATH, "r").readlines()
     template = j_env.get_template("report_0_title.html")
     html = template.render(
         TITLE=title,
@@ -136,32 +178,33 @@ def get_title(year: int, day: int, j_env=None, title: str = None, page_title: st
         LOCATION_TITLE=location_title,
         DATE=report_date,
         STATIC_ROOT=f"{STATIC_ROOT}{os.sep}",
-        DISCLAIMER=disclaimer_text,
         VERSION=VERSION
     )
     return html
 
 
-def get_description(j_env=None):
+def get_description(ranges, color_mapping, j_env=None):
     if not j_env:
         j_env = get_env()
     template = j_env.get_template("report_2_description.html")
-    html = template.render(STATIC_ROOT=f"{STATIC_ROOT}{os.sep}")
+    levels = ["low", "medium", "high", "very high"]
+    conversion_ranges = {}
+    for indx, r in enumerate(ranges):
+        conversion_ranges[levels[indx]] = [r[0], convert_dn(r[0]), r[1]-1, convert_dn(r[1]-1), color_mapping[levels[indx]]]
+    conversion_ranges[levels[-1]] = [ranges[-1][1], convert_dn(ranges[-1][1]), 253, convert_dn(253), color_mapping[levels[-1]]]
+    html = template.render(
+        STATIC_ROOT=f"{STATIC_ROOT}{os.sep}",
+        CONVERSION_TABLE=conversion_ranges,
+        COLOR_MAPPING=color_mapping
+    )
     return html
 
 
 def get_group_block(report_id: str, year: int, day: int, group_type: str, group_name: str, objectids: list,
-                    ranges: list, j_env=None,
+                    color_mapping: dict, ranges: list, j_env=None,
                     group_id: str = None):
     if not j_env:
         j_env = get_env()
-    color_mapping = {
-        "no detection": '#3388ff',
-        "low": '#008000',
-        "medium": '#c8c800',
-        "high": '#ffa500',
-        "very high": '#ff0000'
-    }
     ranges_dict = {"low": ranges[0], "medium": ranges[1], "high": ranges[2], "very high": [ranges[2][1], 254]}
 
     group_metrics = get_group_metrics(objectids=objectids, year=year, day=day, ranges=ranges_dict, p_days=30)
@@ -286,6 +329,22 @@ def get_groupend(j_env=None):
     return html
 
 
+def get_references(j_env=None):
+    if not j_env:
+        j_env = get_env()
+    disclaimer_text = open(DISCLAIMER_PATH, "r").readlines()
+    references_text = open(REFERENCES_PATH, "r").readlines()
+    references_list = []
+    for reference in references_text:
+        references_list.append(reference.replace("\n", "").split("; "))
+    template = j_env.get_template("report_6_refs.html")
+    html = template.render(
+        DISCLAIMER=disclaimer_text,
+        REFERENCES=references_list
+    )
+    return html
+
+
 def get_closing(j_env=None):
     if not j_env:
         j_env = get_env()
@@ -339,15 +398,15 @@ def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: st
     fig, ax = plt.subplots(1, 2)
     ax1 = ax[0]
     ax2 = ax[1]
-    if grouptype == "County":
-        fig.suptitle(f'{groupname} Waterbody Max Occurrence', fontsize=12)
+    # if grouptype == "County":
+    fig.suptitle(f'{groupname} Waterbody Max Occurrence', fontsize=12)
     fig.tight_layout()
     fig.subplots_adjust(top=0.9)
     ax1.set_xlabel(f"Current Max Occurrence")
     ax2.set_xlabel(f"Previous Week Max Occurrence")
 
     if grouptype == "County":
-        county_geo, county_crs = get_county_boundary(geoid=group_id)
+        county_geo, county_crs = get_county_boundary(geoid=str(group_id))
         if county_geo["geometry"]["type"] == "MultiPolygon":
             poly_geos = []
             for p in county_geo["geometry"]["coordinates"]:
@@ -357,6 +416,28 @@ def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: st
             county_poly = gpd.GeoSeries(Polygon(county_geo["geometry"]["coordinates"][0]), crs=county_crs)
         county_poly.plot(ax=ax1, edgecolor='#a8a79b', color='#a8a79b')
         county_poly.plot(ax=ax2, edgecolor='#a8a79b', color='#a8a79b')
+    elif grouptype == "Tribe":
+        tribe_geo, tribe_crs = get_tribe_boundary(tribe=str(group_id))
+        if tribe_geo["geometry"]["type"] == "MultiPolygon":
+            poly_geos = []
+            for p in tribe_geo["geometry"]["coordinates"]:
+                poly_geos.append(Polygon(p[0]))
+            tribe_poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=tribe_crs)
+        else:
+            tribe_poly = gpd.GeoSeries(Polygon(tribe_geo["geometry"]["coordinates"][0]), crs=tribe_crs)
+        tribe_poly.plot(ax=ax1, edgecolor='#a8a79b', color='#a8a79b')
+        tribe_poly.plot(ax=ax2, edgecolor='#a8a79b', color='#a8a79b')
+    elif grouptype == "State":
+        state_geo, state_crs = get_state_boundary(state=str(group_id))
+        if state_geo["geometry"]["type"] == "MultiPolygon":
+            poly_geos = []
+            for p in state_geo["geometry"]["coordinates"]:
+                poly_geos.append(Polygon(p[0]))
+            state_poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=state_crs)
+        else:
+            state_poly = gpd.GeoSeries(Polygon(state_geo["geometry"]["coordinates"][0]), crs=state_crs)
+        state_poly.plot(ax=ax1, edgecolor='#a8a79b', color='#a8a79b')
+        state_poly.plot(ax=ax2, edgecolor='#a8a79b', color='#a8a79b')
 
     boundaries, crs = get_waterbody(objectids=objectids)
     for boundary in boundaries:
@@ -381,6 +462,7 @@ def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: st
         poly.plot(ax=ax2, facecolor='none', color=week_color, linewidth=1)
     # plt.axis('off')
     # plt.show()
+    plt.tight_layout()
     plt.savefig(image_path, dpi=140)
     plt.close('all')
     return image_path
@@ -479,12 +561,15 @@ def get_waterbody_histogram(data, report_root, objectid: int, day: int, year: in
         vertical_spacing=0.1,
         specs=[[{"type": "scatter"}], [{"type": "table"}]]
     )
-    cell_ranges = np.around(np.power(10, (3 / 250) * np.array(np.arange(0, 256)) - 4.2) * 10 ** 8, 2)
+    # cell_ranges = np.around(np.power(10, (3 / 250) * np.array(np.arange(0, 256)) - 4.2) * 10 ** 8, 2)
+    cell_ranges = np.around(convert_dn(np.array(np.arange(0, 256))), 2)
     min_i = np.where(np.array(data[current_key][0:254]) > 0)[0]
     min_i0 = 1 if len(min_i) > 1 else 0
-    min_con = np.power(10, (3 / 250) * min_i[min_i0] - 4.2) * 10 ** 8
+    # min_con = np.power(10, (3 / 250) * min_i[min_i0] - 4.2) * 10 ** 8
+    min_con = convert_dn(min_i[min_i0])
     max_i = np.where(np.array(data[current_key][0:254]) > 0)[0]
-    max_con = np.power(10, (3 / 250) * max_i[-1] - 4.2) * 10 ** 8
+    # max_con = np.power(10, (3 / 250) * max_i[-1] - 4.2) * 10 ** 8
+    max_con = convert_dn(max_i[-1])
     mean_total = 0
     mean_count = 0
     i = 0
@@ -493,13 +578,15 @@ def get_waterbody_histogram(data, report_root, objectid: int, day: int, year: in
         mean_count += c
         i += 1
     mean_actual = int(mean_total / mean_count) if mean_count > 0 else 0
-    mean_con = np.power(10, (3 / 250) * mean_actual - 4.2) * 10 ** 8
+    # mean_con = np.power(10, (3 / 250) * mean_actual - 4.2) * 10 ** 8
+    mean_con = convert_dn(mean_actual)
     std_term = 0
     for c in current_data:
         if c > 0:
             std_term += (c - mean_actual) ** 2
     std_actual = int(np.sqrt(1 / 253 * std_term))
-    std_con = np.power(10, (3 / 250) * std_actual - 4.2) * 10 ** 8
+    # std_con = np.power(10, (3 / 250) * std_actual - 4.2) * 10 ** 8
+    std_con = convert_dn(std_actual)
     day_metrics_names = ["Min (cells/mL)", "Max (cells/mL)", "Average (cells/mL)", "Standard Deviation (cells/mL)"]
     day_metrics_values = [round(min_con, 2), round(max_con, 2), round(mean_con, 2), round(std_con, 2)]
     range_blocks_x = {
@@ -741,11 +828,16 @@ if __name__ == "__main__":
 
     t0 = time.time()
     year = 2021
-    day = 238
+    day = 244
     # states = ["Georgia"]
     objectids = [6624886, 7561665, 862709, 115083, 476621]
-    # states = ["FL"]
-    # county = ['12086', '12093']
-    generate_report(year=year, day=day, objectids=objectids)
+    states = ["GA"]
+    county = ['13067', '12093']
+    tribe = ['5550']
+    # county = ['13049', '13067']
+    # generate_report(year=year, day=day, objectids=objectids)
+    # generate_report(year=year, day=day, counties=county)
+    generate_report(year=year, day=day, tribes=tribe)
+    # generate_report(year=year, day=day, states=states)
     t1 = time.time()
     print(f"Completed report, runtime: {t1 - t0} sec")

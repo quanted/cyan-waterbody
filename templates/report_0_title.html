@@ -6,8 +6,12 @@
     <link rel="stylesheet" type="text/css" href="{{STATIC_ROOT}}cyan_report.css">
 </head>
 <body>
-<div id="footer_content"> <pdf:pagenumber/> of <pdf:pagecount/> </div>
-<pdf:nexttemplate name="title" />
+<div id="footer_content">
+    <pdf:pagenumber/>
+    of
+    <pdf:pagecount/>
+</div>
+<pdf:nexttemplate name="title"/>
 <div class="title-page page">
     <div class="epa-logo-holder">
         <div class="epa-logo">
@@ -20,25 +24,16 @@
         </div>
     </div>
     <div class="title-block">
-        <div class="report-title">{{TITLE}}</div>
+        <h1 class="report-title">{{TITLE}}</h1>
     </div>
     <div class="location-title-block">
-        <div class="separator">for</div>
+        <!--        <div class="separator">for</div>-->
         <div class="location-title">{{LOCATION_TITLE}}</div>
     </div>
     <div class="date-block">
-        <div class="separator">on</div>
+        <!--        <div class="separator">on</div>-->
         <div class="report-date">{{DATE}}</div>
     </div>
     <div class="report-version">{{VERSION}}</div>
 </div>
-<pdf:nextpage />
-<pdf:nexttemplate name="disclaimer" />
-<h3 class="disclaimer-title h3-title">Disclaimers</h3>
-<div class="disclaimer">
-    <div class="disclaimer-title">EPA Disclaimers</div>
-    {% for disclaimer_line in DISCLAIMER %}
-        <p>{{disclaimer_line}}</p>
-    {% endfor %}
-</div>
-<pdf:nextpage />
+<pdf:nextpage/>

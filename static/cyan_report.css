@@ -5,6 +5,7 @@
     @frame content_frame {          /* Content Frame */
         left: 50pt; width: 512pt; top: 90pt; height: 632pt;
     }
+
 }
 
 @page disclaimer{
@@ -40,6 +41,9 @@
 .title-page {
 
 }
+.book-mark-title {
+    display: None;
+}
 
 .epa-logo-holder {
     background-color: #205493;
@@ -59,6 +63,10 @@
     margin-bottom: 50px;
     text-align: center;
     width: 200px;
+}
+.legend-description {
+    text-align: left;
+    font-size: 10px;
 }
 .title-block {
     text-align: center;
@@ -83,13 +91,17 @@
     text-align: center;
     font-size: 12px;
 }
+.disclaimer-block {
+    /*text-align: center;*/
+}
 .disclaimer-title {
-    text-align: center;
+    /*text-align: center;*/
     margin-bottom: 15px;
     font-size: 14px;
+    /*-pdf-outline: false;*/
 }
 .disclaimer p {
-    text-align: center;
+    /*text-align: center;*/
     vertical-align: center;
     margin-bottom: 15px;
 }
@@ -99,7 +111,7 @@ pdftoc {
 }
 pdftoc.pdftoclevel0 {
     font-weight: bold;
-    margin-top: 0.5em;
+    /*margin-top: 0.5em;*/
 }
 pdftoc.pdftoclevel1 {
     margin-left: 1em;
@@ -108,10 +120,21 @@ pdftoc.pdftoclevel2 {
     margin-left: 2em;
     font-style: italic;
 }
+pdftoc.pdftoclevel3 {
+    margin-left: 3em;
+    font-style: italic;
+}
+pdftoc.pdftoclevel4 {
+    margin-left: 4em;
+    font-style: italic;
+}
+pdftoc.pdftoclevel5 {
+    margin-left: 5em;
+    font-style: italic;
+}
 .waterbody-header {
     width: 512px;
     margin-bottom: 20px;
-    border-top: 1px lightgray solid;
     padding-top: 10px;
 }
 .waterbody-title-block {
@@ -128,20 +151,15 @@ pdftoc.pdftoclevel2 {
     vertical-align: center;
 }
 .waterbody-stats-block {
-    /*width: 200px;*/
-    /*border-bottom: 1px lightgray solid;*/
-    /*border-top: 1px lightgray solid;*/
-
+    margin-bottom: 5px;
+    /*border-bottom: 1px solid darkgray;*/
 }
 .waterbody-stat-table {
-    /*width: 256px;*/
     text-align: center;
     padding-top: 5px;
     margin-bottom: 10px;
-
 }
 .group-stat-table {
-    /*width: 256px;*/
     text-align: center;
     padding-top: 5px;
     margin-bottom: 10px;
@@ -154,48 +172,46 @@ pdftoc.pdftoclevel2 {
     border: none;
 }
 .waterbody-stat-name {
-    /*width: 80px;*/
-    background-color: darkgray;
+    border-right: 1px solid darkgray;
     font-weight: bold;
-    border: none;
 }
 .waterbody-stat-value {
-    /*width: 120px;*/
-    /*background-color: darkgray;*/
-    border: none;
+}
+
+.group-summary-block {
+    margin-bottom: 5px;
+    /*border-bottom: 1px solid darkgray;*/
 }
 .group-stat-table-row {
     padding: 1px;
     padding-top: 2px;
     width: 600px;
-    border: none;
 }
 .group-stat-name {
-    /*width: 80px;*/
-    background-color: darkgray;
     font-weight: bold;
-    border: none;
+    border-right: 1px solid darkgray;
 }
 .group-stat-value {
     font-size: 10px;
-    border: none;
 }
 .group-raster-image1 {
     width: 512px;
     margin-top: 5px;
     margin-left: 225px;
+    margin-bottom: 25px;
 }
 .group-raster-image2 {
     width: 512px;
+    /*padding-top: 20px;*/
     margin-left: 225px;
 }
 .waterbody-column-left {
-    /*width: 200px;*/
     width: 400px;
 }
 .waterbody-stat-image {
     width: 516px;
     text-align: center;
+    /*margin-bottom: 20px;*/
 }
 .waterbody-stat-image1 {
     width: 516px;
@@ -225,6 +241,9 @@ pdftoc.pdftoclevel2 {
     font-size: 12px;
     text-align: center;
     margin-bottom: -10px;
+    padding-top: 10px;
+    border-top: 1px solid darkgray;
+    width: 1000px;
 }
 .stats-table-row {
     /*width: 512px;*/
@@ -234,22 +253,131 @@ pdftoc.pdftoclevel2 {
 }
 .group-plot-table {
     -pdf-keep-in-frame-mode: shrink;
-    /*border-top: 1px lightgray solid;*/
     width: 512px;
 }
 .waterbody-plot-table {
     -pdf-keep-in-frame-mode: shrink;
-    /*border-top: 1px lightgray solid;*/
     width: 512px;
 }
 .waterbody-pie-plot-png {
     width: 1000px;
 }
 .table-top-row {
-    /*border-top: 1px lightgray solid;*/
     width: 512px;
 }
 .waterbody-histogram-plot-png {
     width: 1000px;
     /*height: 400px;*/
+}
+
+.description-legends {
+    width: 512px;
+    -pdf-keep-in-frame-mode: shrink;
+}
+.descript-left {
+    width: 200px;
+    padding-left: 25px;
+    padding-right: 10px;
+}
+.dn-descript-left {
+    padding-left: 10px;
+    margin-right: 20px;
+    width: 512px;
+    text-align: center;
+}
+.descript-right {
+    padding-left: 10px;
+    padding-right: 25px;
+    width: 512px;
+    text-align: center;
+}
+.dn-descript-right {
+    width: 200px;
+    margin-left: 5px;
+    font-size: 10px;
+    text-align: center;
+}
+.level-conversion {
+    /*width: 250px;*/
+}
+.dn-table-header {
+    width: 250px;
+    background-color: lightgray;
+}
+.dn-cat {
+    width: 20%;
+    text-align: center;
+    vertical-align: center;
+    padding-top: 15px;
+}
+.dn-border{
+    border-right: 1px darkgray solid;
+}
+.dn-lower {
+    width: 40%;
+    text-align: center;
+    padding-left: 50px;
+}
+.dn-upper {
+    text-align: center;
+    width: 40%;
+    padding-left: 50px;
+}
+.dn-table-row {
+    width: 100%;
+    padding-top: 3px;
+    border-bottom: 1px solid darkgray;
+}
+.dn-cat-value {
+    width: 20%;
+    text-align: center;
+    padding-top: 2px;
+}
+.dn-value {
+    width: 20%;
+    text-align: center;
+}
+.dn-title-top td{
+    width: 100%;
+    text-align: center;
+}
+.dn-title-bottom td{
+    width: 50%;
+    text-align: center;
+}
+.dn-labels {
+    text-align: center;
+    border-bottom: 1px darkgray solid;
+}
+.conversion-title, .legend-title {
+    font-size: 12px;
+    text-align: center;
+}
+.h2-title {
+    color: #205493;
+    font-size: 18px;
+}
+.h3-title {
+    color: #205493;
+    font-size: 16px;
+}
+.h4-title {
+    color: #205493;
+    font-size: 14px;
+}
+.h5-title {
+    color: #205493;
+    font-size: 12px;
+}
+.group-raster-block {
+    text-align: center;
+    /*border-top: 1px solid darkgray;*/
+    /*width: 1000px;*/
+    margin-top: 5px;
+}
+.group-raster-image2 {
+    /*margin-tops: 20px;*/
+}
+.table-divider {
+    border-left: 1px double darkgray;
 }

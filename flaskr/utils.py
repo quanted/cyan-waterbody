@@ -2,6 +2,7 @@ import copy
 import os
 import sqlite3
 from tqdm import tqdm
+import numpy as np
 import multiprocessing as mp
 from flaskr.aggregate import get_waterbody_raster
 import logging
@@ -119,5 +120,13 @@ def p_get_geometry_bounds(objectid, day, year):
     raster, trans, crs, bounds = data
     values = (bounds[1][1], bounds[0][1], bounds[0][0], bounds[1][0], objectid,)
     return values
+
+
+def convert_dn(dn, round=2):
+    if type(dn) == int or type(dn) == np.int64:
+        if dn == 0:
+            return 0
+    cell_con = np.around(np.power(10, (3 / 250) * dn - 4.2) * 10 ** 8, round)
+    return cell_con
 
 

@@ -1,10 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+<div class="disclaimer-block">
+    <h3 class="h3-title">Disclaimers</h3>
+        <div class="disclaimer-title">EPA Disclaimers</div>
+        {% for disclaimer_line in DISCLAIMER %}
+        <p>{{disclaimer_line}}</p>
+        {% endfor %}
+</div>
+<pdf:nextpage />
+<div class="ref-block">
+    <h3 class="h3-title">References</h3>
+    <div class="references-main">
+        {% for ref in REFERENCES %}
+            <div class="reference">{{ref[0]}}; <i>{{ref[1]}}</i>; {{ref[2]}}<br>(<a href="{{ref[3]|safe}}">{{ref[3]|safe}}</a>)</div>
+            <br>
+        {% endfor %}
+    </div>
+</div>

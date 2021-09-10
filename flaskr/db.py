@@ -474,20 +474,38 @@ def get_eparegion_objectids(regions: list):
     return results
 
 
-def get_state_objectids(states: list):
+def get_state_objectids(states: list, with_counties: bool = True):
     results = {}
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     states = sorted(states)
     for state in states:
-        query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE STUSPS=?"
-        value = (state,)
-        cur.execute(query, value)
-        results[state] = []
-        for w in cur.fetchall():
-            results[state].append(w[0])
+        if with_counties:
+            query = "SELECT DISTINCT GEOID FROM WaterBodyCounty WHERE STUSPS=?"
+            value = (state,)
+            cur.execute(query, value)
+            results[state] = {}
+            counties = [county[0] for county in list(cur.fetchall())]
+            results[state] = get_county_objectids(counties=counties)
+        else:
+            query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE STUSPS=?"
+            values = (state,)
+            cur.execute(query, values)
+            results[state] = []
+            for c in cur.fetchall():
+                results[state].append(c[0])
     conn.close()
     return results
+
+
+def get_county_geoid(county_name, state):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT GEOID FROM WaterBodyCounty WHERE NAMELSAD=? AND STUSPS=?"
+    value = (county_name, state,)
+    cur.execute(query, value)
+    result = cur.fetchall()
+    return result[0]
 
 
 def get_tribe_objectids(tribes: list):
@@ -496,12 +514,16 @@ def get_tribe_objectids(tribes: list):
     cur = conn.cursor()
     tribes = sorted(tribes)
     for tribe in tribes:
+        query = "SELECT DISTINCT NAME FROM WaterBodyTribe WHERE GEOID=?"
+        value = (tribe,)
+        cur.execute(query, value)
+        tribe_name = cur.fetchone()[0]
         query = "SELECT DISTINCT OBJECTID FROM WaterBodyTribe WHERE GEOID=?"
         value = (tribe,)
         cur.execute(query, value)
-        results[tribe] = []
+        results[tribe_name] = []
         for w in cur.fetchall():
-            results[tribe].append(w[0])
+            results[tribe_name].append(w[0])
     conn.close()
     return results
 
@@ -598,3 +620,23 @@ def get_all_tribes():
     return results
 
 
+def get_state_name(state):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT NAME FROM WaterBodyState WHERE STUSPS=?"
+    value = (str(state),)
+    cur.execute(query, value)
+    state_name = cur.fetchall()[0][0]
+    conn.close()
+    return state_name
+
+
+def get_tribe_geoid(tribe):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT GEOID FROM WaterBodyTribe WHERE NAME=?"
+    value = (str(tribe),)
+    cur.execute(query, value)
+    tribe_id = cur.fetchall()[0][0]
+    conn.close()
+    return tribe_id

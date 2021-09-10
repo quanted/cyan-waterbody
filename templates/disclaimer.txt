@@ -1,3 +1,1 @@
-Block placeholder disclaimer 1 for cyanobacteria waterbody report using daily OLCI data.
-Block placeholder disclaimer 2 for cyanobacteria waterbody report using daily OLCI data.
-Block placeholder disclaimer 3 for cyanobacteria waterbody report using daily OLCI data.
+Placeholder for EPA report approval disclaimer

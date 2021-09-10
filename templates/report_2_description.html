@@ -1,8 +1,126 @@
-<h3 class="h3-title">Description</h3>
 <div class="report-description">
-    Placeholder description.
-    </br>
-    Placeholder description 2, cyan satellite imagery legend.
-<!--    <img src="{{STATIC_ROOT}}legend.png" class="waterbody-raster-legend">-->
+    <h3 class="h3-title">Description</h3>
+    <div class="report-description-block">
+        <h4 class="h4-title">Satellite Data</h4>
+        <div class="report-description-content">
+            <h5 class="h5-title">Temporal Resolution</h5>
+            The cyanobacteria concentration data reported on the CyAN website, and in these reports, are
+            derived from ESA’s OLCI instruments on the Sentinel 3a and 3b satellites (S3A, S3B) and are delivered in
+            two temporal classifications: weekly and daily data. Daily data prior to July 2020 were derived from the
+            single S3A and have limited spatial coverage of CONUS. In late July 2020, the S3B satellite data stream
+            came online and because of their separate orbital tracks, the spatial coverage of CONUS became much more extensive.
+            The data products as delivered by USGS/NASA are CI_cyano and include chlorophyll-a and phycocyanin in the
+            response of the OLCI satellite sensors (Coffer et al, 2020, Mishra et al, 2019, Lunetta et al, 2015).
+            Refer to the references for algorithm used for detection cyanobacteria.
+            <br><br>
+            Daily data are a snapshot of the cyanobacteria response and are derived from merged S3A and S3B data streams.
+            <h5 class="h5-title">Spatial Resolution</h5>
+            Data are delivered from NASA to the EPA in TIFF-formatted raster image files (gridded images). Each
+            image is composed of 4 million grid cells (pixels). Each grid cell represents a 300 x 300-meter area. Each
+            image is masked for land (and for oceans near the coasts) leaving waterbodies exposed. A waterbody pixel
+            having a cyanobacteria response as detect by the OLCI instruments on ESA’s satellites is reported by CyAN.
+            To get CONUS spatial extent, a collection of 37 raster images (tiles) is produced.
+        </div>
+    </div>
+    <div class="report-description-block">
+        <h4 class="h4-title">Waterbodies</h4>
+        <div class="report-description-content">
+            The waterbodies available in this report are derived from the USGS National Hydrography Dataset HR (NHD HR).
+            The NHD HR waterbodies dataset contains over 8 million distinct waterbodies.
+            From the complete NHD HR waterbodies dataset, the subset of waterbodies available in these reports are those which have a surface area of at least 1 km^2,
+            have a GNIS name, are of ftype 390 (lakes/ponds) or 436 (reservoirs), and are fully within the bounds of the OLCI raster data,
+            resulting in 6951 available waterbodies. Additional information about the NHD HR dataset can be found here:
+            <a href="https://www.usgs.gov/core-science-systems/ngp/national-hydrography/nhdplus-high-resolution">https://www.usgs.gov/core-science-systems/ngp/national-hydrography/nhdplus-high-resolution</a>
+        </div>
+    </div>
+    <div class="report-description-block">
+        <h4 class="h4-title">Legends</h4>
+        <div class="report-description-content">
+            <table class="description-legends">
+                <tr>
+                    <td class="descript-left">
+                        <div class="legend-title">OLCI Satellite Raster Legend</div>
+                        <img src="{{STATIC_ROOT}}legend.png" class="waterbody-raster-legend" alt="Satellite data legend">
+                    </td>
+                    <td class="descript-right">
+                        <div class="legend-description">
+                            The raster legend provides a color mapping of the raw pixel (DN) values that are processed in this report.
+                            Each pixel has a value between 0 and 255, with 0 being below detection, 1 through 253 DN values which convert
+                            to a cell concentration, 254 for land detection and 255 for no data.
+                            <br><br>
+                            Additional Information on Sentinel-3A/OLCI (NASA): <a href="https://oceancolor.gsfc.nasa.gov/data/olci-s3a/">https://oceancolor.gsfc.nasa.gov/data/olci-s3a/</a>
+                            <br><br>
+                            Additional Information on Sentinel-3B/OLCI (NASA): <a href="https://oceancolor.gsfc.nasa.gov/data/olci-s3b/">https://oceancolor.gsfc.nasa.gov/data/olci-s3b/</a>
+                            <br><br>
+                            User guide for Sentinel-3/OLCI products (ESA): <a href="https://sentinel.esa.int/web/sentinel/user-guides/sentinel-3-olci">https://sentinel.esa.int/web/sentinel/user-guides/sentinel-3-olci</a>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <pdf:nextpage />
+            <table class="description-legends">
+                <tr>
+                    <td class="dn-descript-left">
+                        <div class="conversion-title">DN to Cell Concentration Conversions</div>
+                        <table class="level-conversion">
+                            <tr class="dn-table-header">
+                                <td class="dn-cat dn-border"><b>Category</b></td>
+                                <td class="dn-lower"><b>Lower Bound</b></td>
+                                <td class="dn-empty dn-border"></td>
+                                <td class="dn-upper"><b>Upper Bound</b></td>
+                                <td class="dn-empty"></td>
+                            </tr>
+                            <tr class="dn-table-header dn-labels">
+                                <td class="dn-border"></td>
+                                <td><b>DN</b></td>
+                                <td class="dn-border"><b>Cell Concentration (cell/mL)</b></td>
+                                <td><b>DN</b></td>
+                                <td><b>Cell Concentration (cell/mL)</b></td>
+                            </tr>
+                            {% for level, values in CONVERSION_TABLE.items() %}
+                                <tr class="dn-table-row">
+                                    <td class="dn-cat-value" style="background-color:{{values[4]}};"><b>{{level|capitalize}}</b></td>
+                                    <td class="dn-value">{{values[0]}}</td>
+                                    <td class="dn-value dn-border">{{values[1]}}</td>
+                                    <td class="dn-value">{{values[2]}}</td>
+                                    <td class="dn-value">{{values[3]}}</td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+                    <td class="dn-descript-right">
+                        <div class="legend-description">
+                            The ranges of each category are determined by the configuration specified by the report requester,
+                            and directly corresponds to the requesters category ranges in the CyAN Web app.
+                            All graphs and plots in this report use the ranges for each category specified in this table,
+                            with the exception of the raster images where the OLCI legend applies.
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <br>
+    <div class="report-description-block">
+        <h4 class="h4-title">Group Summary</h4>
+        <div class="report-description-content">
+            Waterbodies in the report are grouped either by a specified geopolitical boundary or by being selected by the user.
+            A general summary is compiled for each group in the report, such as the collection of all the user selected waterbodies or all of the waterbodies in a specified county.
+            The summary table shows the number of waterbodies which currently, at the time of the report, have max cell detection by category, and the max cell detection by category for the previous week.
+            These waterbodies are shown in the 'Max Occurrence' images, where the group's waterbodies are show in relation to each other and are color coded by their max cell detection.
+            A graph is provided showing the previous 30 days percentage of waterbodies in the group having max detected occurrence by category.
+        </div>
+    </div>
+    <div class="report-description-block">
+        <h4 class="h4-title">Waterbody Statistics</h4>
+        <div class="report-description-content">
+            Each waterbody in the report has breakdown of the satellite data for the waterbody, based upon the user provided categories and report date.
+            The current, date of the report, is shown for the waterbody as a raw raster image overlay on the NHD HR waterbody's geometry. The OLCI legend provides the cell concentration value color mapping for the satellite images.
+            The satellite image data is categorized by cell concentration ranges, a chart is provided to give the percentage of these categories at the time of the report. These categories include 'No Data', 'Below Detection' and 'Land' detections.
+            A histogram is also provided for the current complete distribution of the waterbody cell detections.
+            A 30 day history is provided graphically showing the detection category counts, as well as a table showing the approximate surface area by pixel count and the percentage of surface area for the whole waterbody for each day.
+            Lastly, a complete history is provided by category pixel count for all the data we have for the waterbody.
+        </div>
+    </div>
 </div>
 <pdf:nextpage />
