@@ -3,3 +3,6 @@ env/
 *.pyc
 cyan_rare/
 .idea/
+outputs/
+static/raster_plots/
+static/temp/
