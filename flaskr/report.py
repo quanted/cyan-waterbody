@@ -151,11 +151,13 @@ def generate_report(
             i += 1
     html += get_references(j_env=j_env)
     html += get_closing(j_env=j_env)
-    report_path = os.path.join("..", "outputs")
+    # report_path = os.path.join("..", "outputs")
+    report_path = os.path.join(os.path.dirname(__file__), "..", "static", "outputs")
     if os.path.exists(report_path):
         report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
     else:
-        report_path = os.path.join("outputs", f"cyanwb_report_{report_id}.pdf")
+        # report_path = os.path.join("outputs", f"cyanwb_report_{report_id}.pdf")
+        os.makedirs(report_path)
     report_file = open(report_path, "w+b")
     pisa_status = pisa.CreatePDF(html, dest=report_file)
     report_file.close()

@@ -5,7 +5,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, make_response, send_from_directory
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, \
-    check_images, get_all_states, get_all_state_counties, get_all_tribes
+    check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.report import generate_report, get_report_path
@@ -209,27 +209,23 @@ def get_image():
     png_img.save(png_file, 'PNG')
     png_file.seek(0)
 
+    # RETURNS IMAGE AS image/png:
+    response = make_response(
+        send_file(
+            png_file,
+            as_attachment=True,
+            attachment_filename=f"{objectid}_{year}-{day}.png",
+            mimetype='image/png'
+        )
+    )
+    return response
+
+    # RETURNS BASE64 IMAGE STRING AND BOUNDS AS JSON:
     # png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
+    # image_str = base64.b64encode(png_file.read()).decode("utf-8")
+    # return {"image": image_str, "bounds": bounds}, 200
 
-    image_str = base64.b64encode(png_file.read()).decode("utf-8")
-
-    return {"image": image_str, "bounds": bounds}, 200
-
-    # RETURN IMAGE AND BBOX IN HEADER:
-    # response = make_response(
-    #     send_file(
-    #         png_file,
-    #         as_attachment=True,
-    #         attachment_filename=f"{objectid}_{year}-{day}.png",
-    #         mimetype='image/png'
-    #     )
-    # )
-    # response.headers.add("Access-Control-Allow-Headers", "BBOX")
-    # response.headers.add("Access-Control-Expose-Headers", "BBOX")
-    # response.headers['BBOX'] = json.dumps(bounds)
-    # return response
-
-    # RETURN GEOTiFF
+    # RETURNS GEOTiFF:
     # height = data.shape[0]
     # width = data.shape[1]
     # if use_custom:
