@@ -1,6 +1,10 @@
 <div class="waterbody-block">
     <div class="waterbody-title-block">
-        <h3 class="waterbody-title">{{GROUP_TYPE}}{% if GROUP_NAME %}: {{GROUP_NAME}}{% endif %}{% if STATE %}, {{STATE}}{% endif %}</h3>
+        {% if TITLE_LEVEL == 2 %}
+            <h2 class="waterbody-title h2-title">{{GROUP_TYPE}}{% if GROUP_NAME %}: {{GROUP_NAME}}{% endif %}{% if STATE %}, {{STATE}}{% endif %}</h2>
+        {% else %}
+            <h3 class="waterbody-title h3-title">{{GROUP_TYPE}}{% if GROUP_NAME %}: {{GROUP_NAME}}{% endif %}{% if STATE %}, {{STATE}}{% endif %}</h3>
+        {% endif %}
     </div>
     <div class="group-summary-block">
         <table class="group-stat-table">

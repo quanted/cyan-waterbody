@@ -1,8 +1,14 @@
 <div class="waterbody-block">
     <div class="waterbody-title-block">
-        <h4 class="waterbody-title">
-            {{ WATER_BODY_NAME }} - {{STATE}}
-        </h4>
+        {% if TITLE_LEVEL == 3 %}
+            <h3 class="waterbody-title">
+                {{ WATER_BODY_NAME }} - {{STATE}}
+            </h3>
+        {% else %}
+            <h4 class="waterbody-title">
+                {{ WATER_BODY_NAME }} - {{STATE}}
+            </h4>
+        {% endif %}
     </div>
     <div class="waterbody-stats-block">
         <table class="waterbody-stat-table">

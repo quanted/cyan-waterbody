@@ -1,5 +1,5 @@
 <div class="disclaimer-block">
-    <h3 class="h3-title">Disclaimers</h3>
+    <h2 class="h3-title">Disclaimers</h2>
         <div class="disclaimer-title">EPA Disclaimers</div>
         {% for disclaimer_line in DISCLAIMER %}
         <p>{{disclaimer_line}}</p>
@@ -7,7 +7,7 @@
 </div>
 <pdf:nextpage />
 <div class="ref-block">
-    <h3 class="h3-title">References</h3>
+    <h2 class="h3-title">References</h2>
     <div class="references-main">
         {% for ref in REFERENCES %}
             <div class="reference">{{ref[0]}}; <i>{{ref[1]}}</i>; {{ref[2]}}<br>(<a href="{{ref[3]|safe}}">{{ref[3]|safe}}</a>)</div>

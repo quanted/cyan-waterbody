@@ -481,7 +481,7 @@ def get_state_objectids(states: list, with_counties: bool = True):
     states = sorted(states)
     for state in states:
         if with_counties:
-            query = "SELECT DISTINCT GEOID FROM WaterBodyCounty WHERE STUSPS=?"
+            query = "SELECT DISTINCT GEOID FROM WaterBodyCounty WHERE STUSPS=? ORDER BY NAME ASC"
             value = (state,)
             cur.execute(query, value)
             results[state] = {}
@@ -640,3 +640,15 @@ def get_tribe_geoid(tribe):
     tribe_id = cur.fetchall()[0][0]
     conn.close()
     return tribe_id
+
+
+def get_states_from_wb(objectids: tuple):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = f"SELECT DISTINCT STUSPS FROM WaterBodyState WHERE OBJECTID IN {objectids}"
+    cur.execute(query)
+    states = []
+    for r in cur.fetchall():
+        states.append(r[0])
+    conn.close()
+    return states

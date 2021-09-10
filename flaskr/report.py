@@ -7,7 +7,7 @@ from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.db import get_conus_objectids, get_eparegion_objectids, get_state_objectids, get_tribe_objectids, \
     get_county_objectids, get_waterbody_data, get_group_metrics, get_county_state, get_county_geoid, \
-    get_all_state_counties, get_tribe_geoid, get_state_name
+    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb
 from flaskr.raster import rasterize_boundary
 from flaskr.utils import DEFAULT_RANGE, get_colormap, rgb, convert_dn
 import rasterio.plot
@@ -26,7 +26,7 @@ import shutil
 import os
 import logging
 
-
+OUTPUT_DIR = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "outputs")
 STATIC_ROOT = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "static")
 DISCLAIMER_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "templates", "disclaimer.txt")
 REFERENCES_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "templates", "references.txt")
@@ -53,7 +53,7 @@ def get_env():
 
 
 def get_report_path(report_id: str):
-    report_file = os.path.join("outputs", f"cyanwb_report_{report_id}.pdf")
+    report_file = os.path.join(OUTPUT_DIR, f"cyanwb_report_{report_id}.pdf")
     if not os.path.isfile(report_file):
         return None
     return report_file
@@ -92,7 +92,8 @@ def generate_report(
         "Contiguous United States" if conus else \
             f"EPA Region{s}: " + ", ".join(regions) if regions else \
                 f"State{s}: " + ",".join(states) if states else \
-                    f"Tribe{s}: " + ",".join(waterbodies.keys())if tribes else f"County: " + ",".join(waterbodies.keys())
+                    f"Tribe{s}: " + ",".join(waterbodies.keys()) if tribes else f"County: " + ",".join(
+                        waterbodies.keys())
     logging.info(f"Generating new report, day: {day}, year: {year}, type: {group_type}, report_id: {report_id}")
     logging.info(f"Report: {report_id}, location: {location_title}, # of groups: {len(waterbodies)}")
 
@@ -115,18 +116,26 @@ def generate_report(
             html += get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type,
                                     group_name=get_state_name(k),
                                     objectids=all_ids[k], ranges=ranges, j_env=j_env, group_id=k,
-                                    color_mapping=color_mapping)
+                                    color_mapping=color_mapping, title_level=2)
             i = 1
             for county, wbs in ids.items():
                 # if len(ids) > 1:
                 county_geoid = get_county_geoid(county_name=county, state=k)[0]
-                html += get_group_block(report_id=str(report_id), year=year, day=day, group_type="County", group_name=county,
+                html += get_group_block(report_id=str(report_id), year=year, day=day, group_type="County",
+                                        group_name=county,
                                         objectids=wbs, ranges=ranges, j_env=j_env, group_id=county_geoid,
-                                        color_mapping=color_mapping)
-                logging.info(f"Report: {report_id}, State: {k}, County: {county}, i/n: {i}/{len(ids.keys())}, # of waterbodies: {len(wbs)}")
+                                        color_mapping=color_mapping, title_level=3)
+                logging.info(
+                    f"Report: {report_id}, State: {k}, County: {county}, i/n: {i}/{len(ids.keys())}, # of waterbodies: {len(wbs)}")
+                wbs_html = {}
                 for objectid in wbs:
-                    html += get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id), j_env=j_env,
-                                                ranges=ranges)
+                    i_html, i_name = get_waterbody_block(year=year, day=day, objectid=objectid,
+                                                         report_id=str(report_id),
+                                                         j_env=j_env,
+                                                         ranges=ranges, title_level=4)
+                    wbs_html[i_name] = i_html
+                for wb in sorted(wbs_html.keys()):
+                    html += wbs_html[wb]
                 i += 1
             logging.info(f"Report: {report_id}, completed group: {k}")
             # Add refs
@@ -138,21 +147,24 @@ def generate_report(
                 group_id = counties[i]
             elif group_type == "Tribe":
                 group_id = get_tribe_geoid(k)
-            if len(ids) > 1:
-                html += get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type, group_name=k,
-                                        objectids=ids, ranges=ranges, j_env=j_env, group_id=group_id,
-                                        color_mapping=color_mapping)
+            html += get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type, group_name=k,
+                                    objectids=ids, ranges=ranges, j_env=j_env, group_id=group_id,
+                                    color_mapping=color_mapping, title_level=2)
             logging.info(f"Report: {report_id}, group: {k}, # of waterbodies: {len(ids)}")
+            wbs_html = {}
             for objectid in ids:
-                html += get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id), j_env=j_env,
-                                            ranges=ranges)
+                i_html, i_name = get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id),
+                                                     j_env=j_env,
+                                                     ranges=ranges, title_level=3)
+                wbs_html[i_name] = i_html
+            for wb in sorted(wbs_html.keys()):
+                html += wbs_html[wb]
             logging.info(f"Report: {report_id}, completed group: {k}")
             # Add refs
             i += 1
     html += get_references(j_env=j_env)
     html += get_closing(j_env=j_env)
-    # report_path = os.path.join("..", "outputs")
-    report_path = os.path.join(os.path.dirname(__file__), "..", "static", "outputs")
+    report_path = OUTPUT_DIR
     if os.path.exists(report_path):
         report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
     else:
@@ -164,7 +176,7 @@ def generate_report(
     shutil.rmtree(report_root)
     # os.rmdir(report_root)
     t1 = time.time()
-    logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1-t0, 4)} secs")
+    logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
     # email report/delete report temp directory
 
 
@@ -192,8 +204,10 @@ def get_description(ranges, color_mapping, j_env=None):
     levels = ["low", "medium", "high", "very high"]
     conversion_ranges = {}
     for indx, r in enumerate(ranges):
-        conversion_ranges[levels[indx]] = [r[0], convert_dn(r[0]), r[1]-1, convert_dn(r[1]-1), color_mapping[levels[indx]]]
-    conversion_ranges[levels[-1]] = [ranges[-1][1], convert_dn(ranges[-1][1]), 253, convert_dn(253), color_mapping[levels[-1]]]
+        conversion_ranges[levels[indx]] = [r[0], convert_dn(r[0]), r[1] - 1, convert_dn(r[1] - 1),
+                                           color_mapping[levels[indx]]]
+    conversion_ranges[levels[-1]] = [ranges[-1][1], convert_dn(ranges[-1][1]), 253, convert_dn(253),
+                                     color_mapping[levels[-1]]]
     html = template.render(
         STATIC_ROOT=f"{STATIC_ROOT}{os.sep}",
         CONVERSION_TABLE=conversion_ranges,
@@ -204,7 +218,7 @@ def get_description(ranges, color_mapping, j_env=None):
 
 def get_group_block(report_id: str, year: int, day: int, group_type: str, group_name: str, objectids: list,
                     color_mapping: dict, ranges: list, j_env=None,
-                    group_id: str = None):
+                    group_id: str = None, title_level: int = 2):
     if not j_env:
         j_env = get_env()
     ranges_dict = {"low": ranges[0], "medium": ranges[1], "high": ranges[2], "very high": [ranges[2][1], 254]}
@@ -272,12 +286,14 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         STATE=group_state,
         GROUP_PROPERTIES=group_properties,
         GROUP_RASTER=waterbodies_geos_raster,
-        GROUP_30=grouped_30_raster
+        GROUP_30=grouped_30_raster,
+        TITLE_LEVEL=title_level
     )
     return html
 
 
-def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, ranges: list, j_env=None):
+def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, ranges: list, j_env=None,
+                        title_level: int = 3):
     if not j_env:
         j_env = get_env()
     report_root = os.path.join(STATIC_ROOT, "temp", str(report_id))
@@ -310,9 +326,10 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
         CURRENT_HISTOGRAM=waterbody_plots["histogram"],
         CURRENT_PIE=waterbody_plots["pie"],
         STACKED30=waterbody_plots["stacked30"],
-        HISTORIC_LINE=waterbody_plots["historic"]
+        HISTORIC_LINE=waterbody_plots["historic"],
+        TITLE_LEVEL=title_level
     )
-    return html
+    return html, waterbody_name
 
 
 def get_toc(j_env=None):
@@ -440,6 +457,20 @@ def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: st
             state_poly = gpd.GeoSeries(Polygon(state_geo["geometry"]["coordinates"][0]), crs=state_crs)
         state_poly.plot(ax=ax1, edgecolor='#a8a79b', color='#a8a79b')
         state_poly.plot(ax=ax2, edgecolor='#a8a79b', color='#a8a79b')
+    else:
+        states = get_states_from_wb(tuple(objectids))
+        for state in states:
+            state_geo, state_crs = get_state_boundary(state=str(state))
+            if state_geo["geometry"]["type"] == "MultiPolygon":
+                poly_geos = []
+                for p in state_geo["geometry"]["coordinates"]:
+                    poly_geos.append(Polygon(p[0]))
+                state_poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=state_crs)
+            else:
+                state_poly = gpd.GeoSeries(Polygon(state_geo["geometry"]["coordinates"][0]), crs=state_crs)
+            state_poly.plot(ax=ax1, edgecolor='#a8a79b', color='#a8a79b')
+            state_poly.plot(ax=ax2, edgecolor='#a8a79b', color='#a8a79b')
+        fig.suptitle(f'Waterbody Max Occurrence', fontsize=12)
 
     boundaries, crs = get_waterbody(objectids=objectids)
     for boundary in boundaries:
@@ -833,13 +864,13 @@ if __name__ == "__main__":
     day = 244
     # states = ["Georgia"]
     objectids = [6624886, 7561665, 862709, 115083, 476621]
-    states = ["GA"]
+    states = ["WY"]
     county = ['13067', '12093']
     tribe = ['5550']
     # county = ['13049', '13067']
     # generate_report(year=year, day=day, objectids=objectids)
     # generate_report(year=year, day=day, counties=county)
-    generate_report(year=year, day=day, tribes=tribe)
-    # generate_report(year=year, day=day, states=states)
+    # generate_report(year=year, day=day, tribes=tribe)
+    generate_report(year=year, day=day, states=states)
     t1 = time.time()
     print(f"Completed report, runtime: {t1 - t0} sec")
