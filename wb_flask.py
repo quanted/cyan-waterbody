@@ -17,6 +17,7 @@ import threading
 import logging
 import json
 import uuid
+import time
 import base64
 import rasterio
 from rasterio.io import MemoryFile
@@ -156,6 +157,7 @@ def get_geometry():
 
 @app.route('/waterbody/image/')
 def get_image():
+    t0 = time.time()
     args = request.args
     objectid = None
     year = None
@@ -190,7 +192,7 @@ def get_image():
         colors['high'] = int(args['high'])
     if 'use_bin' in args:
         use_custom = True
-    raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day)
+    raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day, get_bounds=False)
 
     if raster is None:
         return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
@@ -218,6 +220,8 @@ def get_image():
             mimetype='image/png'
         )
     )
+    t1 = time.time()
+    print(f"Waterbody Image Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return response
 
     # RETURNS BASE64 IMAGE STRING AND BOUNDS AS JSON:

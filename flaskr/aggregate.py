@@ -169,7 +169,7 @@ def retry_failed(daily: bool = True):
         save_data(year=year, day=day, data=data, daily=daily)
 
 
-def get_waterbody_raster(objectid: int, year: int, day: int):
+def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = True):
     features, crs = get_waterbody(objectid=objectid)
     if len(features) == 0:
         return None, None
@@ -193,6 +193,6 @@ def get_waterbody_raster(objectid: int, year: int, day: int):
     else:
         mosaic = f_images[0]
     colormap = get_colormap(f_images[0])
-    data = list(clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'}, histogram=False))
+    data = list(clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'}, histogram=False, get_bounds=get_bounds))
     return data, colormap
 

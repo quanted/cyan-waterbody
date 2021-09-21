@@ -869,8 +869,8 @@ if __name__ == "__main__":
     tribe = ['5550']
     # county = ['13049', '13067']
     # generate_report(year=year, day=day, objectids=objectids)
-    # generate_report(year=year, day=day, counties=county)
+    generate_report(year=year, day=day, counties=county)
     # generate_report(year=year, day=day, tribes=tribe)
-    generate_report(year=year, day=day, states=states)
+    # generate_report(year=year, day=day, states=states)
     t1 = time.time()
     print(f"Completed report, runtime: {t1 - t0} sec")
