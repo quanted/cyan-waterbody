@@ -9,6 +9,7 @@ services:
       - "8085:8080"
     volumes:
       - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+      # - ./cyan_rare/mounts/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - .:/src
@@ -18,3 +19,5 @@ services:
       - WATERBODY_DBF=/mnts/geometry
       - FLASK_APP=wb_flask.py
       - COUNTY_DBF=/mnts/geometry
+      - STATE_DBF=/mnts/geometry
+      - TRIBE_DBF=/mnts/geometry
