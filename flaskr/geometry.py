@@ -87,6 +87,14 @@ def get_waterbody_properties(objectid: int):
     return metadata
 
 
+def get_waterbody_objectids():
+    objectids = []
+    with fiona.open(WATERBODY_DBF) as waterbodies:
+        for f in waterbodies:
+            objectids.append(int(f["properties"]["OBJECTID"]))
+    return objectids
+
+
 def get_waterbody_count():
     n = 0
     with fiona.open(WATERBODY_DBF) as waterbodies:

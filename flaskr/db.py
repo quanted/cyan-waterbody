@@ -17,6 +17,8 @@ IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
 DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data_0.2.sqlite")
 N_VALUES = 256
 
+BAD_OBJECTIDS = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
+
 
 def get_conn():
     conn = sqlite3.connect(DB_FILE)
@@ -448,12 +450,13 @@ def get_conus_objectids():
     cur.execute(query)
     states = sorted(cur.fetchall())
     for state in states:
-        query = "SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE STUSPS=?"
-        value = (state,)
+        query = f"SELECT DISTINCT OBJECTID FROM WaterBodyState WHERE STUSPS=?"
+        value = (state[0],)
         cur.execute(query, value)
         results[state] = []
         for w in cur.fetchall():
-            results[state].append(w[0])
+            if w not in BAD_OBJECTIDS:
+                results[state].append(w)
     conn.close()
     return results
 
@@ -469,7 +472,8 @@ def get_eparegion_objectids(regions: list):
         cur.execute(query, value)
         results[region] = []
         for w in cur.fetchall():
-            results[region].append(w[0])
+            if w[0] not in BAD_OBJECTIDS:
+                results[region].append(w[0])
     conn.close()
     return results
 
@@ -523,7 +527,8 @@ def get_tribe_objectids(tribes: list):
         cur.execute(query, value)
         results[tribe_name] = []
         for w in cur.fetchall():
-            results[tribe_name].append(w[0])
+            if w[0] not in BAD_OBJECTIDS:
+                results[tribe_name].append(w[0])
     conn.close()
     return results
 
@@ -542,7 +547,8 @@ def get_county_objectids(counties: list):
         cur.execute(query, value)
         results[county_name] = []
         for w in cur.fetchall():
-            results[county_name].append(w[0])
+            if w[0] not in BAD_OBJECTIDS:
+                results[county_name].append(w[0])
     conn.close()
     return results
 
@@ -551,6 +557,8 @@ def get_group_metrics(objectids: list, year: int, day: int, ranges: dict, p_days
     results = {}
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
+    if objectids is None:
+        return results
     objectid_tuple = tuple(objectids) if len(objectids) > 1 else f"({objectids[0]})"
 
     for r, indx in ranges.items():
@@ -567,7 +575,8 @@ def get_group_metrics(objectids: list, year: int, day: int, ranges: dict, p_days
             cur.execute(query, values)
             results[r][date_key] = []
             for r0 in cur.fetchall():
-                results[r][date_key].append(r0[0])
+                if r0[0] not in BAD_OBJECTIDS:
+                    results[r][date_key].append(r0[0])
     conn.close()
     return results
 
@@ -646,6 +655,7 @@ def get_states_from_wb(objectids: tuple):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     query = f"SELECT DISTINCT STUSPS FROM WaterBodyState WHERE OBJECTID IN {objectids}"
+    query = query.replace(",", "") if len(objectids) == 1 else query
     cur.execute(query)
     states = []
     for r in cur.fetchall():

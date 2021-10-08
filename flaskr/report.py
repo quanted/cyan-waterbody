@@ -3,11 +3,11 @@ from datetime import datetime, timedelta, date
 from xhtml2pdf import pisa
 from pathlib import Path
 from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_boundary, get_state_boundary, \
-    get_tribe_boundary
+    get_tribe_boundary, get_waterbody_objectids
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.db import get_conus_objectids, get_eparegion_objectids, get_state_objectids, get_tribe_objectids, \
     get_county_objectids, get_waterbody_data, get_group_metrics, get_county_state, get_county_geoid, \
-    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb
+    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb, get_all_states
 from flaskr.raster import rasterize_boundary
 from flaskr.utils import DEFAULT_RANGE, get_colormap, rgb, convert_dn
 import rasterio.plot
@@ -18,6 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import geopandas as gpd
+import multiprocessing as mp
 from shapely.geometry import Polygon, MultiPolygon
 import time
 import copy
@@ -25,6 +26,8 @@ import uuid
 import shutil
 import os
 import logging
+from tqdm import tqdm
+
 
 OUTPUT_DIR = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "outputs")
 STATIC_ROOT = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "static")
@@ -43,6 +46,8 @@ KEEP_PROPERTIES = {
 }
 IMAGE_FORMAT = 'png'
 IMAGE_SCALE = 1
+
+BAD_WATERBODIES = [6267342, 3007550]
 
 
 def get_env():
@@ -69,7 +74,8 @@ def generate_report(
         tribes: list = None,
         counties: list = None,
         ranges: list = None,
-        report_id: str = None
+        report_id: str = None,
+        parallel: bool = False
 ):
     t0 = time.time()
     j_env = get_env()
@@ -109,6 +115,11 @@ def generate_report(
     # html += get_toc(j_env=j_env)
     html += get_description(ranges=ranges, color_mapping=color_mapping, j_env=j_env)
 
+    cpus = 1
+    if parallel:
+        cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        pool = mp.Pool(cpus)
+
     if group_type == "State":
         for k, ids in waterbodies.items():
             all_ids = get_state_objectids(states=[k], with_counties=False)
@@ -119,8 +130,9 @@ def generate_report(
                                     color_mapping=color_mapping, title_level=2)
             i = 1
             for county, wbs in ids.items():
-                # if len(ids) > 1:
                 county_geoid = get_county_geoid(county_name=county, state=k)[0]
+                if len(wbs) == 0:
+                    continue
                 html += get_group_block(report_id=str(report_id), year=year, day=day, group_type="County",
                                         group_name=county,
                                         objectids=wbs, ranges=ranges, j_env=j_env, group_id=county_geoid,
@@ -128,12 +140,22 @@ def generate_report(
                 logging.info(
                     f"Report: {report_id}, State: {k}, County: {county}, i/n: {i}/{len(ids.keys())}, # of waterbodies: {len(wbs)}")
                 wbs_html = {}
-                for objectid in wbs:
-                    i_html, i_name = get_waterbody_block(year=year, day=day, objectid=objectid,
-                                                         report_id=str(report_id),
-                                                         j_env=j_env,
-                                                         ranges=ranges, title_level=4)
-                    wbs_html[i_name] = i_html
+                if parallel and len(wbs) >= cpus:
+                    results_objects = [pool.apply_async(get_waterbody_block, kwds={
+                        'year': year, 'day': day, 'objectid': objectid, 'report_id': str(report_id),
+                        'ranges': ranges, 'title_level': 4}) for objectid in wbs
+                    ]
+                    for r in results_objects:
+                        v = r.get()
+                        i_html, i_name = v[0], v[1]
+                        wbs_html[i_name] = i_html
+                else:
+                    for objectid in wbs:
+                        i_html, i_name = get_waterbody_block(year=year, day=day, objectid=objectid,
+                                                             report_id=str(report_id),
+                                                             j_env=j_env,
+                                                             ranges=ranges, title_level=4)
+                        wbs_html[i_name] = i_html
                 for wb in sorted(wbs_html.keys()):
                     html += wbs_html[wb]
                 i += 1
@@ -152,11 +174,21 @@ def generate_report(
                                     color_mapping=color_mapping, title_level=2)
             logging.info(f"Report: {report_id}, group: {k}, # of waterbodies: {len(ids)}")
             wbs_html = {}
-            for objectid in ids:
-                i_html, i_name = get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id),
-                                                     j_env=j_env,
-                                                     ranges=ranges, title_level=3)
-                wbs_html[i_name] = i_html
+            if parallel and len(ids) >= cpus:
+                results_objects = [pool.apply_async(get_waterbody_block, kwds={
+                    'year': year, 'day': day, 'objectid': objectid, 'report_id': str(report_id),
+                    'ranges': ranges, 'title_level': 3}) for objectid in ids
+                                   ]
+                for r in results_objects:
+                    v = r.get()
+                    i_html, i_name = v[0], v[1]
+                    wbs_html[i_name] = i_html
+            else:
+                for objectid in ids:
+                    i_html, i_name = get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id),
+                                                         j_env=j_env,
+                                                         ranges=ranges, title_level=3)
+                    wbs_html[i_name] = i_html
             for wb in sorted(wbs_html.keys()):
                 html += wbs_html[wb]
             logging.info(f"Report: {report_id}, completed group: {k}")
@@ -166,18 +198,23 @@ def generate_report(
     html += get_closing(j_env=j_env)
     report_path = OUTPUT_DIR
     if os.path.exists(report_path):
-        report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
+        if group_type == "State":
+            report_path = os.path.join(report_path, f"cyanwb_{states[0]}_{year}-{day}.pdf")
+        else:
+            report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
     else:
-        # report_path = os.path.join("outputs", f"cyanwb_report_{report_id}.pdf")
         os.makedirs(report_path)
     report_file = open(report_path, "w+b")
     pisa_status = pisa.CreatePDF(html, dest=report_file)
     report_file.close()
     shutil.rmtree(report_root)
-    # os.rmdir(report_root)
     t1 = time.time()
-    logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
+    if group_type == "State":
+        logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
+    else:
+        logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
     # email report/delete report temp directory
+    return True
 
 
 def get_title(year: int, day: int, j_env=None, title: str = None, page_title: str = None, location_title: str = None):
@@ -379,7 +416,7 @@ def get_report_waterbody_raster(objectid: int, report_id: str, day: int, year: i
     image_path = os.path.join(raster_root, image_file)
     if os.path.exists(image_path):
         return image_path
-    image_data, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day)
+    image_data, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day, get_bounds=False, reproject=True)
     data = image_data[0]
     data = np.reshape(data, (1, data.shape[0], data.shape[1]))
     data = rasterize_boundary(image=data, boundary=image_data[4], affine=image_data[1], crs=image_data[2], value=256)[0]
@@ -400,6 +437,7 @@ def get_report_waterbody_raster(objectid: int, report_id: str, day: int, year: i
     boundary.plot(ax=ax, facecolor='none', edgecolor='#3388ff', linewidth=2)
     plt.axis('off')
     plt.savefig(image_path)
+    plt.close(fig)
     return image_path
 
 
@@ -594,14 +632,11 @@ def get_waterbody_histogram(data, report_root, objectid: int, day: int, year: in
         vertical_spacing=0.1,
         specs=[[{"type": "scatter"}], [{"type": "table"}]]
     )
-    # cell_ranges = np.around(np.power(10, (3 / 250) * np.array(np.arange(0, 256)) - 4.2) * 10 ** 8, 2)
     cell_ranges = np.around(convert_dn(np.array(np.arange(0, 256))), 2)
     min_i = np.where(np.array(data[current_key][0:254]) > 0)[0]
     min_i0 = 1 if len(min_i) > 1 else 0
-    # min_con = np.power(10, (3 / 250) * min_i[min_i0] - 4.2) * 10 ** 8
     min_con = convert_dn(min_i[min_i0])
     max_i = np.where(np.array(data[current_key][0:254]) > 0)[0]
-    # max_con = np.power(10, (3 / 250) * max_i[-1] - 4.2) * 10 ** 8
     max_con = convert_dn(max_i[-1])
     mean_total = 0
     mean_count = 0
@@ -611,14 +646,14 @@ def get_waterbody_histogram(data, report_root, objectid: int, day: int, year: in
         mean_count += c
         i += 1
     mean_actual = int(mean_total / mean_count) if mean_count > 0 else 0
-    # mean_con = np.power(10, (3 / 250) * mean_actual - 4.2) * 10 ** 8
     mean_con = convert_dn(mean_actual)
     std_term = 0
-    for c in current_data:
+    std_n = 0
+    for i, c in enumerate(current_data):
         if c > 0:
-            std_term += (c - mean_actual) ** 2
-    std_actual = int(np.sqrt(1 / 253 * std_term))
-    # std_con = np.power(10, (3 / 250) * std_actual - 4.2) * 10 ** 8
+            std_term += (i - mean_actual) ** 2
+            std_n += c
+    std_actual = int(np.sqrt((1 / std_n) * std_term)) if std_n > 0 else 0
     std_con = convert_dn(std_actual)
     day_metrics_names = ["Min (cells/mL)", "Max (cells/mL)", "Average (cells/mL)", "Standard Deviation (cells/mL)"]
     day_metrics_values = [round(min_con, 2), round(max_con, 2), round(mean_con, 2), round(std_con, 2)]
@@ -856,21 +891,70 @@ def get_waterbody_collection(
     return wb_collection, wb_type
 
 
+def generate_state_reports(year:int, day: int, parallel: bool = True):
+    t0 = time.time()
+    states = get_all_states()
+    # states = [["","MI"], ["","MN"], ["","ND"], ["","TX"], ["","TN"], ["","CO"]]
+    if parallel:
+        generate_all_wb_rasters(year=year, day=day, parallel=parallel)
+        cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        pool = mp.Pool(cpus)
+        states1 = states
+        results_objects = [pool.apply_async(generate_report, kwds={'year': year, 'day': day, 'states': [state[1]], 'parallel': False}) for state in states1]
+        for r in results_objects:
+            _ = r.get()
+        # for state in states2:
+        #     generate_report(year=year, day=day, states=[state[1]], parallel=False)
+        # results_objects = [pool.apply_async(generate_report, kwds={'year': year, 'day': day, 'states': [state[1]], 'parallel': False}) for state in states2]
+        # for r in results_objects:
+        #     _ = r.get()
+    else:
+        for state in states:
+            generate_report(year=year, day=day, states=[state[1]], parallel=True)
+    t1 = time.time()
+    print(f"Completed all state reports, runtime: {t1 - t0} sec")
+    return
+
+
+def generate_all_wb_rasters(year: int, day: int, parallel: bool = True):
+    objectids = get_waterbody_objectids()
+    if parallel:
+        cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        pool = mp.Pool(cpus)
+        results_objects = [pool.apply_async(get_report_waterbody_raster, kwds={'year': year, 'day': day, 'report_id': "", 'objectid': oid}) for oid in objectids]
+        for i in tqdm(range(len(results_objects)), desc="Generating raster images for reports", ascii=False):
+            _ = results_objects[i].get()
+    else:
+        for oid in objectids:
+            _ = get_report_waterbody_raster(objectid=oid, report_id="", year=year, day=day)
+
+
 if __name__ == "__main__":
     import time
 
     t0 = time.time()
     year = 2021
-    day = 244
-    # states = ["Georgia"]
-    objectids = [6624886, 7561665, 862709, 115083, 476621]
-    states = ["WY"]
+    day = 264
+    states = ["MI"]
+    objectids = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
+    # objectids = [6267342, 3007550]
+    # objectids = [1445670]
+    # states = ["MI", "MN"]
     county = ['13067', '12093']
     tribe = ['5550']
     # county = ['13049', '13067']
+    generate_all_wb_rasters(year=year, day=day)
     # generate_report(year=year, day=day, objectids=objectids)
-    generate_report(year=year, day=day, counties=county)
+    # generate_report(year=year, day=day, counties=county)
     # generate_report(year=year, day=day, tribes=tribe)
-    # generate_report(year=year, day=day, states=states)
+    # generate_report(year=year, day=day, states=states, parallel=True)
+    # generate_state_reports(year=year, day=day)
     t1 = time.time()
     print(f"Completed report, runtime: {t1 - t0} sec")
+
+    # t2 = time.time()
+    # generate_report(year=year, day=day, states=states, parallel=False)
+    # t3 = time.time()
+    # print(f"Completed report, runtime: {t3 - t2} sec")
+    # print(f"Performance Comparison - Parallel: {t1-t0} sec, Seq: {t3-t2} sec")
+
