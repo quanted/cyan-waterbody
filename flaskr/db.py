@@ -645,8 +645,9 @@ def get_tribe_geoid(tribe):
 def get_states_from_wb(objectids: tuple):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    query = f"SELECT DISTINCT STUSPS FROM WaterBodyState WHERE OBJECTID IN {objectids}"
-    cur.execute(query)
+    query = "SELECT DISTINCT STUSPS FROM WaterBodyState WHERE OBJECTID IN (%s)" % ",".join("?"*len(objectids))
+    value = objectids
+    cur.execute(query, objectids)
     states = []
     for r in cur.fetchall():
         states.append(r[0])

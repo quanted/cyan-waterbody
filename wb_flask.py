@@ -22,6 +22,8 @@ import base64
 import rasterio
 from rasterio.io import MemoryFile
 
+from celery_tasks import CeleryHandler
+
 
 app = Flask(__name__)
 
@@ -30,6 +32,8 @@ logger = logging.getLogger("cyan-waterbody")
 logger.info("CyAN Waterbody Flask App")
 
 cors = CORS(app, origins=["http://localhost:4200"])
+
+celery_handler = CeleryHandler()
 
 
 @app.route('/')
@@ -355,7 +359,7 @@ def get_report():
     if "tribe" in args:
         tribes = list(args["tribe"].split(","))
     if "objectids" in args:
-        objectids = list(args["objectids"].split(","))
+        objectids = list(int(objectid) for objectid in args["objectids"].split(","))
     if not any([county, tribes, objectids]):
         missing.append("Missing required spatial area of interest. Options include: county, tribe or objectids")
     if "year" in args:
@@ -384,15 +388,29 @@ def get_report():
         ranges = [[[1, colors['low']], [colors['low'], colors['med']], [colors['med'], colors['high']]]]
     if len(missing) > 0:
         return "; ".join(missing), 200
+
     report_id = uuid.uuid4()
+
+    request_dict = {
+        'year': year,
+        'day': day,
+        'objectids': objectids,
+        'tribes': tribes,
+        'counties': county,
+        'ranges': ranges,
+        'report_id': report_id
+    }
+
+    # Starts report generation with celery worker:
+    # response = celery_handler.start_task(request_dict)
+
+    # Starts report generation with thread:
     th = threading.Thread(target=generate_report, kwargs={'year': year, 'day': day, 'objectids': objectids,
                                                           'tribes': tribes, 'counties': county, 'ranges': ranges,
                                                           'report_id': report_id})
     th.start()
-    return {
-        'year': year, 'day': day, 'objectids': objectids, 'tribes': tribes,
-        'counties': county, 'ranges': ranges, 'report_id': report_id
-           }, 200
+    
+    return request_dict, 200
 
 
 @app.route('/waterbody/report/download/')
@@ -431,6 +449,13 @@ def get_report_counties():
 def get_report_tribes():
     tribes = get_all_tribes()
     return {"tribes": tribes}, 200
+
+
+@app.route('/celery')
+def test_celery():
+    celery_result = celery_handler.test_celery()
+    logging.warning("Celery result: {}".format(celery_result))
+    return celery_result
 
 
 if __name__ == "__main__":

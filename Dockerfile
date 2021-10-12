@@ -48,6 +48,5 @@ COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
 
 WORKDIR /src
 EXPOSE 8080
-#ENTRYPOINT ["uwsgi", "--ini", "/etc/uwsgi/uwsgi.ini"]
-#ENTRYPOINT ["flask", "run", "-p", "8080", "-h", "0.0.0.0", "--debugger"]
-ENTRYPOINT ["python", "wb_flask.py"]
+
+CMD ["python", "wb_flask.py"]

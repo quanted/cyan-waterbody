@@ -8,8 +8,8 @@ services:
     ports:
       - "8085:8080"
     volumes:
-      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
-      # - ./cyan_rare/mounts/images:/mnts/images
+      # - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+      - ./cyan_rare/mounts/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - .:/src
@@ -21,3 +21,25 @@ services:
       - COUNTY_DBF=/mnts/geometry
       - STATE_DBF=/mnts/geometry
       - TRIBE_DBF=/mnts/geometry
+      - REDIS_HOSTNAME=redis
+      - REDIS_PORT=6379
+
+  cyan-wb-celery:
+    restart: unless-stopped
+    container_name: cyan-wb-celery
+    build: .
+    image: cyan-wb-celery
+    command: celery -A celery_worker.celery worker --loglevel=INFO -c 1
+    depends_on:
+      - redis
+      - cyan-wb
+    volumes:
+      - .:/src
+    environment:
+      - REDIS_HOSTNAME=redis
+      - REDIS_PORT=6379
+
+  redis:
+    image: redis:latest
+    expose:
+      - "6379"

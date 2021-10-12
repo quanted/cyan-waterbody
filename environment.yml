@@ -16,3 +16,5 @@ dependencies:
   - xhtml2pdf
   - plotly
   - python-kaleido
+  - celery=5.0.5
+  - redis=3.5.3
