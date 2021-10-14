@@ -934,7 +934,7 @@ if __name__ == "__main__":
 
     t0 = time.time()
     year = 2021
-    day = 264
+    day = 276
     states = ["MI"]
     objectids = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
     # objectids = [6267342, 3007550]
@@ -943,8 +943,8 @@ if __name__ == "__main__":
     county = ['13067', '12093']
     tribe = ['5550']
     # county = ['13049', '13067']
-    generate_all_wb_rasters(year=year, day=day)
-    # generate_report(year=year, day=day, objectids=objectids)
+    # generate_all_wb_rasters(year=year, day=day)
+    generate_report(year=year, day=day, objectids=objectids)
     # generate_report(year=year, day=day, counties=county)
     # generate_report(year=year, day=day, tribes=tribe)
     # generate_report(year=year, day=day, states=states, parallel=True)

@@ -187,6 +187,10 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
         poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
     else:
         poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
+
+    poly.plot(linewidth=2)
+    plt.show()
+
     f_images = get_tiles_by_objectid(objectid, image_base)
     if len(f_images) > 1:
         mosaic = mosaic_rasters(f_images)
