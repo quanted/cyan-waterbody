@@ -22,6 +22,7 @@ celery_instance = Celery(
     backend="redis://{}:{}/0".format(redis_hostname, redis_port),
 )
 
+# TODO: Update parameters for recent versions of Celery (throws warnings):
 celery_instance.conf.update(
     CELERY_BROKER_URL="redis://{}:{}/0".format(redis_hostname, redis_port),
     CELERY_RESULT_BACKEND="redis://{}:{}/0".format(redis_hostname, redis_port),
@@ -90,11 +91,33 @@ class CeleryHandler:
         logging.warning("Starting task, request: {}".format(request_obj))
 
         # job_id = str(uuid.uuid4())  # creates job ID for celery task
-        job_id = request_obj['report_id']
+        task_id = request_obj['report_id']
 
         # Runs job on celery worker:
         celery_job = generate_report.apply_async(
-            args=[request_obj], queue="celery", task_id=job_id
+            args=[request_obj], queue="celery", task_id=task_id
         )
 
         return celery_job
+
+    def check_celery_job_status(self, report_id):
+        """
+        Checks the status of a celery job and returns
+        its status.
+        Celery States: FAILURE, PENDING, RECEIVED, RETRY,
+        REVOKED, STARTED, SUCCESS
+        """
+        task = celery_instance.AsyncResult(report_id)
+        return task.status
+
+    def revoke_task(self, report_id):
+        """
+        Revokes/cancels a celery task.
+        """
+        try:
+            result = celery_instance.AsyncResult(report_id).revoke()
+            logging.warning("Task '{}' revoked: {}".format(report_id, result))
+            return {"status": "Job canceled"}
+        except Exception as e:
+            logging.error("revoke_task error: {}".format(e))
+            return {"status": "Failed to cancel job"}

@@ -18,3 +18,4 @@ dependencies:
   - python-kaleido
   - celery=5.0.5
   - redis=3.5.3
+  - APScheduler==3.8.0
