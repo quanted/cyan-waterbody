@@ -124,8 +124,15 @@ def p_get_geometry_bounds(objectid, day, year):
 
 def convert_dn(dn, round=2):
     if type(dn) == int or type(dn) == np.int64:
+        np.int(64)
         if dn == 0:
             return 0
+        if dn > 255:
+            print(f"DN value greater than acceptable max, dn: {dn}")
+    elif type(dn) == list:
+        dn = np.array(dn, dtype=np.int64)
+        if np.max(dn) > 255:
+            print(f"DN value greater than acceptable max, dn: {np.max(dn)}")
     cell_con = np.around(np.power(10, (3 / 250) * dn - 4.2) * 10 ** 8, round)
     return cell_con
 

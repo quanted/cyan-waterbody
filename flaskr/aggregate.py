@@ -169,7 +169,7 @@ def retry_failed(daily: bool = True):
         save_data(year=year, day=day, data=data, daily=daily)
 
 
-def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = True):
+def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = True, retry: int = 5, reproject: bool = True):
     features, crs = get_waterbody(objectid=objectid)
     if len(features) == 0:
         return None, None
@@ -187,12 +187,24 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
         poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
     else:
         poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
+
+    poly.plot(linewidth=2)
+    plt.show()
+
     f_images = get_tiles_by_objectid(objectid, image_base)
     if len(f_images) > 1:
         mosaic = mosaic_rasters(f_images)
     else:
         mosaic = f_images[0]
     colormap = get_colormap(f_images[0])
-    data = list(clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'}, histogram=False, get_bounds=get_bounds))
+    try:
+        data = list(clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'}, histogram=False, get_bounds=get_bounds, reproject=reproject))
+    except Exception as e:
+        print(f"Error attempting to clip raster for objectid: {objectid}, year: {year}, day: {day}, retry: {retry}, error: {e}")
+        if retry > 0:
+            # time.sleep(10)
+            data, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day, retry=retry-1, get_bounds=False, reproject=False)
+        else:
+            return None, colormap
     return data, colormap
 

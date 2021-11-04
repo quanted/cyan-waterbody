@@ -1,4 +1,7 @@
 import warnings
+
+import gdal
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
@@ -6,7 +9,9 @@ from rasterio import mask, warp, crs, MemoryFile, features
 from rasterio.merge import merge
 from rasterio.enums import Resampling
 from rasterio.profiles import DefaultGTiffProfile
-from pyproj import Proj
+from matplotlib import pyplot
+# from osgeo import gdal, osr
+from pyproj import Proj, CRS
 from pyproj import transform as pyt
 import numpy as np
 import types
@@ -15,6 +20,8 @@ import rasterio
 import geopandas as gpd
 import os
 import datetime
+
+gdal.UseExceptions()
 
 
 IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
@@ -61,7 +68,8 @@ def get_images_by_tile(tile: list, n_limit: int = 90):
     return image_files
 
 
-def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbose: bool = False, raster_crs: dict = None, histogram: bool = True, get_bounds: bool = True):
+def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbose: bool = False,
+                raster_crs: dict = None, histogram: bool = True, get_bounds: bool = True, reproject: bool = True):
     """Clip the raster to the given boundary.
 
     Parameters
@@ -123,6 +131,8 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
             height = raster.height
             width = raster.width
             clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True,)
+            if not reproject:
+                raster_crs = raster.crs
             if histogram:
                 clipped = rasterize_boundary(clipped, boundary=boundary, affine=affine, crs=raster.crs)
     except Exception as e:
@@ -134,21 +144,24 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         clipped = clipped[0]
 
     bbox = None
-    if raster_crs:
+    if raster_crs and reproject:
+        source_raster = copy.copy(clipped)
         crs = rasterio.crs.CRS.from_dict(raster_crs)
-        reproject_raster = copy.copy(clipped)
-        transform, width, height = warp.calculate_default_transform(
-            crs_0, crs, width, height, *bounds)
+        # src_crs = rasterio.crs.CRS(init=crs_0)
+        # output = None
+        # transform, width, height = warp.calculate_default_transform(
+        #     crs_0, crs, width, height, *bounds)
+
         reproject_raster, reproject_affine = warp.reproject(
-            clipped,
-            reproject_raster,
+            source_raster,
+            # destination=output,
             src_transform=affine,
             src_crs=crs_0,
-            dst_tranform=transform,
+            # dst_transform=transform,
             dst_crs=crs,
             resampling=Resampling.nearest
         )
-        clipped = reproject_raster
+        clipped = reproject_raster[0]
         affine = reproject_affine
         if get_bounds:
             bounds = rasterio.transform.array_bounds(
@@ -182,6 +195,13 @@ def mosaic_rasters(images):
         resampling=Resampling.nearest
     )
     mosaic_reader_gen = get_dataset_reader(mosaic, out_trans, crs=DST_CRS)
+    # for i in images:
+    #     src = rasterio.open(i)
+    #     pyplot.imshow(src.read(1))
+    #     pyplot.show()
+    # for r in mosaic_reader_gen:
+    #     pyplot.imshow(r.read(1))
+    #     pyplot.show()
     return mosaic_reader_gen
 
 

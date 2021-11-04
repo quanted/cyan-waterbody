@@ -13,6 +13,8 @@ from flask_cors import CORS
 from main import async_aggregate, async_retry
 from PIL import Image, ImageCms
 from io import BytesIO
+import pandas as pd
+import datetime
 import threading
 import logging
 import json
@@ -84,6 +86,38 @@ def get_data():
                                   end_year=end_year, end_day=end_day, ranges=ranges)
     results = {"OBJECTID": objectid, "daily": daily, "data": data}
     return results, 200
+
+
+@app.route('/waterbody/data_download/')
+def get_all_data():
+    args = request.args
+    if "OBJECTID" in args:
+        objectid = args["OBJECTID"]
+    else:
+        return "Missing required waterbody objectid parameter 'OBJECTID'", 200
+    daily = True
+    if "daily" in args:
+        daily = (args["daily"] == "True")
+
+    data = get_waterbody_data(objectid=objectid, daily=daily)
+    if len(data) == 0:
+        return f"No data found for objectid: {objectid}", 200
+    _data_df = []
+    columns = ["date", "objectid"]
+    for n in range(0, 256):
+        columns.append(f"DN-{n}")
+    for d, l in data.items():
+        _d = d.split(" ")
+        data_row = [datetime.datetime(year=int(_d[0]), month=1, day=1) + datetime.timedelta(days=int(_d[1])), objectid]
+        data_row.extend(l)
+        _data_df.append(data_row)
+    data_df = pd.DataFrame(_data_df, columns=columns)
+    data_df.set_index('date', inplace=True)
+    data_df = data_df.sort_values(by=['date'])
+    response = make_response(data_df.to_csv())
+    response.headers["Content-Disposition"] = f"attachment; filename={objectid}_data.csv"
+    response.headers["Content-Type"] = "text/csv"
+    return response
 
 
 @app.route('/waterbody/search/')
