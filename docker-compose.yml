@@ -1,10 +1,10 @@
 version: '3.1'
 
 services:
-  
+
   wb-flask:
     restart: unless-stopped
-    container_name: cyan-wb
+    container_name: wb-flask
     build: .
     ports:
       - "8085:8080"
@@ -27,13 +27,12 @@ services:
 
   wb-celery:
     restart: unless-stopped
-    container_name: cyan-wb-celery
+    container_name: wb-celery
     build: .
-    image: cyan-wb-celery
     command: celery -A celery_worker.celery worker --loglevel=INFO -c 1
     depends_on:
       - redis
-      - cyan-wb
+      - wb-flask
     volumes:
       - .:/src
     environment:
