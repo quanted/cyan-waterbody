@@ -81,7 +81,7 @@ class Scheduler:
 		except JSONDecodeError as e:
 			logging.warning("Could not decode aggregation result: {}".format(e))
 			results = response.content.decode("utf-8")  # gets error message
-			logging.warning("Message returned from cyan-waterbody agg request: {}".format(results))
+			logging.warning("Message returned from cyan-waterbody aggregation request: {}".format(results))
 			logging.warning("Skipping aggregation for {}".format(date))
 			return
 
