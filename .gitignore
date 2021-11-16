@@ -6,3 +6,4 @@ cyan_rare/
 outputs/
 static/raster_plots/
 static/temp/
+.env
