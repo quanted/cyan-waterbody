@@ -13,7 +13,7 @@ class Scheduler:
 	def __init__(self):
 		self.scheduler = None
 		self.schedule_type = "interval"
-		self.schedule_interval_minutes = 1
+		self.schedule_interval_hours = float(os.getenv("SCHEDULER_INTERVAL_HOURS", 4))
 
 		self.start_scheduler()
 
@@ -21,7 +21,7 @@ class Scheduler:
 
 	def start_scheduler(self):
 		self.scheduler = BackgroundScheduler(daemon=True)
-		self.scheduler.add_job(self.execute_scheduled_aggregation, self.schedule_type, minutes=self.schedule_interval_minutes)
+		self.scheduler.add_job(self.execute_scheduled_aggregation, self.schedule_type, hours=self.schedule_interval_hours)
 		self.scheduler.start()
 
 	def execute_scheduled_aggregation(self):
