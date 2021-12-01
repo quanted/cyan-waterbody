@@ -9,6 +9,7 @@ from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, 
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.report import generate_report, get_report_path
+from flaskr.utils import convert_cc
 from flask_cors import CORS
 from main import async_aggregate, async_retry
 from PIL import Image, ImageCms
@@ -217,13 +218,13 @@ def get_image():
     use_custom = False
     if 'low' in args:
         use_custom = True
-        colors['low'] = int(args['low'])
+        colors['low'] = convert_cc(int(args['low']))
     if 'med' in args:
         use_custom = True
-        colors['med'] = int(args['med'])
+        colors['med'] = convert_cc(int(args['med']))
     if 'high' in args:
         use_custom = True
-        colors['high'] = int(args['high'])
+        colors['high'] = convert_cc(int(args['high']))
     if 'use_bin' in args:
         use_custom = True
     raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day, get_bounds=False)
@@ -404,13 +405,13 @@ def get_report():
     use_custom = False
     if 'low' in args:
         use_custom = True
-        colors['low'] = int(args['low'])
+        colors['low'] = convert_cc(int(args['low']))
     if 'med' in args:
         use_custom = True
-        colors['med'] = int(args['med'])
+        colors['med'] = convert_cc(int(args['med']))
     if 'high' in args:
         use_custom = True
-        colors['high'] = int(args['high'])
+        colors['high'] = convert_cc(int(args['high']))
     ranges = None
     if ('high' not in args or 'med' not in args or 'low' not in args) and use_custom:
         missing.append("Missing bin categories for data. Requires high, med and low.")

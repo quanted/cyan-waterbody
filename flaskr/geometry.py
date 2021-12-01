@@ -6,7 +6,7 @@ import os
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
 
-WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "waterbodies_4.dbf")
+WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "waterbodies_9.dbf")
 COUNTY_DBF = os.path.join(os.getenv("COUNTY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_county_500k.dbf")
 STATE_DBF = os.path.join(os.getenv("STATE_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_state_500k.dbf")
 TRIBE_DBF = os.path.join(os.getenv("TRIBE_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_aiannh_500k.dbf")
@@ -103,7 +103,7 @@ def get_waterbody_count():
 
 
 def get_county_boundary(geoid, retry: bool = False):
-    geoid_alt = f"0{geoid}"
+    geoid_alt = geoid.zfill(5)
     with fiona.open(COUNTY_DBF) as counties:
         crs = counties.crs
         for c in counties:
@@ -122,7 +122,7 @@ def get_state_boundary(state):
 
 
 def get_tribe_boundary(tribe):
-    tribe_alt = f"0{tribe}"
+    tribe_alt = tribe.zfill(4)
     with fiona.open(TRIBE_DBF) as tribes:
         crs = tribes.crs
         for c in tribes:

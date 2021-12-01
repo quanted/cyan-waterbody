@@ -5,11 +5,12 @@ import gdal
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
-from rasterio import mask, warp, crs, MemoryFile, features
+from rasterio import mask, warp, crs, MemoryFile, features, plot
 from rasterio.merge import merge
 from rasterio.enums import Resampling
 from rasterio.profiles import DefaultGTiffProfile
 from matplotlib import pyplot
+import matplotlib.pyplot as plt
 # from osgeo import gdal, osr
 from pyproj import Proj, CRS
 from pyproj import transform as pyt
@@ -172,6 +173,9 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
             proj0 = Proj(crs)
             proj1 = Proj('epsg:4326')
             bbox = [pyt(proj0, proj1, bounds[2], bounds[1]), pyt(proj0, proj1, bounds[0], bounds[3])]
+
+    # plot.show(clipped, transform=affine)
+    # plt.show()
 
     return clipped, affine, raster_crs, bbox, boundary
 

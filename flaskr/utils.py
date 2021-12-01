@@ -137,3 +137,13 @@ def convert_dn(dn, round=2):
     return cell_con
 
 
+def convert_cc(cell_concentration):
+    if cell_concentration < 6000:
+        return cell_concentration
+    elif cell_concentration == 0:
+        return 0
+    else:
+        dn = round((np.log10(cell_concentration/10**8)+4.2) * (250/3))
+        return dn
+
+

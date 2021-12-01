@@ -184,12 +184,15 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
         poly_geos = []
         for p in f["geometry"]["coordinates"]:
             poly_geos.append(Polygon(p[0]))
+        # poly = gpd.GeoDataFrame.from_features({"type": "FeatureCollection", "features": [f]})
+        # fea, crs = get_waterbody(objectid=objectid, tojson=False)
+        # poly = gpd.GeoDataFrame.from_features(fea, crs=crs)
         poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
     else:
         poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
-
-    poly.plot(linewidth=2)
-    plt.show()
+    # poly = gpd.GeoDataFrame.from_features(features, crs=crs)
+    # poly.plot(linewidth=1, color='red')
+    # plt.show()
 
     f_images = get_tiles_by_objectid(objectid, image_base)
     if len(f_images) > 1:
