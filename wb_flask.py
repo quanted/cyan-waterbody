@@ -9,7 +9,7 @@ from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, 
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.report import generate_report, get_report_path
-from flaskr.utils import convert_cc
+from flaskr.utils import convert_cc, convert_dn
 from flask_cors import CORS
 from main import async_aggregate, async_retry
 from PIL import Image, ImageCms
@@ -102,7 +102,10 @@ def get_all_data():
     _data_df = []
     columns = ["date", "objectid"]
     for n in range(0, 256):
-        columns.append(f"DN-{n}")
+        if n == 0 or n > 254:
+            columns.append(f"DN={n}")
+        else:
+            columns.append(f"CC={convert_dn(n, round=1)}")
     for d, l in data.items():
         _d = d.split(" ")
         data_row = [datetime.datetime(year=int(_d[0]), month=1, day=1) + datetime.timedelta(days=int(_d[1])), objectid]
