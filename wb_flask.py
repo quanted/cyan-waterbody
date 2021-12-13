@@ -388,9 +388,6 @@ def aggregate_overall_status():
 @app.route('/waterbody/report/')
 def get_report():
     args = request.args
-
-    logging.warning("GET REPORT ARGS: {}".format(args))
-
     county = None
     tribes = None
     objectids = None
@@ -434,10 +431,6 @@ def get_report():
     if len(missing) > 0:
         return "; ".join(missing), 200
 
-    logging.warning("REQUEST HEADERS: {}".format(request.headers))
-    logging.warning("REQUEST OPTIONS: {}".format(dir(request)))
-    logging.warning("REQUEST G: {}".format(dir(g)))
-
     request_dict = {
         'year': year,
         'day': day,
@@ -454,8 +447,6 @@ def get_report():
 
     # Checks that aggregation has been completed for the requests day/year/data type:
     results = check_status(day=day, year=year, daily=True)
-
-    logging.warning("IMAGE AGG STATUS BEFORE REPORT GEN: {}".format(results))
 
     if results.get("status") != "COMPLETED":
         request_dict['report_id'] = None
@@ -488,7 +479,6 @@ def report_status():
     #     return "Report has not completed or does not exist", 404
     # return {"status": True, "message": "Report ready to download", "report_id": report_id}
     status = celery_handler.check_celery_job_status(report_id)
-    logging.warning("CELERY TASK STATUS FOR {}:\n{}".format(report_id, status))
     return {"report_id": report_id, "report_status": status}
 
 
