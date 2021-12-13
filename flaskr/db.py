@@ -612,11 +612,8 @@ def get_all_state_counties(state: str):
     value = (state,)
     cur.execute(query, value)
     for c in cur.fetchall():
-<<<<<<< Updated upstream
-=======
         c = list(c)
         c[0] = str(c[0]).zfill(5)
->>>>>>> Stashed changes
         results.append(list(c))
     conn.close()
     return results
@@ -629,11 +626,8 @@ def get_all_tribes():
     query = "SELECT DISTINCT GEOID, Name FROM WaterBodyTribe"
     cur.execute(query)
     for c in cur.fetchall():
-<<<<<<< Updated upstream
-=======
         c = list(c)
         c[0] = str(c[0]).zfill(4)
->>>>>>> Stashed changes
         results.append(list(c))
     conn.close()
     return results
