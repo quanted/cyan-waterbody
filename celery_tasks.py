@@ -6,8 +6,11 @@ import os
 import logging
 from celery import Celery
 import uuid
+from datetime import datetime
+import json
 
-from flaskr.report import generate_report, get_report_path
+from flaskr import report
+import requests
 
 
 redis_hostname = os.environ.get("REDIS_HOSTNAME", "localhost")
@@ -37,18 +40,33 @@ celery_instance.conf.update(
 
 @celery_instance.task(bind=True)
 def generate_report(self, request_obj):
-    # print("Generating report on celery task.")
-    # sleep(5)
-    # print("Report 'generated'.")
-    # return {"status": "report data goes here"}
 
-    logging.warning("GENERATE REPORT CELERY TASK CALLED: {}".format(request_obj))
+    token = request_obj.pop('token')
+    origin = request_obj.pop('origin')
+    app_name = request_obj.pop('app_name')
 
-    response = generate_report(request_obj)
+    response = None
+    try:
+        response = report.generate_report(**request_obj)
+    except Exception as e:
+        logging.warning("Exception generating report: {}".format(e))
+        return False
 
-    logging.warning("GEN REPORT CELERY TASK RESPONSE: {}".format(response))
+    # TODO: email report/update cyanweb report table status/delete report temp directory?
 
-    return response
+    # Updates report status
+    response = make_update_report_request(
+        {
+            "report_id": response,
+            "report_status": "SUCCESS",
+            "finished_datetime": datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
+        }, 
+        token,
+        origin,
+        app_name
+    )
+
+    return json.loads(response)
 
 
 @celery_instance.task(bind=True)
@@ -57,6 +75,23 @@ def test_celery(*args):
     sleep(5)
     logging.warning("Celery successfully called.")
     return {"status": "celery task finished."}
+
+
+def make_update_report_request(request_obj, token, origin, app_name):
+    """
+    Makes request to cyanweb flask to update report table for
+    a user's report.
+    """
+    url = os.getenv("CYANWEB_FLASK_URL", "http://localhost:5001/cyan/app/api") + "/report/update"
+    headers = {
+        "Access-Control-Expose-Headers": "Authorization",
+        "Access-Control-Allow-Headers": "Authorization",
+        "Authorization": "{}".format(token),
+        "Origin": origin,
+        "App-Name": app_name
+    }
+    response = requests.post(url=url, headers=headers, json=request_obj)
+    return response.content
 
 
 class CeleryHandler:
@@ -84,20 +119,11 @@ class CeleryHandler:
         """
         Starts celery task and saves job/task ID to job table.
         """
-        # th = threading.Thread(target=generate_report, kwargs={'year': year, 'day': day, 'objectids': objectids,
-        #                                                       'tribes': tribes, 'counties': county, 'ranges': ranges,
-        #                                                       'report_id': report_id})
-
-        logging.warning("Starting task, request: {}".format(request_obj))
-
-        # job_id = str(uuid.uuid4())  # creates job ID for celery task
         task_id = request_obj['report_id']
-
         # Runs job on celery worker:
         celery_job = generate_report.apply_async(
             args=[request_obj], queue="celery", task_id=task_id
         )
-
         return celery_job
 
     def check_celery_job_status(self, report_id):

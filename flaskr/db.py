@@ -612,6 +612,11 @@ def get_all_state_counties(state: str):
     value = (state,)
     cur.execute(query, value)
     for c in cur.fetchall():
+<<<<<<< Updated upstream
+=======
+        c = list(c)
+        c[0] = str(c[0]).zfill(5)
+>>>>>>> Stashed changes
         results.append(list(c))
     conn.close()
     return results
@@ -624,6 +629,11 @@ def get_all_tribes():
     query = "SELECT DISTINCT GEOID, Name FROM WaterBodyTribe"
     cur.execute(query)
     for c in cur.fetchall():
+<<<<<<< Updated upstream
+=======
+        c = list(c)
+        c[0] = str(c[0]).zfill(4)
+>>>>>>> Stashed changes
         results.append(list(c))
     conn.close()
     return results
@@ -654,15 +664,9 @@ def get_tribe_geoid(tribe):
 def get_states_from_wb(objectids: tuple):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-# <<<<<<< HEAD
     query = "SELECT DISTINCT STUSPS FROM WaterBodyState WHERE OBJECTID IN (%s)" % ",".join("?"*len(objectids))
     value = objectids
     cur.execute(query, objectids)
-# =======
-#     query = f"SELECT DISTINCT STUSPS FROM WaterBodyState WHERE OBJECTID IN {objectids}"
-#     query = query.replace(",", "") if len(objectids) == 1 else query
-#     cur.execute(query)
-# >>>>>>> main
     states = []
     for r in cur.fetchall():
         states.append(r[0])

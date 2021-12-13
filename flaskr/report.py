@@ -215,8 +215,8 @@ def generate_report(
         logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
     else:
         logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
-    # email report/delete report temp directory
-    return True
+    
+    return report_id
 
 
 def get_title(year: int, day: int, j_env=None, title: str = None, page_title: str = None, location_title: str = None):
@@ -929,6 +929,7 @@ def generate_all_wb_rasters(year: int, day: int, parallel: bool = True):
     else:
         for oid in objectids:
             _ = get_report_waterbody_raster(objectid=oid, report_id="", year=year, day=day)
+
 
 
 if __name__ == "__main__":
