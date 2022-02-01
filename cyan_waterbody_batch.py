@@ -177,14 +177,12 @@ class WaterbodyBatch:
 					continue  # skips job
 				self._initate_status_check_loop(year, day, daily)
 
-	def _get_all_data(self):
+	def _get_all_data(self, cur):
 		"""
 		Gets all DB data of a specified data type.
 		"""
 		print("Querying all data from {} table".format(self.table))
 		start_time = time.time()
-		conn = sqlite3.connect(DB_FILE)
-		cur = conn.cursor()
 		query = "SELECT * FROM {}".format(self.table)
 		cur.execute(query)
 		all_rows = cur.fetchall()
@@ -213,15 +211,12 @@ class WaterbodyBatch:
 		print("Exec time: {}s".format(time.time() - start_time))
 		return processed_rows, failed_rows
 
-	def run_quick_check(self, years, days, waterbodies):
+	def run_quick_check(self, years, days, waterbodies, cur):
 		"""
 		Checks that number of rows matches the expected size
 		given the requested date ranges, etc.
 		"""
 		print("Running quick check.")
-
-		conn = sqlite3.connect(DB_FILE)
-		cur = conn.cursor()
 
 		start_time = time.time()
 
@@ -248,7 +243,7 @@ class WaterbodyBatch:
 		print("Quick check complete.")
 		print("Size of all matching rows: {}".format(results_size))
 		print("Expected number of matched rows: {}".format(expected_size))
-		print("Exec time: {}".format(time.time() - start_time))
+		print("Exec time: {}s".format(time.time() - start_time))
 
 		if results_size == expected_size:
 			return True
@@ -333,7 +328,10 @@ class WaterbodyBatch:
 
 		try:
 
-			all_rows = self._get_all_data()
+			conn = sqlite3.connect(DB_FILE)
+			cur = conn.cursor()
+
+			all_rows = self._get_all_data(cur)
 
 			processed_rows, failed_rows = self.run_full_status_check(all_rows)  # builds lists of processed and failed rows
 
@@ -347,7 +345,7 @@ class WaterbodyBatch:
 				self.data_type
 			))
 
-			quick_result = self.run_quick_check(years, days, waterbodies)
+			quick_result = self.run_quick_check(years, days, waterbodies, cur)
 
 			if quick_result == False:
 				self.run_slow_check(years, days, waterbodies, all_rows)
