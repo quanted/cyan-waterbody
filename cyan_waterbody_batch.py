@@ -368,17 +368,24 @@ if __name__ == "__main__":
 	end_date = None
 	data_type = None
 
+	message = "\n\nOrder of arguments: func_type (main or db), " + \
+		"start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), data_type (daily or weekly)\n"
+
 	try:
 		func_type = sys.argv[1]
 		start_date = sys.argv[2]
 		end_date = sys.argv[3]
 		data_type = sys.argv[4]
 	except IndexError:
-		raise Exception("Order of arguments: func_type (main or db), \
-			start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), data_type (daily or weekly)")
+		raise Exception(message)
 
 	agg_batch = WaterbodyBatch(start_date, end_date, data_type)
 
-	# agg_batch.main()  # runs aggregation batch
+	if func_type == "main":
+		agg_batch.main()  # runs aggregation batch
 
-	agg_batch.validate_database()  # runs DB validation
+	elif func_type == "db":
+		agg_batch.validate_database()  # runs DB validation
+
+	else:
+		raise Exception(message)
