@@ -211,7 +211,7 @@ class WaterbodyBatch:
 		print("Exec time: {}s".format(time.time() - start_time))
 		return processed_rows, failed_rows
 
-	def run_quick_check(self, years, days, waterbodies, cur):
+	def run_quick_check(self, year, days, waterbodies, cur):
 		"""
 		Checks that number of rows matches the expected size
 		given the requested date ranges, etc.
@@ -220,20 +220,21 @@ class WaterbodyBatch:
 
 		start_time = time.time()
 
-		total_days = (self.edate - self.sdate).days + 1  # inclusive
+		total_days = len(days)
 
 		print("Total days in requested date range: {}".format(total_days))
-		 
-		query = "SELECT * FROM {} WHERE year IN ({}) AND day IN ({}) AND OBJECTID IN ({}) AND status=?".format(
+
+		query = "SELECT * FROM {} WHERE year=? AND day IN ({}) AND OBJECTID IN ({}) AND status=?".format(
 			self.table,
-			','.join(['?']*len(years)),
 			','.join(['?']*len(days)),
 			','.join(['?']*len(waterbodies))
 		)
 
-		values = (years + days + waterbodies + ["PROCESSED"])
+		values = ([year] + days + waterbodies + ["PROCESSED"])
 		cur.execute(query, values)
 		rows = cur.fetchall()
+
+		print("Rows Found: {}".format(rows))
 
 		# TODO: Could query without status and separate from PROCESSED, FAILED, and anything missing
 
@@ -246,6 +247,7 @@ class WaterbodyBatch:
 		print("Exec time: {}s".format(time.time() - start_time))
 
 		if results_size == expected_size:
+			print("Quick check result: valid")
 			return True
 		elif results_size < expected_size:
 			print("Missing or FAILED images found from quick check.")
@@ -253,7 +255,7 @@ class WaterbodyBatch:
 		else:
 			raise Exception("More results returned from DB than expected, which is unexpected.")
 
-	def run_slow_check(self, years, days, waterbodies, all_rows):
+	def run_slow_check(self, year, days, waterbodies, all_rows):
 		"""
 		Slow/deep check to see which individual dates, etc. may be
 		missing from the DailyStatus or WeeklyStatus tables.
@@ -266,36 +268,34 @@ class WaterbodyBatch:
 		failed_rows = []
 		start_time = time.time()
 		counter = 1
+
+		rows_to_check = [row for row in all_rows if row[0] == year and row[1] in days]
+
 		for objectid in waterbodies:
 			# Looping list of expected waterbodies from waterbodies DBF.
 
-			objectid_rows = [row for row in all_rows if row[2] == objectid]
+			objectid_rows = [row for row in rows_to_check if row[2] == objectid]
 
 			print("Progress: {}%".format(round(100.0 * (counter/len(waterbodies)), 2)))
 
-			for year in years:
+			for day in days:
 
-				# Sets days for each year to account for leap year:
-				days = [*range(1, 366)] if not calendar.isleap(year) else [*range(1, 367)]
+				current_date = str(year) + str(day)
+				datum_obj = {
+					"objectid": objectid,
+					"date": current_date
+				}
 
-				for day in days:
+				found_rows = []
+				for row in objectid_rows:
+					# Looping all rows from DB table that contain a given objectid:
+					if row[0] == year and row[1] == day and row[3] == "PROCESSED":
+						processed_rows.append(datum_obj)
+						found_rows.append(datum_obj)
 
-					current_date = str(year) + str(day)
-					datum_obj = {
-						"objectid": objectid,
-						"date": current_date
-					}
-
-					found_rows = []
-					for row in objectid_rows:
-						# Looping all rows from DB table that contain a given objectid:
-						if row[0] == year and row[1] == day and row[3] == "PROCESSED":
-							processed_rows.append(datum_obj)
-							found_rows.append(datum_obj)
-
-					if len(found_rows) < 1:
-						print("Found FAILED or missing row: {}".format(datum_obj))
-						failed_rows.append(datum_obj)
+				if len(found_rows) < 1:
+					print("Found FAILED or missing row: {}".format(datum_obj))
+					failed_rows.append(datum_obj)
 
 			counter += 1
 
@@ -316,15 +316,28 @@ class WaterbodyBatch:
 			* Checks that for every OBJECTID, all expected days exist.
 			* Checks that images are PROCESSED (status column) for every OBJECTID for every expected day.
 		"""
+
+		# What about building an object that contains all days to
+		# look for for each year?
+		# Example: {"2020": [5, 12, ...], "2021": [3, 10, ...]} for weekly
+		# Example: {"2020": [1,2,3,...366], "2021": [1,2,3...365]} for daily
+
+		day_inc = 1 if self.data_type == "daily" else 7
 		years = [i for i in range(self.start_year, self.end_year + 1)]
-		print("Years to aggregate: {}".format(years))
+		
+		dates_obj = {}
+		if len(years) == 1:
+			days = [*range(self.start_day, self.end_day + 1, day_inc)]
+			dates_obj[years[0]] = days
+		elif len(years) > 1:
+			dates_obj[years[0]] = [*range(self.start_day, 366, day_inc)] if not calendar.isleap(year) else [*range(self.start_day, 367, day_inc)]
+			dates_obj[years[-1]] = [*range(1, self.end_day + 1, day_inc)]
+			for year in years[1:-2]:
+				dates_obj[year] = [*range(1, 366, day_inc)] if not calendar.isleap(year) else [*range(1, 367, day_inc)]
+		else:
+			raise Exception("Invalid years or days.")
 
-		days = [i for i in range(self.start_day, self.end_day + 1)]
-		print("Days to aggregate: {}".format(days))
-
-		if len(days) == 365:
-			days.append(366)  # include leap day for DB query (see: run_quick_check)
-			print("Updated days to aggregate: {}".format(days))
+		print("Dates object for agg validation: {}".format(dates_obj))
 
 		try:
 
@@ -345,10 +358,15 @@ class WaterbodyBatch:
 				self.data_type
 			))
 
-			quick_result = self.run_quick_check(years, days, waterbodies, cur)
+			quick_results = {}
+			for year, days in dates_obj.items():
+				# Runs quick check for all years:
+				quick_results[year] = self.run_quick_check(year, days, waterbodies, cur)
 
-			if quick_result == False:
-				self.run_slow_check(years, days, waterbodies, all_rows)
+			for year, result in quick_results.items():
+				if result == False:
+					# Runs slow check for any years deemed invalid by quick check:
+					self.run_slow_check(year, days, waterbodies, all_rows)
 
 		except Exception as e:
 			logging.error("Exception validating database: {}".format(e))
