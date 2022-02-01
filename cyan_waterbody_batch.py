@@ -140,7 +140,20 @@ class WaterbodyBatch:
 			month = int(date_string.split("-")[1])
 			day = int(date_string.split("-")[2])
 			return datetime.date(year, month, day)
-			
+
+	def _get_all_data(self, cur):
+		"""
+		Gets all DB data of a specified data type.
+		"""
+		print("Querying all data from {} table".format(self.table))
+		start_time = time.time()
+		query = "SELECT * FROM {}".format(self.table)
+		cur.execute(query)
+		all_rows = cur.fetchall()
+		print("All data query complete.")
+		print("Exec time: {}s".format(time.time() - start_time))
+		return all_rows
+
 
 	def main(self):
 		"""
@@ -176,19 +189,6 @@ class WaterbodyBatch:
 					print("No image found for {} {}, {}. Skipping.".format(year, day, daily))
 					continue  # skips job
 				self._initate_status_check_loop(year, day, daily)
-
-	def _get_all_data(self, cur):
-		"""
-		Gets all DB data of a specified data type.
-		"""
-		print("Querying all data from {} table".format(self.table))
-		start_time = time.time()
-		query = "SELECT * FROM {}".format(self.table)
-		cur.execute(query)
-		all_rows = cur.fetchall()
-		print("All data query complete.")
-		print("Exec time: {}s".format(time.time() - start_time))
-		return all_rows
 
 	def run_full_status_check(self, all_rows):
 		"""
@@ -233,10 +233,6 @@ class WaterbodyBatch:
 		values = ([year] + days + waterbodies + ["PROCESSED"])
 		cur.execute(query, values)
 		rows = cur.fetchall()
-
-		print("Rows Found: {}".format(rows))
-
-		# TODO: Could query without status and separate from PROCESSED, FAILED, and anything missing
 
 		results_size = len(rows)
 		expected_size = total_days * len(waterbodies)
@@ -330,10 +326,16 @@ class WaterbodyBatch:
 			days = [*range(self.start_day, self.end_day + 1, day_inc)]
 			dates_obj[years[0]] = days
 		elif len(years) > 1:
-			dates_obj[years[0]] = [*range(self.start_day, 366, day_inc)] if not calendar.isleap(year) else [*range(self.start_day, 367, day_inc)]
-			dates_obj[years[-1]] = [*range(1, self.end_day + 1, day_inc)]
+			dates_obj[years[0]] = [*range(self.start_day, 366, day_inc)] if not calendar.isleap(years[0]) else [*range(self.start_day, 367, day_inc)]
+			i = 1
 			for year in years[1:-2]:
-				dates_obj[year] = [*range(1, 366, day_inc)] if not calendar.isleap(year) else [*range(1, 367, day_inc)]
+				prev_date_obj = self._doy_to_date(years[i -1], dates_obj[years[i-1]][-1])
+				init_day = int(self._get_day_of_year((prev_date_obj + datetime.timedelta(days=day_inc))))
+				dates_obj[year] = [*range(init_day, 366, day_inc)] if not calendar.isleap(year) else [*range(init_day, 367, day_inc)]
+				i += 1
+			prev_date_obj = self._doy_to_date(years[i-1], dates_obj[years[i-1]][-1])
+			init_day = int(self._get_day_of_year((prev_date_obj + datetime.timedelta(days=day_inc))))
+			dates_obj[years[-1]] = [*range(init_day, self.end_day + 1, day_inc)]
 		else:
 			raise Exception("Invalid years or days.")
 
