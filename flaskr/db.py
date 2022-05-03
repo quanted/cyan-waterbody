@@ -3,7 +3,7 @@ import sqlite3
 import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point, Polygon, MultiPolygon, shape
-from flaskr.geometry import get_waterbody, get_waterbody_count
+from flaskr.geometry import get_waterbody, get_waterbody_count, get_waterbody_by_fids
 from flaskr.raster import get_images, clip_raster, get_images_by_tile, get_raster_bounds
 import datetime
 from tqdm import tqdm
@@ -143,10 +143,19 @@ def get_custon_waterbody_data(geojson, daily: bool = True, start_year: int = Non
     return results
 
 
-def get_waterbody_bypoint(lat: float, lng: float):
+def get_waterbody_fid(objectid: int):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    query = "SELECT OBJECTID FROM WaterbodyBounds WHERE y_max>=? AND x_min<=? AND y_min<=? AND x_max>=?"
+    query = "SELECT FID FROM WaterbodyBounds WHERE OBJECTID==?"
+    cur.execute(query, (int(objectid),))
+    fid = cur.fetchall()
+    return fid[0][0]
+
+
+def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT OBJECTID, FID FROM WaterbodyBounds WHERE y_max>=? AND x_min<=? AND y_min<=? AND x_max>=?"
     values = (lat, lng, lat, lng,)
     cur.execute(query, values)
     lakes = cur.fetchall()
@@ -154,7 +163,8 @@ def get_waterbody_bypoint(lat: float, lng: float):
     if len(lakes) > 0:
         features = []
         for lake in lakes:
-            w = get_waterbody(int(lake[0]))
+            # w = get_waterbody(int(lake[0]))
+            w = get_waterbody_by_fids(fid=lake[1])
             features.append(w[0][0])
             crs = w[1]
         wb = (features, crs)
@@ -177,7 +187,10 @@ def get_waterbody_bypoint(lat: float, lng: float):
             gnis_name = features["properties"]["GNIS_NAME"]
             break
     conn.close()
-    return objectid, gnis_name
+    if return_fid:
+        return objectid, get_waterbody_fid(objectid), gnis_name
+    else:
+        return objectid, gnis_name
 
 
 def get_waterbody_bounds(objectid: str):

@@ -4,7 +4,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import argparse
 import time
 from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds, set_index
-from flaskr.utils import update_geometry_bounds, p_update_geometry_bounds
+from flaskr.utils import update_geometry_bounds, p_update_geometry_bounds, update_waterbody_fids
 from flaskr.aggregate import aggregate, retry_failed, p_aggregate
 from flaskr.report import generate_state_reports
 import logging
@@ -25,6 +25,7 @@ parser.add_argument('--aggregate', default=False, type=bool, help='Save the aggr
 parser.add_argument('--retry', default=False, type=bool, help='Retry failed aggregation attempts')
 parser.add_argument('--set_wb_bounds', default=False, type=bool, help='Reset the waterbody bounds in the database from clipped rasters.')
 parser.add_argument('--generate-state-reports', action='store_true', help='Generate reports for all CONUS states')
+parser.add_argument('--add_waterbody_fids', action='store_true', help='Update Waterbody database to include the FID column')
 
 PARALLEL = True
 
@@ -99,6 +100,10 @@ if __name__ == "__main__":
             print("Setting tile bounds requires reference tif, determined by year and day parameters.")
             exit()
         set_tile_bounds(int(args.year), int(args.day))
+    elif args.add_waterbody_fids:
+        print("Updating Waterbody table column FID with feature IDs")
+        update_waterbody_fids()
+        exit()
     elif args.generate_state_reports:
         if args.year is None or args.day is None:
             print("Generating state reports requires the year and day parameters.")
