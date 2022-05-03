@@ -167,7 +167,7 @@ def get_waterbody_byID(id: int, fid: int = None):
 def get_waterbody_properties(objectid: int, fid: int = None):
     metadata = {}
     with fiona.open(WATERBODY_DBF) as waterbodies:
-        if not fid:
+        if fid:
             f = waterbodies.get(fid)
             if objectid == int(f["properties"]["OBJECTID"]):
                 metadata = f["properties"]
