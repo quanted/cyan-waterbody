@@ -3,11 +3,11 @@ from datetime import datetime, timedelta, date
 from xhtml2pdf import pisa
 from pathlib import Path
 from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_boundary, get_state_boundary, \
-    get_tribe_boundary, get_waterbody_objectids
+    get_tribe_boundary, get_waterbody_objectids, get_waterbody_by_fids
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.db import get_conus_objectids, get_eparegion_objectids, get_state_objectids, get_tribe_objectids, \
     get_county_objectids, get_waterbody_data, get_group_metrics, get_county_state, get_county_geoid, \
-    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb, get_all_states
+    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb, get_all_states, get_waterbody_fid
 from flaskr.raster import rasterize_boundary
 from flaskr.utils import DEFAULT_RANGE, get_colormap, rgb, convert_dn
 import rasterio.plot
@@ -292,9 +292,10 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         mapping_i.append(ra)
 
     group_state = get_county_state(county_id=int(group_id)) if group_type == "County" else None
+    fids = [get_waterbody_fid(int(oid)) for oid in objectids]
     waterbodies_geos_raster = get_waterbody_collection_raster(groupname=group_name, grouptype=group_type,
                                                               group_id=group_id,
-                                                              objectids=objectids,
+                                                              objectids=objectids, fids=fids,
                                                               current_color_mapping=current_color_mapping,
                                                               week_color_mapping=week_color_mapping,
                                                               year=year, day=day, report_id=report_id,
@@ -333,8 +334,10 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
                         title_level: int = 3):
     if not j_env:
         j_env = get_env()
+    objectid = int(objectid)
     report_root = os.path.join(STATIC_ROOT, "temp", str(report_id))
-    waterbody_properties = get_waterbody_properties(objectid=objectid)
+    fid = get_waterbody_fid(objectid=objectid)
+    waterbody_properties = get_waterbody_properties(objectid=objectid, fid=fid)
     waterbody_name = waterbody_properties["GNIS_NAME"]
     waterbody_properties_cleaned = {}
     wb_area = 0
@@ -416,7 +419,7 @@ def get_report_waterbody_raster(objectid: int, report_id: str, day: int, year: i
     image_path = os.path.join(raster_root, image_file)
     if os.path.exists(image_path):
         return image_path
-    image_data, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day, get_bounds=False, reproject=True)
+    image_data, colormap = get_waterbody_raster(objectid=int(objectid), year=year, day=day, get_bounds=False, reproject=True)
     data = image_data[0]
     data = np.reshape(data, (1, data.shape[0], data.shape[1]))
     data = rasterize_boundary(image=data, boundary=image_data[4], affine=image_data[1], crs=image_data[2], value=256)[0]
@@ -442,7 +445,7 @@ def get_report_waterbody_raster(objectid: int, report_id: str, day: int, year: i
     return image_path
 
 
-def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: str, objectids: list,
+def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: str, objectids: list, fids: list,
                                     current_color_mapping: dict, week_color_mapping, year: int, day: int,
                                     report_id: str,
                                     color_mapping):
@@ -511,7 +514,8 @@ def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: st
             state_poly.plot(ax=ax2, edgecolor='#a8a79b', color='#a8a79b')
         fig.suptitle(f'Waterbody Max Occurrence', fontsize=12)
 
-    boundaries, crs = get_waterbody(objectids=objectids)
+    # boundaries, crs = get_waterbody(objectids=objectids)
+    boundaries, crs = get_waterbody_by_fids(fids=fids)
     for boundary in boundaries:
         if boundary["geometry"]["type"] == "MultiPolygon":
             poly_geos = []
