@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import multiprocessing as mp
 from flaskr.aggregate import get_waterbody_raster
+from flaskr.geometry import get_waterbody_fids
 import logging
 
 
@@ -145,5 +146,29 @@ def convert_cc(cell_concentration):
     else:
         dn = round((np.log10(cell_concentration/10**8)+4.2) * (250/3))
         return dn
+
+def update_waterbody_fids():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    try:
+        # attempt to create new column
+        print("Adding FID column to WaterbodyBounds.")
+        add_column_query = "ALTER TABLE WaterbodyBounds Add COLUMN FID integer"
+        cur.execute(add_column_query)
+    except Exception:
+        print("WaterbodyBounds table already has a FID column, updating existing values.")
+
+    objects_fids = get_waterbody_fids()
+
+    for i in tqdm(range(len(objects_fids)), desc="Settings geometry waterbody fid in db...", ascii=False):
+        query = "UPDATE WaterbodyBounds Set FID=? WHERE OBJECTID=?"
+        oid, fid = objects_fids[i]
+        values = (fid, oid)
+        cur.execute(query, values)
+        if i % 400 == 0:
+            cur.execute("COMMIT")
+            cur.execute("BEGIN")
+        i += 1
+    cur.execute("COMMIT")
 
 

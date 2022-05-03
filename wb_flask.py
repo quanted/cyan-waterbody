@@ -5,8 +5,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, make_response, send_from_directory
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, \
-    check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds
-from flaskr.geometry import get_waterbody_byname, get_waterbody_properties
+    check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, get_waterbody_by_fids
+from flaskr.geometry import get_waterbody_byname, get_waterbody_properties, get_waterbody_byID
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.report import generate_report, get_report_path
 from flaskr.utils import convert_cc, convert_dn
@@ -145,9 +145,10 @@ def get_objectid():
         data = get_waterbody_byname(gnis_name=gnis)
         results = {"waterbodies": data if len(data) > 0 else "NA"}
     else:
-        objectid, gnis = get_waterbody_bypoint(lat=lat, lng=lng)
-        if objectid is not None and gnis is not None:
-            data = get_waterbody_byname(gnis)
+        objectid, fid, gnis = get_waterbody_bypoint(lat=lat, lng=lng, return_fid=True)
+        if objectid is not None:
+            data = get_waterbody_byID(id=objectid, fid=int(fid))
+            # data = get_waterbody_byname(gnis)
             results = {"lat": lat, "lng": lng,
                        "waterbodies": data if len(data) > 0 else "NA"}
         else:
@@ -165,7 +166,8 @@ def get_properties():
         objectid = int(args["objectid"])
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
-    data = get_waterbody_properties(objectid=objectid)
+    fid = get_waterbody_fid(objectid=objectid)
+    data = get_waterbody_properties(objectid=objectid, fid=fid)
 
     bounds = get_waterbody_bounds(objectid)
 
@@ -188,7 +190,9 @@ def get_geometry():
         objectid = int(args["objectid"])
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
-    data = get_waterbody(objectid=objectid)
+    # data = get_waterbody(objectid=objectid)
+    fid = get_waterbody_fid(objectid=objectid)
+    data = get_waterbody_by_fids(fid=fid)
     results = {"objectid": objectid, "geojson": data}
     return results, 200
 
