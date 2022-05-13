@@ -60,7 +60,7 @@ class Scheduler:
 			logging.warning("Status response: {}".format(response))
 			if response.status_code != 200:
 				logging.warning("Error making request to Flask API. Skipping remaining task.")
-				return
+				continue
 
 			# Checks for error messages with 200 response:
 			results = None
@@ -72,11 +72,11 @@ class Scheduler:
 				results = response.content.decode("utf-8")  # gets error message
 				logging.warning("Message returned from cyan-waterbody status request: {}".format(results))
 				logging.warning("Skipping aggregation for {}".format(date))
-				return
+				continue
 
 			if results.get("completed") != "0%" or results.get("status") == "COMPLETED":    
 				logging.warning("Aggregation has already been performed for today's date: {}\nSkipping aggregation.".format(date))
-				return
+				continue
 
 			# Executes aggregation endpoint.
 			logging.warning("Initiating aggregation for {}".format(date))
@@ -92,7 +92,7 @@ class Scheduler:
 				results = response.content.decode("utf-8")  # gets error message
 				logging.warning("Message returned from cyan-waterbody aggregation request: {}".format(results))
 				logging.warning("Skipping aggregation for {}".format(date))
-				return
+				continue
 
 			time.sleep(5 * 60)  # sleeps between daily and weekly aggregation
 
