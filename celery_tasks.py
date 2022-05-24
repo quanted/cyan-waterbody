@@ -82,7 +82,7 @@ def make_update_report_request(request_obj, token, origin, app_name):
     Makes request to cyanweb flask to update report table for
     a user's report.
     """
-    url = os.getenv("CYANWEB_FLASK_URL", "http://localhost:5001/cyan/app/api") + "/report/update"
+    url = origin + "/cyan/app/api/report/update"
     headers = {
         "Access-Control-Expose-Headers": "Authorization",
         "Access-Control-Allow-Headers": "Authorization",
