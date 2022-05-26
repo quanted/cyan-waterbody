@@ -114,7 +114,15 @@ def get_all_data():
     data_df = pd.DataFrame(_data_df, columns=columns)
     data_df.set_index('date', inplace=True)
     data_df = data_df.sort_values(by=['date'])
-    response = make_response(data_df.to_csv())
+    data_df.attrs["DN/CN Column Units"] = "The number of 300m x 300m cells with the specified estimated concentration value (CN)"
+    data_df.attrs["DN=0"] = "Below Detection"
+    data_df.attrs["DN=254"] = "Land"
+    data_df.attrs["DN=255"] = "No Data"
+    data_csv = data_df.to_csv()
+    data_csv += "\nMetadata"
+    for k, v in data_df.attrs.items():
+        data_csv += f"\n{k},{v}"
+    response = make_response(data_csv)
     response.headers["Content-Disposition"] = f"attachment; filename={objectid}_data.csv"
     response.headers["Content-Type"] = "text/csv"
     return response
