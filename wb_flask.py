@@ -493,7 +493,8 @@ def cancel_report():
     args = request.args
     report_id = args["report_id"]
     # username = args["username"]
-    celery_handler.revoke_task(report_id)
+    response = celery_handler.revoke_task(report_id)
+    return response
 
 
 @app.route('/waterbody/report/download/')
