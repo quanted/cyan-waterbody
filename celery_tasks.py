@@ -47,20 +47,38 @@ def generate_report(self, request_obj):
 
     response = None
     try:
-        response = report.generate_report(**request_obj)
+        report_response = report.generate_report(**request_obj)  # returns report id
     except Exception as e:
         logging.warning("Exception generating report: {}".format(e))
-        return False
 
-    # TODO: email report/update cyanweb report table status/delete report temp directory?
+        # TODO: Make request to cyanweb flask to update report table with
+        # and error/failed state.
+
+        cyanweb_request_obj = {
+            "report_id": request_obj["report_id"],
+            "report_status": "FAILURE",
+            "finished_datetime": datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
+        }
+
+        response = make_update_report_request(
+            cyanweb_request_obj, 
+            token,
+            origin,
+            app_name
+        )
+
+        return json.loads(response)
+
 
     # Updates report status
+    cyanweb_request_obj = {
+        "report_id": report_response,
+        "report_status": "SUCCESS",
+        "finished_datetime": datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
+    }
+
     response = make_update_report_request(
-        {
-            "report_id": response,
-            "report_status": "SUCCESS",
-            "finished_datetime": datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
-        }, 
+        cyanweb_request_obj, 
         token,
         origin,
         app_name
@@ -83,6 +101,10 @@ def make_update_report_request(request_obj, token, origin, app_name):
     a user's report.
     """
     url = origin + "/cyan/app/api/report/update"
+
+    # NOTE: For troubleshooting only:
+    # url = "http://host.docker.internal:5001/cyan/app/api/report/update"
+
     headers = {
         "Access-Control-Expose-Headers": "Authorization",
         "Access-Control-Allow-Headers": "Authorization",
