@@ -10,6 +10,7 @@ from flaskr.geometry import get_waterbody_byname, get_waterbody_properties, get_
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.report import generate_report, get_report_path
 from flaskr.utils import convert_cc, convert_dn
+from flaskr.metrics import calculate_metrics
 from flask_cors import CORS
 from main import async_aggregate, async_retry
 from PIL import Image, ImageCms
@@ -51,6 +52,8 @@ def get_data():
     args = request.args
     if "OBJECTID" in args:
         objectid = args["OBJECTID"]
+    elif "objectid" in args:
+        objectid = args["objectid"]
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
     start_year = None
@@ -87,7 +90,8 @@ def get_data():
     #                                      end_year=end_year, end_day=end_day, ranges=ranges)
     data = get_waterbody_data(objectid=objectid, daily=daily, start_year=start_year, start_day=start_day,
                                   end_year=end_year, end_day=end_day, ranges=ranges)
-    results = {"OBJECTID": objectid, "daily": daily, "data": data}
+    metrics = calculate_metrics(objectids=[objectid], year=end_year, day=end_day, summary=False)
+    results = {"OBJECTID": objectid, "daily": daily, "data": data, "metrics": metrics}
     return results, 200
 
 
@@ -120,7 +124,15 @@ def get_all_data():
     data_df = pd.DataFrame(_data_df, columns=columns)
     data_df.set_index('date', inplace=True)
     data_df = data_df.sort_values(by=['date'])
-    response = make_response(data_df.to_csv())
+    data_df.attrs["DN/CN Column Units"] = "The number of 300m x 300m cells with the specified estimated concentration value (CN)"
+    data_df.attrs["DN=0"] = "Below Detection"
+    data_df.attrs["DN=254"] = "Land"
+    data_df.attrs["DN=255"] = "No Data"
+    data_csv = data_df.to_csv()
+    data_csv += "\nMetadata"
+    for k, v in data_df.attrs.items():
+        data_csv += f"\n{k},{v}"
+    response = make_response(data_csv)
     response.headers["Content-Disposition"] = f"attachment; filename={objectid}_data.csv"
     response.headers["Content-Type"] = "text/csv"
     return response

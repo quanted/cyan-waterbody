@@ -14,11 +14,17 @@ STATE_DBF = os.path.join(os.getenv("STATE_DBF", "D:\\data\cyan_rare\\mounts\\geo
 TRIBE_DBF = os.path.join(os.getenv("TRIBE_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_aiannh_500k.dbf")
 
 
-def get_waterbody_fids():
-    results = []
+def get_waterbody_fids(return_dict: bool = False):
+    if return_dict:
+        results = {}
+    else:
+        results = []
     with fiona.open(WATERBODY_DBF) as waterbodies:
         for f in waterbodies:
-            results.append((int(f["properties"]["OBJECTID"]), int(f["id"])))
+            if return_dict:
+                results[int(f["properties"]["OBJECTID"])] = int(f["id"])
+            else:
+                results.append((int(f["properties"]["OBJECTID"]), int(f["id"])))
     return results
 
 
