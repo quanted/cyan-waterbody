@@ -16,3 +16,4 @@ dependencies:
   - xhtml2pdf
   - plotly
   - python-kaleido
+  - boto3

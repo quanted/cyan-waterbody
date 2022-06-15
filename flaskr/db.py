@@ -3,7 +3,7 @@ import sqlite3
 import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point, Polygon, MultiPolygon, shape
-from flaskr.geometry import get_waterbody, get_waterbody_count, get_waterbody_by_fids
+from flaskr.geometry import get_waterbody, get_waterbody_count, get_waterbody_by_fids, get_waterbody_fids, get_waterbody_elevation
 from flaskr.raster import get_images, clip_raster, get_images_by_tile, get_raster_bounds
 import datetime
 from tqdm import tqdm
@@ -677,3 +677,112 @@ def get_states_from_wb(objectids: tuple):
         states.append(r[0])
     conn.close()
     return states
+
+
+def set_wb_report_file(state, year, month, upload_date, file_url, status):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    try:
+        # attempt to create new column
+        print("Adding waterbody report table to waterbody database.")
+        add_column_query = "CREATE TABLE WaterbodyReport ( " \
+                           "state TEXT NOT NULL," \
+                           "year int NOT NULL,"\
+                           "month int NOT NULL," \
+                           "upload_date TEXT NOT NULL," \
+                           "file_url TEXT," \
+                           "status TEXT NOT NULL," \
+                           ")"
+        cur.execute(add_column_query)
+        conn.commit()
+    except Exception:
+        print("Waterbody database already has the report table")
+
+    query = "INSERT INTO WaterbodyReport (state, year, month, upload_date, file_url, status) VALUES (?,?,?,?,?,?)"
+    values = (state, year, month, upload_date, file_url, status)
+    cur.execute(query, values)
+    conn.close()
+
+
+def set_waterbody_details_table():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    try:
+        # attempt to create new column
+        print("Adding waterbody details table to waterbody database.")
+        add_table_query = "CREATE TABLE WaterbodyDetails ( " \
+                           "OBJECTID int NOT NULL," \
+                           "fid int NOT NULL, " \
+                           "elevation REAL NOT NULL"\
+                           ")"
+        cur.execute(add_table_query)
+        conn.commit()
+    except Exception:
+        print("Waterbody database already has the waterbody details table")
+
+    waterbody_dict = get_waterbody_fids(return_dict=True)
+
+    cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    pool = mp.Pool(cpus)
+    fid_dict = {}
+    j = 500
+    m = 0
+
+    # update comid list to include those which haven't been completed
+    comids = list(waterbody_dict.keys())
+    query = "SELECT OBJECTID FROM WaterbodyDetails"
+    values = ()
+    cur.execute(query, values)
+    completed_wb = []
+    for r in cur.fetchall():
+        completed_wb.append(r[0])
+    comids = list(set(comids) - set(completed_wb))
+
+    # update comid list to include those which have missing or invalid data
+    query = "SELECT OBJECTID FROM WaterbodyDetails WHERE elevation == -9999.0 OR elevation == -9998.0"
+    values = ()
+    cur.execute(query, values)
+    comids = set(comids)
+    invalid_wbs = []
+    for r in cur.fetchall():
+        invalid_wbs.append(r[0])
+        comids.add(r[0])
+    comids = list(comids)
+    for wb in invalid_wbs:
+        query = "DELETE FROM WaterbodyDetails WHERE OBJECTID=?"
+        values = (wb,)
+        cur.execute(query, values)
+    conn.commit()
+
+    while m <= len(comids) - 1:
+        m0 = m
+        m1 = j + m0 if j+m0 <= len(comids) else len(comids)
+        waterbody_list = comids[m0:m1]
+        results_objects = []
+        logger.info(f"Retrieving data for waterbodies at index: {m0} -> {m1}, n: {len(waterbody_list)}")
+        for comid in tqdm(waterbody_list, "Retrieving waterbody elevation data"):
+            fid = waterbody_dict[comid]
+            results_objects.append(pool.apply_async(get_waterbody_elevation, kwds={'fid': fid}))
+            fid_dict[fid] = comid
+        elevation_data = []
+        for r in tqdm(results_objects, "Retrieving processing results"):
+            _ = r.get()
+            elevation_data.append(_)
+        i = 0
+        for elev in tqdm(elevation_data, "Writing results to database"):
+            elevation = elev[0]
+            fid = elev[1]
+            comid = fid_dict[fid]
+            query = "INSERT INTO WaterbodyDetails (OBJECTID, fid, elevation) VALUES (?,?,?)"
+            values = (comid, fid, float(elevation))
+            cur.execute(query, values)
+            i += 1
+            if i == 100:
+                conn.commit()
+                i = 0
+        m = m1
+        del elevation_data
+        conn.commit()
+    logger.info("Completed waterbody elevation data retrieval")
+    conn.close()
+

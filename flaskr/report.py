@@ -3,13 +3,15 @@ from datetime import datetime, timedelta, date
 from xhtml2pdf import pisa
 from pathlib import Path
 from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_boundary, get_state_boundary, \
-    get_tribe_boundary, get_waterbody_objectids, get_waterbody_by_fids
+    get_tribe_boundary, get_waterbody_objectids, get_waterbody_by_fids, get_alpine_objectids
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.db import get_conus_objectids, get_eparegion_objectids, get_state_objectids, get_tribe_objectids, \
     get_county_objectids, get_waterbody_data, get_group_metrics, get_county_state, get_county_geoid, \
-    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb, get_all_states, get_waterbody_fid
+    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb, get_all_states, get_waterbody_fid, \
+    set_wb_report_file
 from flaskr.raster import rasterize_boundary
 from flaskr.utils import DEFAULT_RANGE, get_colormap, rgb, convert_dn
+from flaskr.report_tools import upload_report
 import rasterio.plot
 import plotly.graph_objects as go
 import plotly.express as px
@@ -73,10 +75,12 @@ def generate_report(
         states: list = None,
         tribes: list = None,
         counties: list = None,
+        alpine: bool = False,
         ranges: list = None,
         report_id: str = None,
         parallel: bool = False
 ):
+        #TODO: Add alpine report
     t0 = time.time()
     j_env = get_env()
     title = "CyANO Waterbody Report"
@@ -209,7 +213,29 @@ def generate_report(
     report_file.close()
     shutil.rmtree(report_root)
     t1 = time.time()
+    report_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
+
     if group_type == "State":
+        upload_status, upload_url = upload_report(file_path=report_file,
+                                                  directory_path=f"state/{states[0]}/{report_date.year}/"
+                                                                 f"{report_date.month}",
+                                                  object_name=f"CyAN-waterbody-report-{states[0]}_{year}-{day}.pdf"
+                                                  )
+        # TODO: Add database update function here (write new entry [state, year, month, upload_date, file_url, status]
+        upload_status = "SUCCESS" if upload_status else "FAILED"
+        set_wb_report_file(state=states[0], year=report_date.year, month=report_date.month,
+                           upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
+        logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
+    if group_type == "Alpine":
+        upload_status, upload_url = upload_report(file_path=report_file,
+                                                  directory_path=f"alpine/{report_date.year}/"
+                                                                 f"{report_date.month}",
+                                                  object_name=f"CyAN-waterbody-report-alpine_{year}-{day}.pdf"
+                                                  )
+        # TODO: Add database update function here (write new entry [state, year, month, upload_date, file_url, status]
+        upload_status = "SUCCESS" if upload_status else "FAILED"
+        set_wb_report_file(state="alpine", year=report_date.year, month=report_date.month,
+                           upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
         logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
     else:
         logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
@@ -870,7 +896,8 @@ def get_waterbody_collection(
         regions: list = None,
         states: list = None,
         tribes: list = None,
-        counties: list = None
+        counties: list = None,
+        alpine: bool = False
 ):
     wb_collection = {}
     if DEBUG:
@@ -890,6 +917,9 @@ def get_waterbody_collection(
     elif counties:
         wb_collection = get_county_objectids(counties)
         wb_type = "County"
+    elif alpine:
+        wb_collection = get_alpine_objectids()
+        wb_type = "Alpine Lakes"
     else:
         wb_collection["user_selected"] = objectids if objectids else []
         wb_type = "User Selected Waterbodies"
