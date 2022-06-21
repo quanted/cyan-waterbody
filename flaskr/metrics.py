@@ -135,7 +135,7 @@ def calculate_magnitude(data: pd.DataFrame, detect_columns: list, all_columns: l
     magnitude_wb = dict(magnitude.groupby(by='OBJECTID').sum().sum(axis=1))
     wb_magnitude_update = {}
     for k, v in magnitude_wb.items():
-        wb_magnitude_update[int(k)] = v
+        wb_magnitude_update[int(k)] = round(v, 4)
 
     waterbody_fids = get_waterbody_fids(return_dict=True)
 
@@ -145,9 +145,9 @@ def calculate_magnitude(data: pd.DataFrame, detect_columns: list, all_columns: l
 
     for comid in objectids:
         wb_data = get_waterbody_by_fids(waterbody_fids[comid])
-        area_normalized_magnitude[int(comid)] = magnitude_wb[str(comid)] / wb_data[0][0]['properties']['AREASQKM']
+        area_normalized_magnitude[int(comid)] = round(magnitude_wb[str(comid)] / wb_data[0][0]['properties']['AREASQKM'], 4)
 
     chia_area_normalized_bloom = {}
     for k, v in area_normalized_magnitude.items():
-        chia_area_normalized_bloom[int(k)] = 595.8 * v
+        chia_area_normalized_bloom[int(k)] = round(595.8 * v, 4)
     return wb_magnitude_update, area_normalized_magnitude, chia_area_normalized_bloom

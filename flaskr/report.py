@@ -99,6 +99,7 @@ def generate_report(
     os.mkdir(report_root)
     waterbodies, group_type = get_waterbody_collection(objectids=objectids, conus=conus, regions=regions, states=states,
                                                        tribes=tribes, counties=counties, alpine=alpine)
+    report_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
     location_title = "User Selected Waterbodies"
     if conus:
         location_title = "Contiguous United States"
@@ -109,7 +110,7 @@ def generate_report(
     elif tribes:
         location_title = f"Tribe{s}: " + ", ".join(waterbodies.keys())
     elif alpine:
-        location_title = "Alpine Lake"
+        location_title = "Alpine Lakes"
 
     logging.info(f"Generating new report, day: {day}, year: {year}, type: {group_type}, report_id: {report_id}")
     logging.info(f"Report: {report_id}, location: {location_title}, # of groups: {len(waterbodies)}")
@@ -156,10 +157,11 @@ def generate_report(
                 if parallel and len(wbs) >= cpus:
                     results_objects = [pool.apply_async(get_waterbody_block, kwds={
                         'year': year, 'day': day, 'objectid': objectid, 'report_id': str(report_id),
-                        'ranges': ranges, 'title_level': 4, 'frequency': wb_metrics["Frequency by Waterbody"][objectid],
-                                                         'magnitude': wb_metrics["Magnitude by Waterbody"][objectid],
-                                                         'mag_area_norm': wb_metrics["Area Normalized Magnitude"][objectid],
-                                                         'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid]}) for objectid in wbs
+                        'ranges': ranges, 'title_level': 4, 'extent': wb_metrics["Extent by Waterbody"][objectid],
+                        'frequency': wb_metrics["Frequency by Waterbody"][objectid],
+                        'magnitude': wb_metrics["Magnitude by Waterbody"][objectid],
+                        'mag_area_norm': wb_metrics["Area Normalized Magnitude"][objectid],
+                        'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid]}) for objectid in wbs
                     ]
                     for r in results_objects:
                         v = r.get()
@@ -177,6 +179,7 @@ def generate_report(
                                                              mag_area_norm=wb_metrics["Area Normalized Magnitude"][objectid],
                                                              chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],)
                         wbs_html[i_name] = i_html
+                #TODO: Add sorting by magnitude option
                 for wb in sorted(wbs_html.keys()):
                     html += wbs_html[wb]
                 i += 1
@@ -199,11 +202,12 @@ def generate_report(
             if parallel and len(ids) >= cpus:
                 results_objects = [pool.apply_async(get_waterbody_block, kwds={
                     'year': year, 'day': day, 'objectid': objectid, 'report_id': str(report_id),
-                    'ranges': ranges, 'title_level': 3, 'frequency': group_metrics["Frequency by Waterbody"][objectid],
-                                                         'magnitude': group_metrics["Magnitude by Waterbody"][objectid],
-                                                         'mag_area_norm': group_metrics["Area Normalized Magnitude"][objectid],
-                                                         'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid]}) for objectid in ids
-                                   ]
+                    'ranges': ranges, 'title_level': 3, 'extent': group_metrics["Extent by Waterbody"][objectid],
+                    'frequency': group_metrics["Frequency by Waterbody"][objectid],
+                    'magnitude': group_metrics["Magnitude by Waterbody"][objectid],
+                    'mag_area_norm': group_metrics["Area Normalized Magnitude"][objectid],
+                    'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid]}) for objectid in ids
+                ]
                 for r in results_objects:
                     v = r.get()
                     i_html, i_name = v[0], v[1]
@@ -220,6 +224,7 @@ def generate_report(
                                                          chia_area_norm=group_metrics["Chia Normalized Magnitude"][objectid],
                                                          )
                     wbs_html[i_name] = i_html
+            #TODO: Add sorting by magnitude option
             for wb in sorted(wbs_html.keys()):
                 html += wbs_html[wb]
             logging.info(f"Report: {report_id}, completed group: {k}")
@@ -231,6 +236,8 @@ def generate_report(
     if os.path.exists(report_path):
         if group_type == "State":
             report_path = os.path.join(report_path, f"cyanwb_{states[0]}_{year}-{day}.pdf")
+        elif group_type == "Alpine Lakes":
+            report_path = os.path.join(report_path, f"cyanwb_AlpineLakes_{report_date.year}-{report_date.month}.pdf")
         else:
             report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
     else:
@@ -375,8 +382,8 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         "Waterbodies with high cell count detection (previous week)": len(week_color_mapping["high"]),
         "Waterbodies with very high cell count detection (current)": len(current_color_mapping["very high"]),
         "Waterbodies with very high cell count detection (previous week)": len(week_color_mapping["very high"]),
-        "Extent": grouped_metrics["Extent"],
-        "Frequency": grouped_metrics["Frequency"],
+        "Extent": f"{grouped_metrics['Extent']} %",
+        "Frequency": f"{grouped_metrics['Frequency']} %",
     }
     template = j_env.get_template("report_3_group.html")
     if group_type == "User Selected Waterbodies":
@@ -1034,12 +1041,12 @@ if __name__ == "__main__":
     tribe = ['5550']
     # county = ['13049', '13067']
     # generate_all_wb_rasters(year=year, day=day)
-    # generate_report(year=year, day=day, objectids=objectids)
+    generate_report(year=year, day=day, objectids=objectids)
     # generate_report(year=year, day=day, counties=county)
     # generate_report(year=year, day=day, tribes=tribe)
     # generate_report(year=year, day=day, states=states, parallel=True)
     # generate_state_reports(year=year, day=day)
-    generate_alpinelake_report(year=year, day=day)
+    # generate_alpinelake_report(year=year, day=day)
     t1 = time.time()
     print(f"Completed report, runtime: {t1 - t0} sec")
 
