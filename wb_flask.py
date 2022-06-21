@@ -49,6 +49,7 @@ def status_check():
 
 @app.route('/waterbody/data/')
 def get_data():
+    t0 = time.time()
     args = request.args
     if "OBJECTID" in args:
         objectid = args["OBJECTID"]
@@ -77,6 +78,16 @@ def get_data():
             ranges = json.loads(args["ranges"])
         except Exception as e:
             logger.info("Unable to load provided ranges object, error: {}".format(e))
+    historic_days = 30
+    if "historic_days" in args:
+        historic_days = int(args["historic_days"])
+    elif start_day and start_year:
+        start_date = datetime.datetime(year=start_year, month=1, day=1) + datetime.timedelta(days=start_day - 1)
+        if end_day and end_year:
+            end_date = datetime.datetime(year=end_year, month=1, day=1) + datetime.timedelta(days=end_day - 1)
+        else:
+            end_date = datetime.datetime.today() + datetime.timedelta(days=-1)
+        historic_days = (end_date - start_date).days
     geojson = None
     if "geojson" in args:
         try:
@@ -90,8 +101,10 @@ def get_data():
     #                                      end_year=end_year, end_day=end_day, ranges=ranges)
     data = get_waterbody_data(objectid=objectid, daily=daily, start_year=start_year, start_day=start_day,
                                   end_year=end_year, end_day=end_day, ranges=ranges)
-    metrics = calculate_metrics(objectids=[objectid], year=end_year, day=end_day, summary=False)
+    metrics = calculate_metrics(objectids=[objectid], year=end_year, day=end_day, summary=False, historic_days=historic_days)
     results = {"OBJECTID": objectid, "daily": daily, "data": data, "metrics": metrics}
+    t1 = time.time()
+    logger.info(f"Waterbody Data, historic_days: {historic_days}, request runtime: {round(t1-t0, 3)} sec")
     return results, 200
 
 

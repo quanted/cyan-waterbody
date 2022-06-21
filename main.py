@@ -3,10 +3,10 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import argparse
 import time
-from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds, set_index
+from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds, set_index, set_waterbody_details_table
 from flaskr.utils import update_geometry_bounds, p_update_geometry_bounds, update_waterbody_fids
 from flaskr.aggregate import aggregate, retry_failed, p_aggregate
-from flaskr.report import generate_state_reports
+from flaskr.report import generate_state_reports, generate_alpinelake_report
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +27,7 @@ parser.add_argument('--set_wb_bounds', default=False, type=bool, help='Reset the
 parser.add_argument('--generate-state-reports', action='store_true', help='Generate reports for all CONUS states')
 parser.add_argument('--generate-alpine-lake-report', action='store_true', help='Generate a report for all alpine lakes in CONUS, elevation of >= 5000m')
 parser.add_argument('--add_waterbody_fids', action='store_true', help='Update Waterbody database to include the FID column')
+parser.add_argument('--add_waterbody_elevation', action='store_true', help='Update Waterbody database to include waterbody elevation data from USGS')
 
 PARALLEL = True
 
@@ -105,11 +106,20 @@ if __name__ == "__main__":
         print("Updating Waterbody table column FID with feature IDs")
         update_waterbody_fids()
         exit()
+    elif args.add_waterbody_elevation:
+        print("Updating Waterbody details table with elevation data")
+        set_waterbody_details_table()
+        exit()
     elif args.generate_state_reports:
         if args.year is None or args.day is None:
             print("Generating state reports requires the year and day parameters.")
             exit()
         generate_state_reports(year=int(args.year), day=int(args.day), parallel=True)
+    elif args.generate_alpine_lake_reports:
+        if args.year is None or args.day is None:
+            print("Generating alpine lake report requires the year and day parameters.")
+            exit()
+        generate_alpinelake_report(year=int(args.year), day=int(args.day), parallel=True)
     else:
         print("")
         logger.info("Invalid input arguments\n")

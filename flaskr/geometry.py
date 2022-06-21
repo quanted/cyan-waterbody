@@ -4,7 +4,11 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import fiona
 import os
 import geopandas as gpd
-from shapely.geometry import Polygon, MultiPolygon
+import random
+import requests
+import json
+import numpy as np
+from shapely.geometry import Polygon, MultiPolygon, Point
 
 import time
 
@@ -35,10 +39,10 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
     if tojson:
         with fiona.open(WATERBODY_DBF) as waterbodies:
             crs = waterbodies.crs
-            if fid:
+            if fid is not None:
                 f = waterbodies.get(fid)
                 features.append(f)
-            if fids:
+            if fids is not None:
                 for _fid in fids:
                     f = waterbodies.get(_fid)
                     features.append(f)
@@ -56,10 +60,10 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
     else:
         with fiona.open(WATERBODY_DBF) as waterbodies:
             crs = waterbodies.crs
-            if fid:
+            if fid is not None:
                 f = waterbodies.get(fid)
                 features.append(f)
-            if fids:
+            if fids is not None:
                 for _fid in fids:
                     f = waterbodies.get(_fid)
                     features.append(f)
@@ -229,3 +233,44 @@ def get_tribe_boundary(tribe):
             if tribe == c["properties"]["GEOID"] or tribe_alt == c["properties"]["GEOID"]:
                 return c, crs
     return None, None
+
+
+def get_waterbody_elevation(fid: int, n: int = 10, delay: int = 2, countdown: int = 0):
+    waterbody, crs = get_waterbody_by_fids(fid=fid)
+    waterbody = waterbody[0]
+    if waterbody["geometry"]["type"] == "MultiPolygon":
+        poly_geos = []
+        for p in waterbody["geometry"]["coordinates"]:
+            poly_geos.append(Polygon(p[0]))
+        poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
+    else:
+        poly = gpd.GeoSeries(Polygon(waterbody["geometry"]["coordinates"][0]), crs=crs)
+    points = []
+    m = 0
+    poly_bounds = poly.geometry.bounds
+    while m < n:
+        point = Point(random.uniform(poly_bounds['minx'][0], poly_bounds['maxx'][0]), random.uniform(poly_bounds['miny'][0], poly_bounds['maxy'][0]))
+        if poly.contains(point)[0]:
+            points.append(point)
+            m += 1
+    del poly
+    missing_data = -9999
+    bad_request = -9998
+    elevations = []
+    for point in points:
+        query_url = f"https://nationalmap.gov/epqs/pqs.php?x={point.x}&y={point.y}&units=Feet&output=json"
+        try:
+            response = json.loads(requests.get(query_url).content)
+        except Exception:
+            if countdown == 0:
+                return bad_request, fid
+            time.sleep(delay)
+            return get_waterbody_elevation(fid=fid, delay=delay+2, countdown=countdown-1)
+        elev = response["USGS_Elevation_Point_Query_Service"]["Elevation_Query"]["Elevation"]
+        if elev != '-1000000':
+            elevations.append(elev)
+    if len(elevations) == 0:
+        return missing_data, fid
+    del points
+    min_elevation = round(np.min(elevations), 2)
+    return min_elevation, fid

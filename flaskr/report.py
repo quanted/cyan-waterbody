@@ -1,5 +1,6 @@
 import jinja2
 from datetime import datetime, timedelta, date
+import calendar
 from xhtml2pdf import pisa
 from pathlib import Path
 from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_boundary, get_state_boundary, \
@@ -7,9 +8,12 @@ from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.db import get_conus_objectids, get_eparegion_objectids, get_state_objectids, get_tribe_objectids, \
     get_county_objectids, get_waterbody_data, get_group_metrics, get_county_state, get_county_geoid, \
-    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb, get_all_states, get_waterbody_fid
+    get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb, get_all_states, get_waterbody_fid, \
+    set_wb_report_file, get_alpine_objectids, get_elevation
 from flaskr.raster import rasterize_boundary
 from flaskr.utils import DEFAULT_RANGE, get_colormap, rgb, convert_dn
+from flaskr.metrics import calculate_metrics
+from flaskr.report_tools import upload_report
 import rasterio.plot
 import plotly.graph_objects as go
 import plotly.express as px
@@ -73,6 +77,7 @@ def generate_report(
         states: list = None,
         tribes: list = None,
         counties: list = None,
+        alpine: bool = False,
         ranges: list = None,
         report_id: str = None,
         parallel: bool = False
@@ -93,13 +98,20 @@ def generate_report(
     report_root = os.path.join(STATIC_ROOT, "temp", str(report_id))
     os.mkdir(report_root)
     waterbodies, group_type = get_waterbody_collection(objectids=objectids, conus=conus, regions=regions, states=states,
-                                                       tribes=tribes, counties=counties)
-    location_title = "User Selected Waterbodies" if objectids else \
-        "Contiguous United States" if conus else \
-            f"EPA Region{s}: " + ", ".join(regions) if regions else \
-                f"State{s}: " + ",".join(states) if states else \
-                    f"Tribe{s}: " + ",".join(waterbodies.keys()) if tribes else f"County: " + ",".join(
-                        waterbodies.keys())
+                                                       tribes=tribes, counties=counties, alpine=alpine)
+    report_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
+    location_title = "User Selected Waterbodies"
+    if conus:
+        location_title = "Contiguous United States"
+    elif regions:
+        location_title = f"EPA Region{s}: " + ", ".join(regions)
+    elif states:
+        location_title = f"State{s}: " + ", ".join(states)
+    elif tribes:
+        location_title = f"Tribe{s}: " + ", ".join(waterbodies.keys())
+    elif alpine:
+        location_title = "Alpine Lakes"
+
     logging.info(f"Generating new report, day: {day}, year: {year}, type: {group_type}, report_id: {report_id}")
     logging.info(f"Report: {report_id}, location: {location_title}, # of groups: {len(waterbodies)}")
 
@@ -124,26 +136,32 @@ def generate_report(
         for k, ids in waterbodies.items():
             all_ids = get_state_objectids(states=[k], with_counties=False)
             logging.info(f"Report: {report_id}, State: {k}, # of waterbodies: {len(all_ids[k])}")
-            html += get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type,
+            group_html, wb_metrics = get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type,
                                     group_name=get_state_name(k),
                                     objectids=all_ids[k], ranges=ranges, j_env=j_env, group_id=k,
                                     color_mapping=color_mapping, title_level=2)
+            html += group_html
             i = 1
             for county, wbs in ids.items():
                 county_geoid = get_county_geoid(county_name=county, state=k)[0]
                 if len(wbs) == 0:
                     continue
-                html += get_group_block(report_id=str(report_id), year=year, day=day, group_type="County",
+                group_html, wb_metrics = get_group_block(report_id=str(report_id), year=year, day=day, group_type="County",
                                         group_name=county,
                                         objectids=wbs, ranges=ranges, j_env=j_env, group_id=county_geoid,
                                         color_mapping=color_mapping, title_level=3)
+                html += group_html
                 logging.info(
                     f"Report: {report_id}, State: {k}, County: {county}, i/n: {i}/{len(ids.keys())}, # of waterbodies: {len(wbs)}")
                 wbs_html = {}
                 if parallel and len(wbs) >= cpus:
                     results_objects = [pool.apply_async(get_waterbody_block, kwds={
                         'year': year, 'day': day, 'objectid': objectid, 'report_id': str(report_id),
-                        'ranges': ranges, 'title_level': 4}) for objectid in wbs
+                        'ranges': ranges, 'title_level': 4, 'extent': wb_metrics["Extent by Waterbody"][objectid],
+                        'frequency': wb_metrics["Frequency by Waterbody"][objectid],
+                        'magnitude': wb_metrics["Magnitude by Waterbody"][objectid],
+                        'mag_area_norm': wb_metrics["Area Normalized Magnitude"][objectid],
+                        'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid]}) for objectid in wbs
                     ]
                     for r in results_objects:
                         v = r.get()
@@ -154,8 +172,14 @@ def generate_report(
                         i_html, i_name = get_waterbody_block(year=year, day=day, objectid=objectid,
                                                              report_id=str(report_id),
                                                              j_env=j_env,
-                                                             ranges=ranges, title_level=4)
+                                                             ranges=ranges, title_level=4,
+                                                             extent=wb_metrics["Extent by Waterbody"][objectid],
+                                                             frequency=wb_metrics["Frequency by Waterbody"][objectid],
+                                                             magnitude=wb_metrics["Magnitude by Waterbody"][objectid],
+                                                             mag_area_norm=wb_metrics["Area Normalized Magnitude"][objectid],
+                                                             chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],)
                         wbs_html[i_name] = i_html
+                #TODO: Add sorting by magnitude option
                 for wb in sorted(wbs_html.keys()):
                     html += wbs_html[wb]
                 i += 1
@@ -169,16 +193,21 @@ def generate_report(
                 group_id = counties[i]
             elif group_type == "Tribe":
                 group_id = get_tribe_geoid(k)
-            html += get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type, group_name=k,
+            group_html, group_metrics = get_group_block(report_id=str(report_id), year=year, day=day, group_type=group_type, group_name=k,
                                     objectids=ids, ranges=ranges, j_env=j_env, group_id=group_id,
                                     color_mapping=color_mapping, title_level=2)
+            html += group_html
             logging.info(f"Report: {report_id}, group: {k}, # of waterbodies: {len(ids)}")
             wbs_html = {}
             if parallel and len(ids) >= cpus:
                 results_objects = [pool.apply_async(get_waterbody_block, kwds={
                     'year': year, 'day': day, 'objectid': objectid, 'report_id': str(report_id),
-                    'ranges': ranges, 'title_level': 3}) for objectid in ids
-                                   ]
+                    'ranges': ranges, 'title_level': 3, 'extent': group_metrics["Extent by Waterbody"][objectid],
+                    'frequency': group_metrics["Frequency by Waterbody"][objectid],
+                    'magnitude': group_metrics["Magnitude by Waterbody"][objectid],
+                    'mag_area_norm': group_metrics["Area Normalized Magnitude"][objectid],
+                    'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid]}) for objectid in ids
+                ]
                 for r in results_objects:
                     v = r.get()
                     i_html, i_name = v[0], v[1]
@@ -187,8 +216,15 @@ def generate_report(
                 for objectid in ids:
                     i_html, i_name = get_waterbody_block(year=year, day=day, objectid=objectid, report_id=str(report_id),
                                                          j_env=j_env,
-                                                         ranges=ranges, title_level=3)
+                                                         ranges=ranges, title_level=3,
+                                                         extent=group_metrics["Extent by Waterbody"][objectid],
+                                                         frequency=group_metrics["Frequency by Waterbody"][objectid],
+                                                         magnitude=group_metrics["Magnitude by Waterbody"][objectid],
+                                                         mag_area_norm=group_metrics["Area Normalized Magnitude"][objectid],
+                                                         chia_area_norm=group_metrics["Chia Normalized Magnitude"][objectid],
+                                                         )
                     wbs_html[i_name] = i_html
+            #TODO: Add sorting by magnitude option
             for wb in sorted(wbs_html.keys()):
                 html += wbs_html[wb]
             logging.info(f"Report: {report_id}, completed group: {k}")
@@ -197,8 +233,19 @@ def generate_report(
     html += get_references(j_env=j_env)
     html += get_closing(j_env=j_env)
     report_path = OUTPUT_DIR
+<<<<<<< HEAD
 
     if not os.path.exists(report_path):
+=======
+    if os.path.exists(report_path):
+        if group_type == "State":
+            report_path = os.path.join(report_path, f"cyanwb_{states[0]}_{year}-{day}.pdf")
+        elif group_type == "Alpine Lakes":
+            report_path = os.path.join(report_path, f"cyanwb_AlpineLakes_{report_date.year}-{report_date.month}.pdf")
+        else:
+            report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
+    else:
+>>>>>>> main
         os.makedirs(report_path)
 
     if group_type == "State":
@@ -211,7 +258,29 @@ def generate_report(
     report_file.close()
     shutil.rmtree(report_root)
     t1 = time.time()
+    report_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
+
     if group_type == "State":
+        # upload_status, upload_url = upload_report(file_path=report_file,
+        #                                           directory_path=f"state/{states[0]}/{report_date.year}/"
+        #                                                          f"{report_date.month}",
+        #                                           object_name=f"CyAN-waterbody-report-{states[0]}_{year}-{day}.pdf"
+        #                                           )
+        # # TODO: Add database update function here (write new entry [state, year, month, upload_date, file_url, status]
+        # upload_status = "SUCCESS" if upload_status else "FAILED"
+        # set_wb_report_file(state=states[0], year=report_date.year, month=report_date.month,
+        #                    upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
+        logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
+    if group_type == "Alpine":
+        # upload_status, upload_url = upload_report(file_path=report_file,
+        #                                           directory_path=f"alpine/{report_date.year}/"
+        #                                                          f"{report_date.month}",
+        #                                           object_name=f"CyAN-waterbody-report-alpine_{year}-{day}.pdf"
+        #                                           )
+        # # TODO: Add database update function here (write new entry [state, year, month, upload_date, file_url, status]
+        # upload_status = "SUCCESS" if upload_status else "FAILED"
+        # set_wb_report_file(state="alpine", year=report_date.year, month=report_date.month,
+        #                    upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
         logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
     else:
         logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
@@ -262,7 +331,12 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         j_env = get_env()
     ranges_dict = {"low": ranges[0], "medium": ranges[1], "high": ranges[2], "very high": [ranges[2][1], 254]}
 
-    group_metrics = get_group_metrics(objectids=objectids, year=year, day=day, ranges=ranges_dict, p_days=30)
+    p_days = 30
+    if group_type in ["States", "Alpine Lakes"]:
+        report_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
+        p_days = calendar.monthrange(report_date.year, report_date.month)[1]
+
+    group_metrics = get_group_metrics(objectids=objectids, year=year, day=day, ranges=ranges_dict, p_days=p_days)
     current_color_mapping = {"no detection": copy.copy(objectids), "low": [], "medium": [], "high": [], "very high": []}
     current_key = f"{year} {day}"
     mapping_i = ["no detection"]
@@ -303,7 +377,10 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
                                                               year=year, day=day, report_id=report_id,
                                                               color_mapping=color_mapping)
     grouped_30_raster = get_collection_history30(group_metrics, object_list=objectids, color_mapping=color_mapping,
-                                                 report_id=report_id, year=year, day=day, groupid=group_id)
+                                                 report_id=report_id, year=year, day=day, groupid=group_id, p_days=p_days)
+
+    grouped_metrics = calculate_metrics(objectids=objectids, year=year, day=day, historic_days=p_days, report=True)
+
     group_properties = {
         "Number of waterbodies": len(objectids),
         "Waterbodies with no data or no detection (current)": len(current_color_mapping["no detection"]),
@@ -316,6 +393,8 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         "Waterbodies with high cell count detection (previous week)": len(week_color_mapping["high"]),
         "Waterbodies with very high cell count detection (current)": len(current_color_mapping["very high"]),
         "Waterbodies with very high cell count detection (previous week)": len(week_color_mapping["very high"]),
+        "Extent": f"{grouped_metrics['Extent']} %",
+        "Frequency": f"{grouped_metrics['Frequency']} %",
     }
     template = j_env.get_template("report_3_group.html")
     if group_type == "User Selected Waterbodies":
@@ -329,11 +408,12 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         GROUP_30=grouped_30_raster,
         TITLE_LEVEL=title_level
     )
-    return html
+    return html, grouped_metrics
 
 
 def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, ranges: list, j_env=None,
-                        title_level: int = 3):
+                        title_level: int = 3, extent: float = None, frequency: float = None, magnitude: float = None,
+                        mag_area_norm: float = None, chia_area_norm: float = None):
     if not j_env:
         j_env = get_env()
     objectid = int(objectid)
@@ -343,6 +423,7 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
     waterbody_name = waterbody_properties["GNIS_NAME"]
     waterbody_properties_cleaned = {}
     wb_area = 0
+
     for name, value in waterbody_properties.items():
         if name in KEEP_PROPERTIES.keys():
             if value:
@@ -351,6 +432,14 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
                     wb_area = KEEP_PROPERTIES[name][1](value)
             else:
                 waterbody_properties_cleaned[KEEP_PROPERTIES[name][0]] = "NA"
+    waterbody_properties_cleaned[" "] = ""
+    waterbody_properties_cleaned["Elevation (m)"] = get_elevation(objectid=objectid, meters=True)
+    waterbody_properties_cleaned["Bloom Extent"] = f"{extent} %"
+    waterbody_properties_cleaned["Bloom Frequency"] = f"{frequency} %"
+    waterbody_properties_cleaned["Bloom Magnitude"] = f"{magnitude} cell concentration"
+    waterbody_properties_cleaned["Bloom Area Normalized Magnitude"] = f"{mag_area_norm} cells/km^2"
+    waterbody_properties_cleaned["Bloom Chia Area Normalized Magnitude"] = f"{chia_area_norm} kg*km^-2"
+
     waterbody_raster = get_report_waterbody_raster(objectid=objectid, day=day, year=year, report_id=report_id)
     waterbody_plots = get_waterbody_plots(objectid=objectid, day=day, year=year, report_id=report_id, ranges=ranges,
                                           area=wb_area)
@@ -546,13 +635,13 @@ def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: st
     return image_path
 
 
-def get_collection_history30(stacked_data, object_list, color_mapping, report_id, year: int, day: int, groupid):
+def get_collection_history30(stacked_data, object_list, color_mapping, report_id, year: int, day: int, groupid, p_days: int = 30):
     report_root = os.path.join(STATIC_ROOT, "temp", str(report_id))
     x_dates = []
     y_values = {"no detection": [], "low": [], "medium": [], "high": [],
                 "very high": []}
     current_date0 = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
-    for i in range(0, 30):
+    for i in range(0, p_days):
         current_date = current_date0 - timedelta(days=i)
         current_date_value = f"{current_date.year}-{current_date.month}-{current_date.day}"
         x_dates.append(current_date_value)
@@ -872,7 +961,8 @@ def get_waterbody_collection(
         regions: list = None,
         states: list = None,
         tribes: list = None,
-        counties: list = None
+        counties: list = None,
+        alpine: bool = False
 ):
     wb_collection = {}
     if DEBUG:
@@ -892,6 +982,9 @@ def get_waterbody_collection(
     elif counties:
         wb_collection = get_county_objectids(counties)
         wb_type = "County"
+    elif alpine:
+        wb_collection = {"Alpine Lakes": get_alpine_objectids()}
+        wb_type = "Alpine Lakes"
     else:
         wb_collection["user_selected"] = objectids if objectids else []
         wb_type = "User Selected Waterbodies"
@@ -923,6 +1016,14 @@ def generate_state_reports(year:int, day: int, parallel: bool = True):
     return
 
 
+def generate_alpinelake_report(year:int, day: int, parallel: bool = True):
+    t0 = time.time()
+    generate_report(year=year, day=day, alpine=True, parallel=parallel)
+    t1 = time.time()
+    print(f"Completed all state reports, runtime: {t1 - t0} sec")
+    return
+
+
 def generate_all_wb_rasters(year: int, day: int, parallel: bool = True):
     objectids = get_waterbody_objectids()
     if parallel:
@@ -943,7 +1044,7 @@ if __name__ == "__main__":
     t0 = time.time()
     year = 2021
     day = 276
-    states = ["MI"]
+    # states = ["MI"]
     objectids = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
     # objectids = [6267342, 3007550]
     # objectids = [1445670]
@@ -957,6 +1058,7 @@ if __name__ == "__main__":
     # generate_report(year=year, day=day, tribes=tribe)
     # generate_report(year=year, day=day, states=states, parallel=True)
     # generate_state_reports(year=year, day=day)
+    # generate_alpinelake_report(year=year, day=day)
     t1 = time.time()
     print(f"Completed report, runtime: {t1 - t0} sec")
 
