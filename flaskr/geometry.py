@@ -18,10 +18,6 @@ STATE_DBF = os.path.join(os.getenv("STATE_DBF", "D:\\data\cyan_rare\\mounts\\geo
 TRIBE_DBF = os.path.join(os.getenv("TRIBE_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_aiannh_500k.dbf")
 
 
-def get_alpine_objectids():
-    pass
-
-
 def get_waterbody_fids(return_dict: bool = False):
     if return_dict:
         results = {}

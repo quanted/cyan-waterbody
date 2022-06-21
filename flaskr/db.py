@@ -58,28 +58,55 @@ def get_waterbody_data(objectid: str, daily: bool = True, start_year: int = None
         query = "SELECT * FROM DailyData WHERE OBJECTID=?"
     else:
         query = "SELECT * FROM WeeklyData WHERE OBJECTID=?"
-    values = [objectid]
-    if start_year:
-        query = query + " AND year >= ?"
-        values.append(start_year)
-    if start_day:
-        query = query + " AND day >= ?"
-        values.append(start_day)
-    if end_year:
-        query = query + " AND year <= ?"
-        values.append(end_year)
-    if end_day:
-        query = query + " AND day <= ?"
-        values.append(end_day)
-    cur.execute(query, tuple(values))
-    data_rows = cur.fetchall()
-    data = {}
-    for r in data_rows:
-        day = str(r[0]) + " " + str(r[1])
-        if day not in data.keys():
-            histogram = np.zeros(N_VALUES)
-            data[day] = histogram
-        data[day][r[3]] = r[4]
+    if start_year and end_year and start_day and end_day:
+
+        years = [start_year]
+        delta_year = start_year
+        while delta_year < end_year:
+            delta_year += 1
+            years.append(delta_year)
+        data = {}
+        for i, year in enumerate(years):
+            values = [objectid]
+            _query = query + " AND year == ?"
+            values.append(year)
+            if i == 0:
+                _query = _query + " AND day >= ?"
+                values.append(start_day)
+            if i == len(years) - 1:
+                _query = _query + " AND day <= ?"
+                values.append(end_day)
+            cur.execute(_query, tuple(values))
+            data_rows = cur.fetchall()
+            for r in data_rows:
+                day = str(r[0]) + " " + str(r[1])
+                if day not in data.keys():
+                    histogram = np.zeros(N_VALUES)
+                    data[day] = histogram
+                data[day][r[3]] = r[4]
+    else:
+        values = [objectid]
+        if start_year:
+            query = query + " AND year >= ?"
+            values.append(start_year)
+        if start_day:
+            query = query + " AND day >= ?"
+            values.append(start_day)
+        if end_year:
+            query = query + " AND year <= ?"
+            values.append(end_year)
+        if end_day:
+            query = query + " AND day <= ?"
+            values.append(end_day)
+        cur.execute(query, tuple(values))
+        data_rows = cur.fetchall()
+        data = {}
+        for r in data_rows:
+            day = str(r[0]) + " " + str(r[1])
+            if day not in data.keys():
+                histogram = np.zeros(N_VALUES)
+                data[day] = histogram
+            data[day][r[3]] = r[4]
     conn.close()
     if ranges:
         range_data = {}
@@ -785,4 +812,29 @@ def set_waterbody_details_table():
         conn.commit()
     logger.info("Completed waterbody elevation data retrieval")
     conn.close()
+
+
+def get_alpine_objectids():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    # Alpine lakes defined as having an elevation of greater than or equal to 5000 feet.
+    query = f"SELECT OBJECTID FROM WaterbodyDetails WHERE elevation >= 5000.0"
+    cur.execute(query)
+    waterbodies = []
+    for r in cur.fetchall():
+        waterbodies.append(r[0])
+    conn.close()
+    return waterbodies
+
+
+def get_elevation(objectid: int, meters: bool = False):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT elevation FROM WaterbodyDetails WHERE OBJECTID=?"
+    values = (objectid,)
+    cur.execute(query, values)
+    elevation = cur.fetchone()[0]
+    if meters:
+        elevation = round(elevation/3.281, 3)
+    return elevation
 
