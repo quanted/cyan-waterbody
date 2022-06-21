@@ -6,7 +6,7 @@ from flaskr.db import get_waterbody_data
 import time
 
 
-def calculate_metrics(objectids: list, year: int, day: int, historic_days: int = 30, summary: bool = True, report: bool = False):
+def calculate_metrics(objectids: list, year: int, day: int, historic_days: int = 30, summary: bool = True, report: bool = False, wb_dict: dict = None):
     t0 = time.time()
     today = datetime.today()
     if year is None:
@@ -20,7 +20,10 @@ def calculate_metrics(objectids: list, year: int, day: int, historic_days: int =
 
     wb_data = []
     for oid in objectids:
-        data = get_waterbody_data(objectid=oid, start_year=end_date.year, start_day=end_day, end_year=start_date.year, end_day=start_day, ranges=None, non_blooms=True)
+        if wb_dict is not None:
+            data = wb_dict
+        else:
+            data = get_waterbody_data(objectid=oid, start_year=end_date.year, start_day=end_day, end_year=start_date.year, end_day=start_day, ranges=None, non_blooms=True)
         for datestr, values in data.items():
             date_split = datestr.split(" ")
             data_date = datetime(year=int(date_split[0]), month=1, day=1) + timedelta(days=int(date_split[1]) - 1)

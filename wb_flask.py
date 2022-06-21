@@ -95,7 +95,7 @@ def get_data():
     #                                      end_year=end_year, end_day=end_day, ranges=ranges)
     data = get_waterbody_data(objectid=objectid, daily=daily, start_year=start_year, start_day=start_day,
                                   end_year=end_year, end_day=end_day, ranges=ranges)
-    metrics = calculate_metrics(objectids=[objectid], year=end_year, day=end_day, summary=False, historic_days=historic_days)
+    metrics = calculate_metrics(objectids=[objectid], year=end_year, day=end_day, summary=False, historic_days=historic_days, wb_dict=data)
     results = {"OBJECTID": objectid, "daily": daily, "data": data, "metrics": metrics}
     t1 = time.time()
     logger.info(f"Waterbody Data, historic_days: {historic_days}, request runtime: {round(t1-t0, 3)} sec")
