@@ -5,7 +5,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, make_response, send_from_directory
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, \
-    check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, get_waterbody_by_fids
+    check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, get_waterbody_by_fids, get_elevation
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties, get_waterbody_byID
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.report import generate_report, get_report_path
@@ -193,7 +193,8 @@ def get_properties():
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
     fid = get_waterbody_fid(objectid=objectid)
     data = get_waterbody_properties(objectid=objectid, fid=fid)
-
+    data["ELEVATION"] = get_elevation(objectid=objectid, meters=True)
+    del data["path"]
     bounds = get_waterbody_bounds(objectid)
 
     data["x_min"] = bounds[1]
