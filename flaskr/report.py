@@ -243,10 +243,6 @@ def generate_report(
     html += get_references(j_env=j_env)
     html += get_closing(j_env=j_env)
     report_path = OUTPUT_DIR
-<<<<<<< HEAD
-
-    if not os.path.exists(report_path):
-=======
     if os.path.exists(report_path):
         if group_type == "State":
             report_path = os.path.join(report_path, f"cyano-report_{states[0]}_{year}-{report_date.month}.pdf")
@@ -255,7 +251,6 @@ def generate_report(
         else:
             report_path = os.path.join(report_path, f"cyano-report_{report_id}.pdf")
     else:
->>>>>>> main
         os.makedirs(report_path)
 
     if group_type == "State":
