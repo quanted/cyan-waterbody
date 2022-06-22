@@ -107,10 +107,20 @@ def generate_report(
         location_title = f"EPA Region{s}: " + ", ".join(regions)
     elif states:
         location_title = f"State{s}: " + ", ".join(states)
+        report_day = calendar.monthrange(report_date.year, report_date.month)[1]
+        new_report_date = datetime(year=report_date.year, month=report_date.month, day=report_day)
+        if new_report_date < datetime.now():
+            day = datetime(year=report_date.year, month=report_date.month, day=report_day).timetuple().tm_yday
+            report_date = new_report_date
     elif tribes:
         location_title = f"Tribe{s}: " + ", ".join(waterbodies.keys())
     elif alpine:
         location_title = "Alpine Lakes"
+        report_day = calendar.monthrange(report_date.year, report_date.month)[1]
+        new_report_date = datetime(year=report_date.year, month=report_date.month, day=report_day)
+        if new_report_date < datetime.now():
+            day = datetime(year=report_date.year, month=report_date.month, day=report_day).timetuple().tm_yday
+            report_date = new_report_date
 
     logging.info(f"Generating new report, day: {day}, year: {year}, type: {group_type}, report_id: {report_id}")
     logging.info(f"Report: {report_id}, location: {location_title}, # of groups: {len(waterbodies)}")
@@ -235,11 +245,11 @@ def generate_report(
     report_path = OUTPUT_DIR
     if os.path.exists(report_path):
         if group_type == "State":
-            report_path = os.path.join(report_path, f"cyanwb_{states[0]}_{year}-{day}.pdf")
+            report_path = os.path.join(report_path, f"cyano-report_{states[0]}_{year}-{report_date.month}.pdf")
         elif group_type == "Alpine Lakes":
-            report_path = os.path.join(report_path, f"cyanwb_AlpineLakes_{report_date.year}-{report_date.month}.pdf")
+            report_path = os.path.join(report_path, f"cyano-report_AlpineLakes_{report_date.year}-{report_date.month}.pdf")
         else:
-            report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
+            report_path = os.path.join(report_path, f"cyano-report_{report_id}.pdf")
     else:
         os.makedirs(report_path)
     report_file = open(report_path, "w+b")
@@ -1041,12 +1051,12 @@ if __name__ == "__main__":
     tribe = ['5550']
     # county = ['13049', '13067']
     # generate_all_wb_rasters(year=year, day=day)
-    generate_report(year=year, day=day, objectids=objectids)
+    # generate_report(year=year, day=day, objectids=objectids)
     # generate_report(year=year, day=day, counties=county)
     # generate_report(year=year, day=day, tribes=tribe)
     # generate_report(year=year, day=day, states=states, parallel=True)
     # generate_state_reports(year=year, day=day)
-    # generate_alpinelake_report(year=year, day=day)
+    generate_alpinelake_report(year=year, day=day, parallel=False)
     t1 = time.time()
     print(f"Completed report, runtime: {t1 - t0} sec")
 
