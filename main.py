@@ -25,7 +25,7 @@ parser.add_argument('--aggregate', default=False, type=bool, help='Save the aggr
 parser.add_argument('--retry', default=False, type=bool, help='Retry failed aggregation attempts')
 parser.add_argument('--set_wb_bounds', default=False, type=bool, help='Reset the waterbody bounds in the database from clipped rasters.')
 parser.add_argument('--generate-state-reports', action='store_true', help='Generate reports for all CONUS states')
-parser.add_argument('--generate-alpine-lake-report', action='store_true', help='Generate a report for all alpine lakes in CONUS, elevation of >= 5000m')
+parser.add_argument('--generate-alpine-lake-report', action='store_true', help='Generate a report for all alpine lakes in CONUS, elevation of >= 5000ft')
 parser.add_argument('--add_waterbody_fids', action='store_true', help='Update Waterbody database to include the FID column')
 parser.add_argument('--add_waterbody_elevation', action='store_true', help='Update Waterbody database to include waterbody elevation data from USGS')
 

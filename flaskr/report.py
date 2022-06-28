@@ -100,6 +100,7 @@ def generate_report(
     waterbodies, group_type = get_waterbody_collection(objectids=objectids, conus=conus, regions=regions, states=states,
                                                        tribes=tribes, counties=counties, alpine=alpine)
     report_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
+    report_day = 30
     location_title = "User Selected Waterbodies"
     if conus:
         location_title = "Contiguous United States"
@@ -171,7 +172,8 @@ def generate_report(
                         'frequency': wb_metrics["Frequency by Waterbody"][objectid],
                         'magnitude': wb_metrics["Magnitude by Waterbody"][objectid],
                         'mag_area_norm': wb_metrics["Area Normalized Magnitude"][objectid],
-                        'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid]}) for objectid in wbs
+                        'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid],
+                        'p_days': report_day}) for objectid in wbs
                     ]
                     for r in results_objects:
                         v = r.get()
@@ -187,7 +189,8 @@ def generate_report(
                                                              frequency=wb_metrics["Frequency by Waterbody"][objectid],
                                                              magnitude=wb_metrics["Magnitude by Waterbody"][objectid],
                                                              mag_area_norm=wb_metrics["Area Normalized Magnitude"][objectid],
-                                                             chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],)
+                                                             chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],
+                                                             p_days=report_day)
                         wbs_html[i_name] = i_html
                 #TODO: Add sorting by magnitude option
                 for wb in sorted(wbs_html.keys()):
@@ -216,7 +219,8 @@ def generate_report(
                     'frequency': group_metrics["Frequency by Waterbody"][objectid],
                     'magnitude': group_metrics["Magnitude by Waterbody"][objectid],
                     'mag_area_norm': group_metrics["Area Normalized Magnitude"][objectid],
-                    'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid]}) for objectid in ids
+                    'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid],
+                    'p_days': report_day}) for objectid in ids
                 ]
                 for r in results_objects:
                     v = r.get()
@@ -232,6 +236,7 @@ def generate_report(
                                                          magnitude=group_metrics["Magnitude by Waterbody"][objectid],
                                                          mag_area_norm=group_metrics["Area Normalized Magnitude"][objectid],
                                                          chia_area_norm=group_metrics["Chia Normalized Magnitude"][objectid],
+                                                         p_days=report_day
                                                          )
                     wbs_html[i_name] = i_html
             #TODO: Add sorting by magnitude option
@@ -418,7 +423,7 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
 
 def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, ranges: list, j_env=None,
                         title_level: int = 3, extent: float = None, frequency: float = None, magnitude: float = None,
-                        mag_area_norm: float = None, chia_area_norm: float = None):
+                        mag_area_norm: float = None, chia_area_norm: float = None, p_days: int = 30):
     if not j_env:
         j_env = get_env()
     objectid = int(objectid)
@@ -447,7 +452,7 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
 
     waterbody_raster = get_report_waterbody_raster(objectid=objectid, day=day, year=year, report_id=report_id)
     waterbody_plots = get_waterbody_plots(objectid=objectid, day=day, year=year, report_id=report_id, ranges=ranges,
-                                          area=wb_area)
+                                          area=wb_area, p_days=p_days)
     report_datetime = date(year=year, month=1, day=1) + timedelta(days=day - 1)
     report_date = report_datetime.strftime("%d %B %Y")
     template = j_env.get_template("report_4_stats.html")
@@ -690,7 +695,7 @@ def get_collection_history30(stacked_data, object_list, color_mapping, report_id
     return history_30_path
 
 
-def get_waterbody_plots(objectid: int, report_id: str, day: int, year: int, ranges: list, area: float):
+def get_waterbody_plots(objectid: int, report_id: str, day: int, year: int, ranges: list, area: float, p_days: int = 30):
     report_root = os.path.join(STATIC_ROOT, "temp", str(report_id))
     start_day = datetime(year=year, month=1, day=1) + timedelta(days=day - 31)
     color_mapping = {
@@ -713,7 +718,7 @@ def get_waterbody_plots(objectid: int, report_id: str, day: int, year: int, rang
     plots["pie"] = get_waterbody_pie(data=data, ranged_data=ranged_data, report_root=report_root, objectid=objectid,
                                      day=day, year=year, color_mapping=color_mapping)
     plots["stacked30"] = get_waterbody_30bar(ranged_data=ranged_data, report_root=report_root, objectid=objectid,
-                                             day=day, year=year, area=area, color_mapping=color_mapping)
+                                             day=day, year=year, area=area, color_mapping=color_mapping, p_days=p_days)
     plots["historic"] = get_waterbody_history(ranged_data=ranged_data, report_root=report_root, objectid=objectid,
                                               year=year, day=day, color_mapping=color_mapping)
     del data
@@ -859,7 +864,7 @@ def get_waterbody_pie(data, ranged_data, report_root, objectid: int, day: int, y
     return current_pie_path
 
 
-def get_waterbody_30bar(ranged_data, report_root, objectid: int, day: int, year: int, area: float, color_mapping):
+def get_waterbody_30bar(ranged_data, report_root, objectid: int, day: int, year: int, area: float, color_mapping, p_days:int = 30):
     current_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 31)
     all_columns = ["Date", "Low (sqkm)", "Medium (sqkm)", "High (sqkm)", "Very High (sqkm)", "Below Detection (sqkm)",
                    "Land (sqkm)", "No Data (sqkm)", f"Pixel Area<br>(sqkm)", "Geometry<br>Area<br>(sqkm)",
@@ -908,7 +913,7 @@ def get_waterbody_30bar(ranged_data, report_root, objectid: int, day: int, year:
         header=dict(values=all_columns, font=dict(size=12), align='center'),
         cells=dict(values=stacked_csv, align='center', font=dict(size=12))), row=2, col=1
     )
-    stacked_30_fig.update_layout(title={"text": "30 Day Waterbody History",
+    stacked_30_fig.update_layout(title={"text": f"{p_days} Day Waterbody History",
                                         'y': 0.98, 'x': 0.5,
                                         'xanchor': 'center', 'yanchor': 'top'},
                                  yaxis_title="Cell Count", font={'size': 22},
