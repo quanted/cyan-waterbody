@@ -258,10 +258,11 @@ def generate_report(
     else:
         os.makedirs(report_path)
 
-    if group_type == "State":
-        report_path = os.path.join(report_path, f"cyanwb_{states[0]}_{year}-{day}.pdf")
-    else:
-        report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
+    # if group_type == "State":
+    #     report_path = os.path.join(report_path, f"cyanwb_{states[0]}_{year}-{day}.pdf")
+    # else:
+    #     logging.warning("Setting report path.")
+    #     report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
         
     report_file = open(report_path, "w+b")
     pisa_status = pisa.CreatePDF(html, dest=report_file)
