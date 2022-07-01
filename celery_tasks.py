@@ -51,41 +51,6 @@ def generate_report(self, request_obj):
     except Exception as e:
         logging.warning("Exception generating report: {}".format(e))
 
-        # TODO: Make request to cyanweb flask to update report table with
-        # and error/failed state.
-
-        cyanweb_request_obj = {
-            "report_id": request_obj["report_id"],
-            "report_status": "FAILURE",
-            "finished_datetime": datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
-        }
-
-        response = make_update_report_request(
-            cyanweb_request_obj, 
-            token,
-            origin,
-            app_name
-        )
-
-        return json.loads(response)
-
-
-    # Updates report status
-    cyanweb_request_obj = {
-        "report_id": report_response,
-        "report_status": "SUCCESS",
-        "finished_datetime": datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
-    }
-
-    response = make_update_report_request(
-        cyanweb_request_obj, 
-        token,
-        origin,
-        app_name
-    )
-
-    return json.loads(response)
-
 
 @celery_instance.task(bind=True)
 def test_celery(*args):
@@ -93,27 +58,6 @@ def test_celery(*args):
     sleep(5)
     logging.warning("Celery successfully called.")
     return {"status": "celery task finished."}
-
-
-def make_update_report_request(request_obj, token, origin, app_name):
-    """
-    Makes request to cyanweb flask to update report table for
-    a user's report.
-    """
-    url = origin + "/cyan/app/api/report/update"
-
-    # NOTE: For troubleshooting only:
-    # url = "http://host.docker.internal:5001/cyan/app/api/report/update"
-
-    headers = {
-        "Access-Control-Expose-Headers": "Authorization",
-        "Access-Control-Allow-Headers": "Authorization",
-        "Authorization": "{}".format(token),
-        "Origin": origin,
-        "App-Name": app_name
-    }
-    response = requests.post(url=url, headers=headers, json=request_obj)
-    return response.content
 
 
 class CeleryHandler:
