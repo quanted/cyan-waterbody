@@ -2,6 +2,7 @@ import os
 import sqlite3
 import numpy as np
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import Point, Polygon, MultiPolygon, shape
 from flaskr.geometry import get_waterbody, get_waterbody_count, get_waterbody_by_fids, get_waterbody_fids, get_waterbody_elevation
 from flaskr.raster import get_images, clip_raster, get_images_by_tile, get_raster_bounds
@@ -9,6 +10,7 @@ import datetime
 from tqdm import tqdm
 import multiprocessing as mp
 import logging
+import csv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyan-waterbody")
@@ -733,7 +735,7 @@ def set_wb_report_file(state, year, month, upload_date, file_url, status):
     conn.close()
 
 
-def set_waterbody_details_table():
+def set_waterbody_details_table(input_file: str = None):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     try:
@@ -783,24 +785,43 @@ def set_waterbody_details_table():
         cur.execute(query, values)
     conn.commit()
 
+    elevation_data = []
+    fid_dict = {}
+    if input_file is not None:
+        elevation_data = []
+        with open(input_file) as csvfile:
+            datareader = csv.reader(csvfile, delimiter=',')
+            i = 0
+            for row in datareader:
+                if i > 0:
+                    fid = int(row[1])
+                    comid = int(row[0])
+                    fid_dict[fid] = comid
+                    elevation_data.append([fid, float(row[2])])
+                i += 1
+
     while m <= len(comids) - 1:
         m0 = m
         m1 = j + m0 if j+m0 <= len(comids) else len(comids)
         waterbody_list = comids[m0:m1]
         results_objects = []
-        logger.info(f"Retrieving data for waterbodies at index: {m0} -> {m1}, n: {len(waterbody_list)}")
-        for comid in tqdm(waterbody_list, "Retrieving waterbody elevation data"):
-            fid = waterbody_dict[comid]
-            results_objects.append(pool.apply_async(get_waterbody_elevation, kwds={'fid': fid}))
-            fid_dict[fid] = comid
-        elevation_data = []
-        for r in tqdm(results_objects, "Retrieving processing results"):
-            _ = r.get()
-            elevation_data.append(_)
+
+        if input_file is None:
+            logger.info(f"Retrieving data for waterbodies at index: {m0} -> {m1}, n: {len(waterbody_list)}")
+            for comid in tqdm(waterbody_list, "Retrieving waterbody elevation data"):
+                fid = waterbody_dict[comid]
+                results_objects.append(pool.apply_async(get_waterbody_elevation, kwds={'fid': fid}))
+                fid_dict[fid] = comid
+            elevation_data = []
+            for r in tqdm(results_objects, "Retrieving processing results"):
+                _ = r.get()
+                elevation_data.append(_)
+        else:
+            m1 = len(elevation_data)
         i = 0
         for elev in tqdm(elevation_data, "Writing results to database"):
-            elevation = elev[0]
-            fid = elev[1]
+            elevation = elev[1]
+            fid = elev[0]
             comid = fid_dict[fid]
             query = "INSERT INTO WaterbodyDetails (OBJECTID, fid, elevation) VALUES (?,?,?)"
             values = (comid, fid, float(elevation))
@@ -840,3 +861,9 @@ def get_elevation(objectid: int, meters: bool = False):
         elevation = round(elevation/3.281, 3)
     return elevation
 
+
+def export_waterbody_details_table():
+    conn = sqlite3.connect(DB_FILE)
+    df = pd.read_sql("SELECT * FROM WaterbodyDetails", conn)
+    conn.close()
+    return df

@@ -273,4 +273,4 @@ def get_waterbody_elevation(fid: int, n: int = 10, delay: int = 2, countdown: in
         return missing_data, fid
     del points
     min_elevation = round(np.min(elevations), 2)
-    return min_elevation, fid
+    return fid, min_elevation
