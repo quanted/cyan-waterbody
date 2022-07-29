@@ -62,7 +62,7 @@ def get_env():
 
 
 def get_report_path(report_id: str):
-    report_file = os.path.join(OUTPUT_DIR, f"cyanwb_report_{report_id}.pdf")
+    report_file = os.path.join(OUTPUT_DIR, f"cyano-report_{report_id}.pdf")
     if not os.path.isfile(report_file):
         return None
     return report_file
