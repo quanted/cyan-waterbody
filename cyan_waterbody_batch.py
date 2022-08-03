@@ -4,8 +4,8 @@ import logging
 import requests
 import json
 import time
-import sqlite3
-import fiona
+# import sqlite3
+# import fiona
 import datetime
 import calendar
 
@@ -40,6 +40,8 @@ class WaterbodyBatch:
 		self.status_retry_sleep = 30  # seconds
 		self.attempt = 0
 
+		self.missing_image_days = []  # list of days without images
+
 		self.host_domain = os.getenv("WB_HOST_DOMAIN", "http://localhost:8085")  # server cyan-waterbody is running on
 		self.aggregation_endpoint = "/waterbody/aggregate/"  # Ex: "/waterbody/aggregate/?year=2021&day=187&daily=True"
 		self.status_endpoint = "/waterbody/aggregate/status/"  # Ex: "/waterbody/aggregate/status/?year=2021&day=187&daily=True"
@@ -69,7 +71,7 @@ class WaterbodyBatch:
 		else:
 			raise Exception("Data type must be one of the following: {}".format(self.data_type_options))
 
-	def _validate_response(self, response):
+	def _validate_response(self, response, year, day, daily):
 		print("Validating response: {}".format(response))
 		print("Response content: {}".format(response.content))
 		
@@ -78,6 +80,9 @@ class WaterbodyBatch:
 			content = content.decode("utf-8")
 
 		if "no images found" in content:
+			logging.warning("Image not found for {} {}, daily: {}".format(year, day, daily))
+			missing_day = "{} {}, daily: {}".format(year, day, daily)
+			self.missing_image_days.append(missing_day)
 			return False
 		elif response.status_code != 200:
 			raise Exception("Error making response")
@@ -86,12 +91,12 @@ class WaterbodyBatch:
 	def _make_aggregation_request(self, year: int, day: int, daily: bool):
 		url = self.host_domain + self.aggregation_endpoint
 		response = requests.get(url, params={"year": year, "day": day, "daily": daily})
-		return self._validate_response(response)
+		return self._validate_response(response, year, day, daily)
 
 	def _make_status_request(self, year: int, day: int, daily: bool):
 		url = self.host_domain + self.status_endpoint
 		response = requests.get(url, params={"year": year, "day": day, "daily": daily})
-		return json.loads(self._validate_response(response).content)
+		return json.loads(self._validate_response(response, year, day, daily).content)
 
 	def _initate_status_check_loop(self, year: int, day: int, daily: bool):
 		self.attempt = 0
@@ -189,6 +194,8 @@ class WaterbodyBatch:
 					print("No image found for {} {}, {}. Skipping.".format(year, day, daily))
 					continue  # skips job
 				self._initate_status_check_loop(year, day, daily)
+
+		logging.info("Missing images after batch aggregation: {}".format(self.missing_image_days))
 
 	def run_full_status_check(self, all_rows):
 		"""

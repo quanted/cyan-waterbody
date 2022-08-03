@@ -9,8 +9,9 @@ services:
     ports:
       - "8085:8080"
     volumes:
-      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+      # - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
       # - ./cyan_rare/mounts/images:/mnts/images
+      - ../EPA-Cyano/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - .:/src
@@ -36,6 +37,7 @@ services:
     volumes:
       - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
       # - ./cyan_rare/mounts/images:/mnts/images
+      # - ../EPA-Cyano/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - .:/src
@@ -49,9 +51,9 @@ services:
       - TRIBE_DBF=/mnts/geometry
       - REDIS_HOSTNAME=redis
       - REDIS_PORT=6379
-      - FLASK_HOSTNAME=wb-flask
-      - FLASK_PORT=8080
-      - SCHEDULER_INTERVAL_HOURS=${SCHEDULER_INTERVAL_HOURS:-4}
+      - WB_FLASK_URL=http://wb-flask:8080
+      - NASA_IMAGE_PATH=/mnts/images
+      - ADMIN_TOOL_URL=${ADMIN_TOOL_URL}
     env_file:
       - ./.env
 
