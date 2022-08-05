@@ -33,7 +33,7 @@ class AggScheduler:
 	def start_scheduler(self):
 		self.scheduler = BackgroundScheduler(daemon=True, timezone=utc)
 		# self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["daily"], minute="*")  # testing job
-		self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["daily"], hour="*/4")  # every 4 hours
+		self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["daily"], hour="*/4", minute="30")  # every 4 hours at minute 30
 		self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["weekly"], hour="4", minute="0")  # 1x/day at 4:00
 		self.scheduler.start()
 
@@ -45,13 +45,9 @@ class AggScheduler:
 			period = 2
 		elif data_type == "weekly":
 			period = 1
-
-		# # TODO: Convert year, day into YYYY-MM-DD
-		# start_date = None  # YYYY-MM-DD
-		# end_date = None  # YYYY-MM-DD
-
-		start_date = self.convert_doy_to_date(year, day)
-		end_date = self.convert_doy_to_date(year, day)
+			
+		start_date = self.convert_doy_to_date(year, day)  # YYYY-MM-DD
+		end_date = self.convert_doy_to_date(year, day)  # YYYY-MM-DD
 
 		logging.info("Downloading image for \
 			start date: {} {} ({}), end date: {} {} ({}), data type: {}".format(
@@ -123,7 +119,7 @@ class AggScheduler:
 			return False
 
 		if results.get("completed") != "0%" or results.get("status") == "COMPLETED":    
-			logging.info("Aggregation has already been performed for today's date: {}\nSkipping aggregation.".format(date))
+			logging.info("Aggregation has already been performed for today's date: {} {}\nSkipping aggregation.".format(year, day))
 			return False
 
 		return results
@@ -172,23 +168,10 @@ class AggScheduler:
 				# NOTE: Only performing this for weekly for now as daily images are already
 				# downloaded and processed in the EPA-Cyano tomcat backend.
 				self.run_nasa_image_downloader(year, day, data_type)
-				
+
 		else:
 			logging.warning("Unaccounted for response: {}".format(results))
 			return False
-
-		# try:
-		# 	results = json.loads(response.content)
-		# 	logging.info("Aggregation start results: {}".format(results))
-		# except JSONDecodeError as e:
-		# 	logging.warning("Could not decode aggregation result: {}".format(e))
-		# 	results = response.content.decode("utf-8")  # gets error message
-		# 	logging.warning("Message returned from cyan-waterbody aggregation request: {}".format(results))
-
-		# 	# TODO: Check if the reason is
-
-		# 	logging.warning("Skipping aggregation for {} {}".format(year, day))
-		# 	return False
 
 	def scheduled_aggregation(self, *args):
 		"""
