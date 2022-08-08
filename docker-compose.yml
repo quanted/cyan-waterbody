@@ -9,9 +9,9 @@ services:
     ports:
       - "8085:8080"
     volumes:
-      # - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
       # - ./cyan_rare/mounts/images:/mnts/images
-      - ../EPA-Cyano/images:/mnts/images
+      # - ../EPA-Cyano/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - .:/src
