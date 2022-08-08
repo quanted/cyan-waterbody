@@ -90,12 +90,12 @@ class WaterbodyBatch:
 
 	def _make_aggregation_request(self, year: int, day: int, daily: bool):
 		url = self.host_domain + self.aggregation_endpoint
-		response = requests.get(url, params={"year": year, "day": day, "daily": daily})
+		response = requests.get(url, params={"year": year, "day": day, "daily": daily}, timeout=60)
 		return self._validate_response(response, year, day, daily)
 
 	def _make_status_request(self, year: int, day: int, daily: bool):
 		url = self.host_domain + self.status_endpoint
-		response = requests.get(url, params={"year": year, "day": day, "daily": daily})
+		response = requests.get(url, params={"year": year, "day": day, "daily": daily}, timeout=60)
 		return json.loads(self._validate_response(response, year, day, daily).content)
 
 	def _initate_status_check_loop(self, year: int, day: int, daily: bool):
