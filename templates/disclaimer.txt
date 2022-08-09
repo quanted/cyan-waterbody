@@ -1,1 +1,1 @@
-Placeholder for EPA report approval disclaimer
+This experimental CyAN waterbody report provides provisional satellite derived measures of cyanobacteria, which may contain errors and should be considered a research tool. The focus of this report is to provide cyanobacteria measure for larger waterbodies within the contiguous United States. 
