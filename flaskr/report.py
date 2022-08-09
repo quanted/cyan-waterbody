@@ -39,7 +39,7 @@ DISCLAIMER_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "t
 REFERENCES_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "templates", "references.txt")
 DEBUG = False
 
-VERSION = "Proof of Concept Draft"
+VERSION = "v0.1.0"
 KEEP_PROPERTIES = {
     "OBJECTID": ["Object ID", int],
     "GNIS_ID": ["GNIS ID", str],
