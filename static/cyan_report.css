@@ -261,17 +261,17 @@ pdftoc.pdftoclevel5 {
     width: 512px;
 }
 .waterbody-plot-table {
-    -pdf-keep-in-frame-mode: shrink;
+    /*-pdf-keep-in-frame-mode: shrink;*/
     width: 512px;
 }
 .waterbody-pie-plot-png {
-    width: 1000px;
+    width: 512px;
 }
 .table-top-row {
     width: 512px;
 }
 .waterbody-histogram-plot-png {
-    width: 1000px;
+    width: 512px;
     /*height: 400px;*/
 }
 
@@ -385,4 +385,42 @@ pdftoc.pdftoclevel5 {
 }
 .table-divider {
     border-left: 1px double darkgray;
+}
+
+/*30 Day Datatable*/
+.waterbody-data-table-block {
+    /*width: 512px;*/
+    text-align: center;
+    /*-pdf-keep-in-frame-mode: shrink;*/
+}
+.waterbody-data-table-block-row {
+    /*width: 512px;*/
+    text-align: center;
+}
+.data-table {
+    text-align: center;
+    /*-pdf-keep-in-frame-mode: shrink;*/
+}
+.data-table-row-label {
+    text-align: center;
+    background-color: lightgray;
+    border: 1px white solid;
+    padding-top: 1px;
+}
+.data-table-label {
+    text-align: center;
+    color: black;
+    font-size: 6px;
+}
+.data-table-row-data {
+    text-align: center;
+    border: 1px white solid;
+    background-color: aliceblue;
+}
+.data-table-cell {
+    color: gray;
+    text-align: center;
+    padding-top: 1px;
+    padding-bottom: -1px;
+    font-size: 6px;
 }
