@@ -39,7 +39,7 @@ DISCLAIMER_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "t
 REFERENCES_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "templates", "references.txt")
 DEBUG = False
 
-VERSION = "Proof of Concept Draft"
+VERSION = "v0.1.0"
 KEEP_PROPERTIES = {
     "OBJECTID": ["Object ID", int],
     "GNIS_ID": ["GNIS ID", str],
@@ -452,7 +452,7 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
     waterbody_properties_cleaned["Bloom Chia Area Normalized Magnitude"] = f"{chia_area_norm} kg*km^-2"
 
     waterbody_raster = get_report_waterbody_raster(objectid=objectid, day=day, year=year, report_id=report_id)
-    waterbody_plots = get_waterbody_plots(objectid=objectid, day=day, year=year, report_id=report_id, ranges=ranges,
+    waterbody_plots, data_table = get_waterbody_plots(objectid=objectid, day=day, year=year, report_id=report_id, ranges=ranges,
                                           area=wb_area, p_days=p_days)
     report_datetime = date(year=year, month=1, day=1) + timedelta(days=day - 1)
     report_date = report_datetime.strftime("%d %B %Y")
@@ -468,6 +468,7 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
         CURRENT_HISTOGRAM=waterbody_plots["histogram"],
         CURRENT_PIE=waterbody_plots["pie"],
         STACKED30=waterbody_plots["stacked30"],
+        DATA_TABLE=data_table,
         HISTORIC_LINE=waterbody_plots["historic"],
         TITLE_LEVEL=title_level
     )
@@ -718,13 +719,13 @@ def get_waterbody_plots(objectid: int, report_id: str, day: int, year: int, rang
                                                  day=day, year=year, ranges=ranges0)
     plots["pie"] = get_waterbody_pie(data=data, ranged_data=ranged_data, report_root=report_root, objectid=objectid,
                                      day=day, year=year, color_mapping=color_mapping)
-    plots["stacked30"] = get_waterbody_30bar(ranged_data=ranged_data, report_root=report_root, objectid=objectid,
+    plots["stacked30"], data_table = get_waterbody_30day_html(ranged_data=ranged_data, report_root=report_root, objectid=objectid,
                                              day=day, year=year, area=area, color_mapping=color_mapping, p_days=p_days)
     plots["historic"] = get_waterbody_history(ranged_data=ranged_data, report_root=report_root, objectid=objectid,
                                               year=year, day=day, color_mapping=color_mapping)
     del data
     del ranged_data
-    return plots
+    return plots, data_table
 
 
 def get_waterbody_histogram(data, report_root, objectid: int, day: int, year: int, ranges: list):
@@ -928,6 +929,80 @@ def get_waterbody_30bar(ranged_data, report_root, objectid: int, day: int, year:
     return stacked_30_path
 
 
+def get_waterbody_30day_html(ranged_data, report_root, objectid: int, day: int, year: int, area: float, color_mapping, p_days:int = 30):
+    current_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 31)
+    all_columns = ["Date", "Low (sqkm)", "Medium (sqkm)", "High (sqkm)", "Very High (sqkm)", "Below Detection (sqkm)",
+                   "Land (sqkm)", "No Data (sqkm)", f"Pixel Area<br>(sqkm)", "Geometry<br>Area<br>(sqkm)",
+                   "Low (%)", "Medium (%)", "High (%)", "Very High (%)", "Below Detection (%)", "Land (%)",
+                   "No Data (%)"]
+    bold_columns = []
+    for c in all_columns:
+        bold_columns.append(f"<b>{c}</b>")
+    all_columns = bold_columns
+    columns = ["Low", "Medium", "High", "Very High"]
+    ranged_data = copy.copy(ranged_data)
+    x_dates = []
+    stacked_data = {"Low": [], "Medium": [], "High": [], "Very High": [], "Below Detection": [], "Land": [],
+                    "No Data": []}
+    stacked_csv = []
+    current_date0 = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
+    for i in range(0, 30):
+        current_date = current_date0 - timedelta(days=i)
+        i_k = f"{current_date.year} {current_date.timetuple().tm_yday}"
+        if i_k in ranged_data.keys():
+            x_dates.append(f"{current_date.year}-{current_date.month}-{current_date.day}")
+            stacked_data["Low"].append(ranged_data[i_k][0])
+            stacked_data["Medium"].append(ranged_data[i_k][1])
+            stacked_data["High"].append(ranged_data[i_k][2])
+            stacked_data["Very High"].append(ranged_data[i_k][3])
+            stacked_data["Below Detection"].append(ranged_data[i_k][4])
+            stacked_data["Land"].append(ranged_data[i_k][5])
+            stacked_data["No Data"].append(ranged_data[i_k][6])
+            percentages = np.around(100 * (np.divide(ranged_data[i_k], int(np.sum(ranged_data[i_k])))), 2)
+            stacked_csv.append(
+                [f"{current_date.year}-{current_date.month}-{current_date.day}",
+                 *np.around(0.09 * np.array(ranged_data[i_k]), 4),
+                 np.around(0.09 * np.sum(ranged_data[i_k]), 4), round(area, 2), *percentages])
+        # current_date = current_date + timedelta(days=1)
+    orig_csv = copy.copy(stacked_csv)
+    stacked_csv = [*zip(*stacked_csv)]  # transposing 2d matrix
+    stacked_30_fig = make_subplots(
+        rows=1, cols=1,
+        vertical_spacing=0.05,
+        specs=[[{"type": "scatter"}]]
+    )
+    for c in columns:
+        stacked_30_fig.add_trace(go.Bar(
+            x=x_dates, y=stacked_data[c], name=c, marker_color=color_mapping[c], text=stacked_data[c],
+            textposition='inside', textangle=0), row=1, col=1)
+
+    # Build datatable
+    table_html = "<table class='data-table' style='width: 512px;'><tr class='data-table-row-label' style='width: 512px;'>"
+    for label in all_columns:
+        _label = label[3:-4]
+        table_html += f"<th class='data-table-label'>{_label}</th>"
+    table_html += "</tr>"
+    for row in orig_csv:
+        table_html += "<tr class='data-table-row-data' style='width: 512px;'>"
+        for value in row:
+            table_html += f"<td class='data-table-cell'>{value}</td>"
+        table_html += "</tr>"
+    table_html += "</table>"
+
+    stacked_30_fig.update_layout(title={"text": f"{p_days} Day Waterbody History",
+                                        'y': 0.98, 'x': 0.5,
+                                        'xanchor': 'center', 'yanchor': 'top'},
+                                 yaxis_title="Cell Count", font={'size': 22},
+                                 width=1600, height=800)
+    # stacked_30_fig.show()
+    stacked_30_file = f"{objectid}-{year}-{day}-stacked30.{IMAGE_FORMAT}"
+    stacked_30_path = os.path.join(report_root, stacked_30_file)
+    stacked_30_fig.write_image(stacked_30_path, scale=IMAGE_SCALE, format=IMAGE_FORMAT)
+    del stacked_csv
+    plt.close('all')
+    return stacked_30_path, table_html
+
+
 def get_waterbody_history(ranged_data, report_root, objectid: int, year: int, day: int, color_mapping):
     columns = ["Low", "Medium", "High", "Very High"]
     x_dates = []
@@ -945,16 +1020,26 @@ def get_waterbody_history(ranged_data, report_root, objectid: int, year: int, da
         specs=[[{"type": "scatter"}], [{"type": "scatter"}], [{"type": "scatter"}], [{"type": "scatter"}]],
         y_title="Cell Count", x_title="Date"
     )
+    historic_line_fig.update_yaxes(matches=None)
     i = 1
     for c in columns:
         historic_line_fig.add_trace(go.Scatter(x=x_dates, y=stacked_data[c], mode='lines', name=c,
                                                line=dict(color=color_mapping[c], width=1), fill='tozeroy',
                                                connectgaps=True), row=i, col=1)
+        max_y = max(stacked_data[c])
+        max_y = 5 if max_y == 0 else max_y
+        historic_line_fig.update_yaxes(range=[0, max_y], row=i, col=1)
         i += 1
+
     historic_line_fig.update_layout(title={"text": "Complete Waterbody History",
                                            'y': 0.9, 'x': 0.5,
                                            'xanchor': 'center', 'yanchor': 'top',
-                                           'font': {'size': 22}}, width=1200, height=600, font={'size': 22})
+                                           'font': {'size': 22}},
+                                    width=1200,
+                                    height=600,
+                                    font={'size': 22},
+                                    )
+
     historic_line_fig.layout.annotations[0]["font"] = {'size': 22}
     historic_line_fig.layout.annotations[1]["font"] = {'size': 22}
     # historic_line_fig.show()
@@ -1056,20 +1141,20 @@ if __name__ == "__main__":
     year = 2021
     day = 276
     # states = ["MI"]
-    objectids = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
-    # objectids = [6267342, 3007550]
+    # objectids = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
+    objectids = [6267342, 3007550]
     # objectids = [1445670]
     # states = ["MI", "MN"]
     county = ['13067', '12093']
     tribe = ['5550']
     # county = ['13049', '13067']
     # generate_all_wb_rasters(year=year, day=day)
-    # generate_report(year=year, day=day, objectids=objectids)
+    generate_report(year=year, day=day, objectids=objectids)
     # generate_report(year=year, day=day, counties=county)
     # generate_report(year=year, day=day, tribes=tribe)
     # generate_report(year=year, day=day, states=states, parallel=True)
     # generate_state_reports(year=year, day=day)
-    generate_alpinelake_report(year=year, day=day, parallel=False)
+    # generate_alpinelake_report(year=year, day=day, parallel=False)
     t1 = time.time()
     print(f"Completed report, runtime: {t1 - t0} sec")
 

@@ -48,12 +48,19 @@
         </tr>
     </table>
     <pdf:nextpage/>
-    <table class="waterbody-plot-table">
+    <table class="waterbody-plot-table" style="width: 600px; margin-top: -1px; margin-bottom: -5px;">
         <tr class="waterbody-stat-image2">
             <td class="waterbody-stat-image">
                 <img src="{{STACKED30}}" class="waterbody-30day-plot-png waterbody-state-image" alt="30 Day historic data">
             </td>
         </tr>
+    </table>
+    <table style="width: 600px; margin-top: -1px; margin-bottom: -5px;">
+        <tr class="waterbody-data-table-block">
+            <td class="waterbody-data-table-block-row">{{DATA_TABLE | safe}}</td>
+        </tr>
+    </table>
+    <table style="width: 600px; margin-top: -1px;">
         <tr class="waterbody-stat-image3">
             <td class="waterbody-stat-image">
                 <img src="{{HISTORIC_LINE}}" class="waterbody-historic-plot-png waterbody-state-image" alt="Waterbody historic data">
