@@ -40,12 +40,15 @@ class AggScheduler:
 	def run_nasa_image_downloader(self, year, day, data_type):
 		"""
 		Downloads missing images.
+		NOTE: Only running for weekly right now. Cyano tomcat is already
+		performing automated daily image downloading.
 		"""
 		if data_type == "daily":
 			period = 2
 		elif data_type == "weekly":
 			period = 1
-			
+		
+		# NOTE: start/end date should be sunday of the current week for weekly data.
 		start_date = self.convert_doy_to_date(year, day)  # YYYY-MM-DD
 		end_date = self.convert_doy_to_date(year, day)  # YYYY-MM-DD
 
@@ -84,7 +87,8 @@ class AggScheduler:
 		Uses the Sunday of the current week.
 		"""
 		current_date = datetime.utcnow()
-		previous_sunday = current_date - timedelta(days = current_date.weekday() + 1)
+		last_weeks_date = current_date - timedelta(days = 7)
+		previous_sunday = last_weeks_date - timedelta(days = last_weeks_date.weekday() + 1)
 		day = str(previous_sunday.timetuple().tm_yday)
 		year = str(previous_sunday.year)
 		return year, day
