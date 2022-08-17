@@ -110,7 +110,8 @@ def p_aggregate(year: int, day: int, daily: bool = True, objectid: str = None, o
     image_base = PurePath(images[0]).parts[-1].split(".tif")
     image_base = "_".join(image_base[0].split("_")[:-2])
 
-    cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    # cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    cpus = 2
     pool = mp.Pool(cpus)
     logger.info("Running async, cores: {}".format(cpus))
 
