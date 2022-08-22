@@ -63,7 +63,7 @@ class AggScheduler:
 
 		logging.info("Uploading image for {} {}, {}".format(year, day, data_type))
 
-		self.image_uploader.upload(directory_path=output_path)
+		self.image_uploader.upload(directory_path=self.image_path)
 
 	def convert_doy_to_date(self, year, day):
 		"""
