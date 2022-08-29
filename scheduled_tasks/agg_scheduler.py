@@ -61,9 +61,10 @@ class AggScheduler:
 		# TODO: Return result from nasa_image_downloader to indicate success or failure???
 		files_list = self.nasa_image_downloader.main(period, start_date, end_date)
 
-		for filename in files_list:
+		for file_url in files_list:
 			logging.info("Uploading image for {} {}, {}".format(year, day, data_type))
 			# self.image_uploader.upload(directory_path=self.image_path)
+			filename = file_url.split("/")[-1]
 			file_path = os.path.join(self.image_path, filename)
 			self.image_uploader.upload_image(file_path)
 
