@@ -15,11 +15,13 @@ logger = logging.getLogger("cyan-downloader")
 
 PROJECT_ROOT=os.path.abspath(os.path.dirname(__file__))
 
+default_image_dir = os.path.join(PROJECT_ROOT, "test_images")
+
 
 class AdminLogin:
     def __init__(self):
         self.session_id = None
-        self.image_dir = os.path.join(PROJECT_ROOT, "test_images")
+        self.image_dir = os.path.join(NASA_IMAGE_PATH, default_image_dir)
         # self.base_url = "https://ceamdev.ceeopdev.net/admintool/"
         # self.base_url = "http://host.docker.internal:8085"
         self.base_url = os.getenv("ADMIN_TOOL_URL")
