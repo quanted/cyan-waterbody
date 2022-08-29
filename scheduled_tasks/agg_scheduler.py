@@ -59,11 +59,15 @@ class AggScheduler:
 		)
 
 		# TODO: Return result from nasa_image_downloader to indicate success or failure???
-		self.nasa_image_downloader.main(period, start_date, end_date)
+		file_list = self.nasa_image_downloader.main(period, start_date, end_date)
 
-		logging.info("Uploading image for {} {}, {}".format(year, day, data_type))
+		for filename in files_list:
+			logging.info("Uploading image for {} {}, {}".format(year, day, data_type))
+			# self.image_uploader.upload(directory_path=self.image_path)
+			file_path = os.path.join(self.image_path, filename)
+			self.image_uploader.upload_image(file_path)
 
-		self.image_uploader.upload(directory_path=self.image_path)
+
 
 	def convert_doy_to_date(self, year, day):
 		"""
@@ -128,11 +132,12 @@ class AggScheduler:
 
 		return results
 
-	def make_agg_request(self, daily, year, day):
+	def make_agg_request(self, year, day, data_type):
 		"""
 		Makes request to initiate aggregation.
 		"""
 		logging.info("\n\n> Initiating aggregation for {} {}".format(year, day))
+		daily = self.data_type_map[data_type]
 		url = self.flask_url + self.agg_endpoint
 		params={"day": day, "year": year, "daily": daily}
 		try:
@@ -172,6 +177,8 @@ class AggScheduler:
 				# NOTE: Only performing this for weekly for now as daily images are already
 				# downloaded and processed in the EPA-Cyano tomcat backend.
 				self.run_nasa_image_downloader(year, day, data_type)
+				daily = self.data_type_map[data_type]
+				self.make_agg_request(year, day, data_type)  # redo aggregation request
 
 		else:
 			logging.warning("Unaccounted for response: {}".format(results))
@@ -211,7 +218,7 @@ class AggScheduler:
 			return
 
 		# Executes aggregation endpoint:
-		agg_response = self.make_agg_request(daily, year, day)
+		agg_response = self.make_agg_request(year, day, data_type)
 		if not agg_response:
 			return
 

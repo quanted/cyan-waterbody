@@ -168,6 +168,7 @@ class NasaImageDownloads:
             sys.exit()
         self.download_files(files_list)
         self._update_config()
+        return files_list
 
 
 if __name__ == "__main__":
