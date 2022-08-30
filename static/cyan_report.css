@@ -262,7 +262,7 @@ pdftoc.pdftoclevel5 {
 }
 .waterbody-plot-table {
     /*-pdf-keep-in-frame-mode: shrink;*/
-    width: 512px;
+    /*width: 512px;*/
 }
 .waterbody-pie-plot-png {
     width: 512px;
@@ -271,7 +271,7 @@ pdftoc.pdftoclevel5 {
     width: 512px;
 }
 .waterbody-histogram-plot-png {
-    width: 512px;
+    /*width: 512px;*/
     /*height: 400px;*/
 }
 
@@ -386,6 +386,9 @@ pdftoc.pdftoclevel5 {
 .table-divider {
     border-left: 1px double darkgray;
 }
+.waterbody-historic-plot-png {
+    /*width: 1000px;*/
+}
 
 /*30 Day Datatable*/
 .waterbody-data-table-block {
@@ -423,4 +426,48 @@ pdftoc.pdftoclevel5 {
     padding-top: 1px;
     padding-bottom: -1px;
     font-size: 6px;
+}
+.metric-order-block {
+    width: 100%;
+}
+.metric-order-table {
+    text-align: center;
+    font-size: 12px;
+    width: 512pt;
+    display: inline-block;
+}
+.metric-order-header{
+    width: 512px;
+    font-weight: bold;
+    border-bottom: 1px solid darkgray;
+    text-align: center;
+    /*margin-bottom: 5px;*/
+}
+.metric-order-header-name {
+    width: 50%;
+    /*padding: 0 64px;*/
+    /*margin: 0 64px;*/
+    text-align: center;
+    /*padding: 0 32px;*/
+}
+
+.metric-order-table-row {
+    padding: 2px;
+    width: 600px;
+    border: none;
+    font-size: 10px;
+}
+.metric-order-table-row td {
+    width: 25%;
+}
+.metric-order-name {
+    border-right: 1px solid darkgray;
+    /*margin-left: 10px;*/
+    /*font-weight: bold;*/
+}
+.metric-order-value {
+    /*margin-right: 10px;*/
+}
+.table-break {
+    /*border-right: 2px double darkgray;*/
 }
