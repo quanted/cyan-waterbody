@@ -36,5 +36,24 @@
             </tr>
         </table>
     </div>
+    <pdf:nextpage/>
+    <div class="metric-order-block">
+        <table class="metric-order-table">
+            <tr class="metric-order-header">
+                <th class="metric-order-header-name" style="border-right: 1px solid lightgray;">Waterbodies ordered by Frequency (%)</th>
+                <th class="metric-order-header-name">Waterbodies ordered by Extent (%)</th>
+            </tr>
+        </table>
+        <table class="metric-order-table" style="margin-top:10px;">
+            {% for metric in WB_METRICS_ORDER %}
+                <tr class="metric-order-table-row">
+                    <td class="metric-order-name">{{metric[0]}}</td>
+                    <td class="metric-order-value table-break">{{metric[1]}}</td>
+                    <td class="metric-order-name">{{metric[2]}}</td>
+                    <td class="metric-order-value">{{metric[3]}}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
 </div>
 <pdf:nextpage/>

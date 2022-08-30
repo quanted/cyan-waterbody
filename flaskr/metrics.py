@@ -7,6 +7,17 @@ import time
 
 
 def calculate_metrics(objectids: list, year: int, day: int, historic_days: int = 30, summary: bool = True, report: bool = False, wb_dict: dict = None):
+    """
+    Calculate waterbody metrics as defined in publications. Magnitude is currently commented out in the output as the publication has not yet been cleared.
+    :param objectids:
+    :param year:
+    :param day:
+    :param historic_days:
+    :param summary:
+    :param report:
+    :param wb_dict:
+    :return:
+    """
     t0 = time.time()
     today = datetime.today()
     if year is None:
@@ -46,17 +57,17 @@ def calculate_metrics(objectids: list, year: int, day: int, historic_days: int =
         results["Extent"] = extent
         results["Frequency by Waterbody"] = frequency_wb
         results["Extent by Waterbody"] = extent_wb
-        results["Magnitude by Waterbody"] = magnitude_wb
-        results["Area Normalized Magnitude"] = area_normalized
-        results["Chia Normalized Magnitude"] = chia_normalized
+        # results["Magnitude by Waterbody"] = magnitude_wb
+        # results["Area Normalized Magnitude"] = area_normalized
+        # results["Chia Normalized Magnitude"] = chia_normalized
         results["Metadata"] = {
             "Period": f"{historic_days} days",
             "Timestep": "daily",
             "Frequency Units": "%",
             "Extent Units": "%",
-            "Magnitude Units": "cell concentration",
-            "Area Normalized Magnitude Units": "cells/km^2",
-            "Chia Normalized Magnitude Units": "kg*km^-2"
+            # "Magnitude Units": "cell concentration",
+            # "Area Normalized Magnitude Units": "cells/km^2",
+            # "Chia Normalized Magnitude Units": "kg*km^-2"
         }
     else:
         if summary:
@@ -64,17 +75,17 @@ def calculate_metrics(objectids: list, year: int, day: int, historic_days: int =
             results["extent"] = extent
         results["frequency_wb"] = frequency_wb
         results["extent_wb"] = extent_wb
-        results["magnitude_wb"] = magnitude_wb
-        results["area_normalized_magnitude"] = area_normalized
-        results["chia_normalized_magnitude"] = chia_normalized
+        # results["magnitude_wb"] = magnitude_wb
+        # results["area_normalized_magnitude"] = area_normalized
+        # results["chia_normalized_magnitude"] = chia_normalized
         results["metadata"] = {
             "period": f"{historic_days} days",
             "timestep": "daily",
             "frequency_units": "%",
             "extent_units": "%",
-            "magnitude_units": "cell concentration",
-            "area_normalized_magnitude_units": "cells/km^2",
-            "chia_normalized_magnitude_units": "kg*km^-2"
+            # "magnitude_units": "cell concentration",
+            # "area_normalized_magnitude_units": "cells/km^2",
+            # "chia_normalized_magnitude_units": "kg*km^-2"
         }
     t1 = time.time()
     print(f"Metric calculation runtime: {round(t1 - t0, 3)} sec")

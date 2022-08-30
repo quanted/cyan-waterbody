@@ -32,8 +32,9 @@ def get_waterbody_fids(return_dict: bool = False):
     return results
 
 
-def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = False):
+def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = False, name_only: bool = False):
     features = []
+    names = {}
     if fid is None and fids is None:
         return features
     if tojson:
@@ -63,10 +64,14 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
             if fid is not None:
                 f = waterbodies.get(fid)
                 features.append(f)
+                names[int(f["properties"]["OBJECTID"])] = f["properties"]["GNIS_NAME"]
             if fids is not None:
                 for _fid in fids:
                     f = waterbodies.get(_fid)
                     features.append(f)
+                    names[int(f["properties"]["OBJECTID"])] = f["properties"]["GNIS_NAME"]
+        if name_only:
+            return names
         return features, crs
 
 

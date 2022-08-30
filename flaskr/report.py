@@ -170,9 +170,9 @@ def generate_report(
                         'year': year, 'day': day, 'objectid': objectid, 'report_id': str(report_id),
                         'ranges': ranges, 'title_level': 4, 'extent': wb_metrics["Extent by Waterbody"][objectid],
                         'frequency': wb_metrics["Frequency by Waterbody"][objectid],
-                        'magnitude': wb_metrics["Magnitude by Waterbody"][objectid],
-                        'mag_area_norm': wb_metrics["Area Normalized Magnitude"][objectid],
-                        'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid],
+                        # 'magnitude': wb_metrics["Magnitude by Waterbody"][objectid],
+                        # 'mag_area_norm': wb_metrics["Area Normalized Magnitude"][objectid],
+                        # 'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid],
                         'p_days': report_day}) for objectid in wbs
                     ]
                     for r in results_objects:
@@ -187,9 +187,9 @@ def generate_report(
                                                              ranges=ranges, title_level=4,
                                                              extent=wb_metrics["Extent by Waterbody"][objectid],
                                                              frequency=wb_metrics["Frequency by Waterbody"][objectid],
-                                                             magnitude=wb_metrics["Magnitude by Waterbody"][objectid],
-                                                             mag_area_norm=wb_metrics["Area Normalized Magnitude"][objectid],
-                                                             chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],
+                                                             # magnitude=wb_metrics["Magnitude by Waterbody"][objectid],
+                                                             # mag_area_norm=wb_metrics["Area Normalized Magnitude"][objectid],
+                                                             # chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],
                                                              p_days=report_day)
                         wbs_html[i_name] = i_html
                 #TODO: Add sorting by magnitude option
@@ -217,9 +217,9 @@ def generate_report(
                     'year': year, 'day': day, 'objectid': objectid, 'report_id': str(report_id),
                     'ranges': ranges, 'title_level': 3, 'extent': group_metrics["Extent by Waterbody"][objectid],
                     'frequency': group_metrics["Frequency by Waterbody"][objectid],
-                    'magnitude': group_metrics["Magnitude by Waterbody"][objectid],
-                    'mag_area_norm': group_metrics["Area Normalized Magnitude"][objectid],
-                    'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid],
+                    # 'magnitude': group_metrics["Magnitude by Waterbody"][objectid],
+                    # 'mag_area_norm': group_metrics["Area Normalized Magnitude"][objectid],
+                    # 'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid],
                     'p_days': report_day}) for objectid in ids
                 ]
                 for r in results_objects:
@@ -233,13 +233,12 @@ def generate_report(
                                                          ranges=ranges, title_level=3,
                                                          extent=group_metrics["Extent by Waterbody"][objectid],
                                                          frequency=group_metrics["Frequency by Waterbody"][objectid],
-                                                         magnitude=group_metrics["Magnitude by Waterbody"][objectid],
-                                                         mag_area_norm=group_metrics["Area Normalized Magnitude"][objectid],
-                                                         chia_area_norm=group_metrics["Chia Normalized Magnitude"][objectid],
+                                                         # magnitude=group_metrics["Magnitude by Waterbody"][objectid],
+                                                         # mag_area_norm=group_metrics["Area Normalized Magnitude"][objectid],
+                                                         # chia_area_norm=group_metrics["Chia Normalized Magnitude"][objectid],
                                                          p_days=report_day
                                                          )
                     wbs_html[i_name] = i_html
-            #TODO: Add sorting by magnitude option
             for wb in sorted(wbs_html.keys()):
                 html += wbs_html[wb]
             logging.info(f"Report: {report_id}, completed group: {k}")
@@ -400,6 +399,22 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         "Extent": f"{grouped_metrics['Extent']} %",
         "Frequency": f"{grouped_metrics['Frequency']} %",
     }
+
+    waterbody_names = get_waterbody_by_fids(fids=fids, name_only=True)
+    waterbody_frequency_order = []
+    waterbody_extent_order = []
+    for comid in waterbody_names.keys():
+        waterbody_frequency_order.append((waterbody_names[comid], grouped_metrics["Frequency by Waterbody"][comid]))
+        waterbody_extent_order.append((waterbody_names[comid], grouped_metrics["Extent by Waterbody"][comid]))
+    waterbody_frequency_order = sorted(waterbody_frequency_order, key=lambda x: x[1], reverse=True)
+    waterbody_extent_order = sorted(waterbody_extent_order, key=lambda x: x[1], reverse=True)
+    waterbody_metrics_order = []
+    for i in range(len(waterbody_names)):
+        waterbody_metrics_order.append(
+            (waterbody_frequency_order[i][0], round(100*waterbody_frequency_order[i][1], 2),
+             waterbody_extent_order[i][0], round(100*waterbody_extent_order[i][1]), 2)
+        )
+
     template = j_env.get_template("report_3_group.html")
     if group_type == "User Selected Waterbodies":
         group_name = None
@@ -410,7 +425,8 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         GROUP_PROPERTIES=group_properties,
         GROUP_RASTER=waterbodies_geos_raster,
         GROUP_30=grouped_30_raster,
-        TITLE_LEVEL=title_level
+        TITLE_LEVEL=title_level,
+        WB_METRICS_ORDER=waterbody_metrics_order,
     )
     return html, grouped_metrics
 
@@ -986,7 +1002,7 @@ def get_waterbody_30day_html(ranged_data, report_root, objectid: int, day: int, 
                                         'y': 0.98, 'x': 0.5,
                                         'xanchor': 'center', 'yanchor': 'top'},
                                  yaxis_title="Cell Count", font={'size': 22},
-                                 width=1600, height=800)
+                                 width=1200, height=600)
     # stacked_30_fig.show()
     stacked_30_file = f"{objectid}-{year}-{day}-stacked30.{IMAGE_FORMAT}"
     stacked_30_path = os.path.join(report_root, stacked_30_file)
@@ -1134,15 +1150,15 @@ if __name__ == "__main__":
     day = 276
     # states = ["MI"]
     # objectids = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
-    objectids = [6267342, 3007550]
+    # objectids = [6267342, 3007550]
     # objectids = [1445670]
     # states = ["MI", "MN"]
     county = ['13067', '12093']
     tribe = ['5550']
     # county = ['13049', '13067']
     # generate_all_wb_rasters(year=year, day=day)
-    generate_report(year=year, day=day, objectids=objectids)
-    # generate_report(year=year, day=day, counties=county)
+    # generate_report(year=year, day=day, objectids=objectids)
+    generate_report(year=year, day=day, counties=county)
     # generate_report(year=year, day=day, tribes=tribe)
     # generate_report(year=year, day=day, states=states, parallel=True)
     # generate_state_reports(year=year, day=day)
