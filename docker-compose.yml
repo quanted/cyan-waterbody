@@ -5,6 +5,7 @@ services:
   wb-flask:
     restart: unless-stopped
     container_name: wb-flask
+    image: ${WB_FLASK_IMAGE:-ghcr.io/quanted/wb-flask:gdit-dev}
     build: .
     ports:
       - "8085:8080"
@@ -14,7 +15,7 @@ services:
       # - ../EPA-Cyano/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
-      - .:/src
+      # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
       - WATERBODY_DB=/mnts/database
@@ -25,10 +26,13 @@ services:
       - TRIBE_DBF=/mnts/geometry
       - REDIS_HOSTNAME=redis
       - REDIS_PORT=6379
+    env_file:
+      - ./.env
 
   wb-celery:
     restart: unless-stopped
     container_name: wb-celery
+    image: ${WB_CELERY_IMAGE:-ghcr.io/quanted/wb-celery:gdit-dev}
     build: .
     command: celery -A celery_worker.celery worker --loglevel=INFO -c 1
     depends_on:
@@ -40,7 +44,7 @@ services:
       # - ../EPA-Cyano/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
-      - .:/src
+      # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
       - WATERBODY_DB=/mnts/database
@@ -60,6 +64,6 @@ services:
   redis:
     restart: unless-stopped
     container_name: wb-redis
-    image: redis:latest
+    image: ${WB_REDIS_IMAGE:-ghcr.io/quanted/wb-redis:gdit-dev}
     expose:
       - "6379"
