@@ -1,0 +1,5 @@
+cyan_rare/
+env/
+outputs/
+.env
+__pycache__/
