@@ -6,7 +6,6 @@ services:
     restart: unless-stopped
     container_name: wb-flask
     image: ${WB_FLASK_IMAGE:-ghcr.io/quanted/wb-flask:gdit-dev}
-    build: .
     ports:
       - "8085:8080"
     volumes:
@@ -33,7 +32,6 @@ services:
     restart: unless-stopped
     container_name: wb-celery
     image: ${WB_CELERY_IMAGE:-ghcr.io/quanted/wb-celery:gdit-dev}
-    build: .
     command: celery -A celery_worker.celery worker --loglevel=INFO -c 1
     depends_on:
       - redis
