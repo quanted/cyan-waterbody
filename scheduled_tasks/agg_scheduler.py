@@ -26,7 +26,7 @@ class AggScheduler:
 		}
 		self.image_path = os.getenv("NASA_IMAGE_PATH")  # path where images reside for WB and Cyano
 		self.nasa_image_downloader = NasaImageDownloads()
-		self.image_uploader = AdminLogin()
+		self.admintool = AdminLogin()
 
 		self.start_scheduler()
 
@@ -34,7 +34,7 @@ class AggScheduler:
 		self.scheduler = BackgroundScheduler(daemon=True, timezone=utc)
 		# self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["daily"], minute="*")  # testing job
 		self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["daily"], hour="*/4", minute="30")  # every 4 hours at minute 30
-		self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["weekly"], hour="4", minute="0")  # 1x/day at 4:00
+		self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["weekly"], hour="*/8", minute="0")  # every 8 hours
 		self.scheduler.start()
 
 	def run_nasa_image_downloader(self, year, day, data_type):
@@ -58,15 +58,20 @@ class AggScheduler:
 			)
 		)
 
+		# Runs the NASA image downloader:
 		# TODO: Return result from nasa_image_downloader to indicate success or failure???
 		files_list = self.nasa_image_downloader.main(period, start_date, end_date)
 
+		# Logs into the admintool:
+		self.admintool.admin_login()
+
+		# Executes image uploads with the admintool:
 		for file_url in files_list:
 			logging.info("Uploading image for {} {}, {}".format(year, day, data_type))
-			# self.image_uploader.upload(directory_path=self.image_path)
+			# self.admintool.upload(directory_path=self.image_path)
 			filename = file_url.split("/")[-1]
 			file_path = os.path.join(self.image_path, filename)
-			self.image_uploader.upload_image(file_path)
+			self.admintool.upload_image(file_path)
 
 
 
