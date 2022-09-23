@@ -1,5 +1,5 @@
 stages:
-  - Image Build
+  - Image Copy
 
 include:
   - project: 'DSO/DASTScanner'
@@ -7,33 +7,47 @@ include:
   - remote: 'https://gitlab.com/prismacloud-public/shift-left/extension/-/raw/master/.pcs.gitlab-ci.yml'
   
 CopyDevImages:
-  stage: Image Build
+  stage: Image Copy
   tags:
     - qed-stg-runner
   when: manual
   image:
-    name: gcr.io/kaniko-project/executor:debug
+    name: gcr.io/go-containerregistry/crane:debug
     entrypoint: [ "" ]
   script:
-    - mkdir -p /kaniko/.docker
-    - |
-      cat << EOF > /kaniko/.docker/config.json
-      {
-        "auths": {
-          "$CI_REGISTRY": {
-            "username":"$CI_REGISTRY_USER",
-            "password":"$CI_REGISTRY_PASSWORD"
-          }
-        }
-      }
-      EOF
-    - mkdir -p /workspace
-    # Cyano flask Image:
-    - echo "FROM ghcr.io/quanted/wb-flask:gdit-dev" > /workspace/Dockerfile
-    - /kaniko/executor --context=/workspace --destination=$CI_REGISTRY_IMAGE/wb-flask:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
-    # Cyano celery Image:
-    - echo "FROM ghcr.io/quanted/wb-celery:gdit-dev" > /workspace/Dockerfile
-    - /kaniko/executor --context=/workspace --destination=$CI_REGISTRY_IMAGE/wb-celery:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
-    # Cyano redis Image:
-    - echo "FROM ghcr.io/quanted/wb-redis:gdit-dev" > /workspace/Dockerfile
-    - /kaniko/executor --context=/workspace --destination=$CI_REGISTRY_IMAGE/wb-redis:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+    - crane auth login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - crane copy "ghcr.io/quanted/wb-flask:gdit-dev" "$CI_REGISTRY_IMAGE/wb-flask:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    - crane copy "ghcr.io/quanted/wb-celery:gdit-dev" "$CI_REGISTRY_IMAGE/wb-celery:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    - crane copy "ghcr.io/quanted/wb-redis:gdit-dev" "$CI_REGISTRY_IMAGE/wb-redis:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+
+# CopyDevImages:
+#   stage: Image Build
+#   tags:
+#     - qed-stg-runner
+#   when: manual
+#   image:
+#     name: gcr.io/kaniko-project/executor:debug
+#     entrypoint: [ "" ]
+#   script:
+#     - mkdir -p /kaniko/.docker
+#     - |
+#       cat << EOF > /kaniko/.docker/config.json
+#       {
+#         "auths": {
+#           "$CI_REGISTRY": {
+#             "username":"$CI_REGISTRY_USER",
+#             "password":"$CI_REGISTRY_PASSWORD"
+#           }
+#         }
+#       }
+#       EOF
+#     - mkdir -p /workspace
+#     # Cyano flask Image:
+#     - echo "FROM ghcr.io/quanted/wb-flask:gdit-dev" > /workspace/Dockerfile
+#     - /kaniko/executor --context=/workspace --destination=$CI_REGISTRY_IMAGE/wb-flask:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+#     # Cyano celery Image:
+#     - echo "FROM ghcr.io/quanted/wb-celery:gdit-dev" > /workspace/Dockerfile
+#     - /kaniko/executor --context=/workspace --destination=$CI_REGISTRY_IMAGE/wb-celery:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+#     # Cyano redis Image:
+#     - echo "FROM ghcr.io/quanted/wb-redis:gdit-dev" > /workspace/Dockerfile
+#     - /kaniko/executor --context=/workspace --destination=$CI_REGISTRY_IMAGE/wb-redis:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
