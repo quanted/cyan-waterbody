@@ -198,7 +198,7 @@ def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
             crs = w[1]
         wb = (features, crs)
     else:
-        return None, None
+        return None, None, None
     objectid = None
     gnis_name = None
     point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
@@ -216,10 +216,10 @@ def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
             gnis_name = features["properties"]["GNIS_NAME"]
             break
     conn.close()
-    if return_fid:
+    if return_fid and objectid is not None:
         return objectid, get_waterbody_fid(objectid), gnis_name
     else:
-        return objectid, gnis_name
+        return objectid, None, gnis_name
 
 
 def get_waterbody_bounds(objectid: str):
