@@ -90,9 +90,6 @@ def get_data():
             message = "Unable to load provided geojson, error: {}".format(e)
             logger.info(message)
             return message, 200
-    # if geojson is not None:
-    #     data = get_custom_waterbody_data(geojson=geojson, daily=daily, start_year=start_year, start_day=start_day,
-    #                                      end_year=end_year, end_day=end_day, ranges=ranges)
     data = get_waterbody_data(objectid=objectid, daily=daily, start_year=start_year, start_day=start_day,
                                   end_year=end_year, end_day=end_day, ranges=ranges)
     metrics = calculate_metrics(objectids=[objectid], year=end_year, day=end_day, summary=False, historic_days=historic_days)
@@ -104,9 +101,12 @@ def get_data():
 
 @app.route('/waterbody/data_download/')
 def get_all_data():
+    t0 = time.time()
     args = request.args
     if "OBJECTID" in args:
         objectid = args["OBJECTID"]
+    elif "objectid" in args:
+        objectid = args["objectid"]
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
     daily = True
@@ -142,11 +142,14 @@ def get_all_data():
     response = make_response(data_csv)
     response.headers["Content-Disposition"] = f"attachment; filename={objectid}_data.csv"
     response.headers["Content-Type"] = "text/csv"
+    t1 = time.time()
+    print(f"Waterbody Data Download Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return response
 
 
 @app.route('/waterbody/search/')
 def get_objectid():
+    t0 = time.time()
     args = request.args
     lat = None
     lng = None
@@ -169,6 +172,7 @@ def get_objectid():
     if gnis is not None:
         data = get_waterbody_byname(gnis_name=gnis)
         results = {"waterbodies": data if len(data) > 0 else "NA"}
+        objectid = "NA"
     else:
         objectid, fid, gnis = get_waterbody_bypoint(lat=lat, lng=lng, return_fid=True)
         if objectid is not None:
@@ -178,11 +182,14 @@ def get_objectid():
                        "waterbodies": data if len(data) > 0 else "NA"}
         else:
             results = {"lat": lat, "lng": lng, "OBJECTID": int(objectid) if objectid is not None else "NA"}
+    t1 = time.time()
+    print(f"Waterbody Search Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return results, 200
 
 
 @app.route('/waterbody/properties/')
 def get_properties():
+    t0 = time.time()
     args = request.args
     objectid = None
     if "OBJECTID" in args:
@@ -203,11 +210,14 @@ def get_properties():
     data["y_max"] = bounds[4]
 
     result = {"objectid": objectid, "properties": data}
+    t1 = time.time()
+    print(f"Waterbody Property Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return result, 200
 
 
 @app.route('/waterbody/geometry/')
 def get_geometry():
+    t0 = time.time()
     args = request.args
     objectid = None
     if "OBJECTID" in args:
@@ -216,10 +226,11 @@ def get_geometry():
         objectid = int(args["objectid"])
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
-    # data = get_waterbody(objectid=objectid)
     fid = get_waterbody_fid(objectid=objectid)
     data = get_waterbody_by_fids(fid=fid)
     results = {"objectid": objectid, "geojson": data}
+    t1 = time.time()
+    print(f"Waterbody Geometry Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return results, 200
 
 
@@ -230,6 +241,7 @@ def get_image():
     objectid = None
     year = None
     day = None
+    daily = True
     missing = []
     if "OBJECTID" in args:
         objectid = int(args["OBJECTID"])
@@ -245,6 +257,8 @@ def get_image():
         day = int(args["day"])
     else:
         missing.append("Missing required day parameter 'day'")
+    if "daily" in args:
+        daily = bool(str(args["daily"]).lower() == "true")
     if len(missing) > 0:
         return ", ".join(missing), 200
     colors = {}
@@ -260,10 +274,10 @@ def get_image():
         colors['high'] = convert_cc(int(args['high']))
     if 'use_bin' in args:
         use_custom = True
-    raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day, get_bounds=False)
+    raster, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day, get_bounds=False, daily=daily)
 
     if raster is None:
-        return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}", 200
+        return f"No image found for waterbody: {objectid}, year: {year}, and day: {day}, daily: {daily}", 200
     data, trans, crs, bounds, geom = raster
 
     colormap[0] = (0, 0, 0, 0)
@@ -291,31 +305,6 @@ def get_image():
     t1 = time.time()
     print(f"Waterbody Image Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return response
-
-    # RETURNS BASE64 IMAGE STRING AND BOUNDS AS JSON:
-    # png_img.save(f"{objectid}_{year}-{day}.png", "PNG")
-    # image_str = base64.b64encode(png_file.read()).decode("utf-8")
-    # return {"image": image_str, "bounds": bounds}, 200
-
-    # RETURNS GEOTiFF:
-    # height = data.shape[0]
-    # width = data.shape[1]
-    # if use_custom:
-    #     colormap = get_colormap(**colors)
-    # profile = rasterio.profiles.DefaultGTiffProfile(count=1)
-    # profile.update(transform=trans, driver='GTiff', height=height, width=width, crs=crs)
-    # data = data.reshape(1, height, width)
-    # with MemoryFile() as memfile:
-    #     with memfile.open(**profile) as dataset:
-    #         dataset.write(data)
-    #         dataset.write_colormap(1, colormap)
-    #     memfile.seek(0)
-    #     return send_file(
-    #         BytesIO(memfile.read()),
-    #         as_attachment=True,
-    #         attachment_filename=f"{objectid}_{year}-{day}.tiff",
-    #         mimetype='image/tiff'
-    #     )
 
 
 @app.route('/waterbody/aggregate/')

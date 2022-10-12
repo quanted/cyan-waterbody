@@ -1,8 +1,8 @@
 import numpy as np
 from pathlib import PurePath
 from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_dataset_reader, rasterize_boundary
-from flaskr.geometry import get_waterbody
-from flaskr.db import get_tiles_by_objectid, get_conn, save_data
+from flaskr.geometry import get_waterbody, get_waterbody_by_fids
+from flaskr.db import get_tiles_by_objectid, get_conn, save_data, get_waterbody_fid
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
 import multiprocessing as mp
@@ -169,11 +169,12 @@ def retry_failed(daily: bool = True):
         save_data(year=year, day=day, data=data, daily=daily)
 
 
-def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = True, retry: int = 5, reproject: bool = True):
-    features, crs = get_waterbody(objectid=objectid)
+def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = True, retry: int = 5, reproject: bool = True, daily: bool = True):
+    fid = get_waterbody_fid(objectid=objectid)
+    features, crs = get_waterbody_by_fids(fid=fid)
     if len(features) == 0:
         return None, None
-    images = get_images(year=year, day=day, daily=True)
+    images = get_images(year=year, day=day, daily=daily)
     if len(images) == 0:
         return None, None
     image_base = PurePath(images[0]).parts[-1].split(".tif")
@@ -184,16 +185,9 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
         poly_geos = []
         for p in f["geometry"]["coordinates"]:
             poly_geos.append(Polygon(p[0]))
-        # poly = gpd.GeoDataFrame.from_features({"type": "FeatureCollection", "features": [f]})
-        # fea, crs = get_waterbody(objectid=objectid, tojson=False)
-        # poly = gpd.GeoDataFrame.from_features(fea, crs=crs)
         poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
     else:
         poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
-    # poly = gpd.GeoDataFrame.from_features(features, crs=crs)
-    # poly.plot(linewidth=1, color='red')
-    # plt.show()
-
     f_images = get_tiles_by_objectid(objectid, image_base)
     if len(f_images) > 1:
         mosaic = mosaic_rasters(f_images)
@@ -205,7 +199,6 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
     except Exception as e:
         print(f"Error attempting to clip raster for objectid: {objectid}, year: {year}, day: {day}, retry: {retry}, error: {e}")
         if retry > 0:
-            # time.sleep(10)
             data, colormap = get_waterbody_raster(objectid=objectid, year=year, day=day, retry=retry-1, get_bounds=False, reproject=False)
         else:
             return None, colormap
