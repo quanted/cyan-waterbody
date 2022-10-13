@@ -7,7 +7,7 @@ from flask import Flask, request, send_file, make_response, send_from_directory
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, \
     check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, get_waterbody_by_fids, get_elevation
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties, get_waterbody_byID
-from flaskr.aggregate import get_waterbody_raster
+from flaskr.aggregate import get_waterbody_raster, get_conus_file
 from flaskr.report import generate_report, get_report_path
 from flaskr.utils import convert_cc, convert_dn
 from flaskr.metrics import calculate_metrics
@@ -90,12 +90,15 @@ def get_data():
             message = "Unable to load provided geojson, error: {}".format(e)
             logger.info(message)
             return message, 200
+    t1 = time.time()
     data = get_waterbody_data(objectid=objectid, daily=daily, start_year=start_year, start_day=start_day,
                                   end_year=end_year, end_day=end_day, ranges=ranges)
+    t2 = time.time()
     metrics = calculate_metrics(objectids=[objectid], year=end_year, day=end_day, summary=False, historic_days=historic_days)
     results = {"OBJECTID": objectid, "daily": daily, "data": data, "metrics": metrics}
-    t1 = time.time()
-    logger.info(f"Waterbody Data, historic_days: {historic_days}, request runtime: {round(t1-t0, 3)} sec")
+    t3 = time.time()
+    logger.info(f"Waterbody Data, historic_days: {historic_days}, request runtime: {round(t3-t0, 3)} sec, "
+                f"data retrieval: {round(t2-t1, 3)} sec, metric calculation: {round(t3-t2, 3)}")
     return results, 200
 
 
@@ -304,6 +307,47 @@ def get_image():
     )
     t1 = time.time()
     print(f"Waterbody Image Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
+    return response
+
+
+@app.route('/waterbody/conus_image/')
+def get_conus_image():
+    t0 = time.time()
+    args = request.args
+    current_date = datetime.datetime.now()
+    daily = True
+    if "year" in args:
+        year = int(args["year"])
+    else:
+        year = current_date.year
+    if "day" in args:
+        day = int(args["day"])
+    else:
+        day = current_date.timetuple().tm_yday
+    if "daily" in args:
+        daily = (args["daily"] == "True")
+
+    conus_file_path = get_conus_file(year=year, day=day, daily=daily, tries=3 if daily else 8)
+    if conus_file_path is None:
+        return {"year": year, "day": day, "daily": daily, "message": "No conus cyano image found for the inputs provided."}
+
+    # RETURNS IMAGE AS image/png:
+    response = make_response(
+        send_file(
+            conus_file_path,
+            as_attachment=True,
+            attachment_filename=f"{conus_file_path}",
+            mimetype='image/png'
+        )
+    )
+    response.set_cookie("cyano_conus_bounds", str(
+        {
+            'bottom': 22.802171214983044, 'left': -131.1651209108407,
+            'right': -65.04027865759939, 'top': 52.921760353630894
+        }
+    ))
+    t1 = time.time()
+    print(f"Waterbody Conus Image Request complete, image: {conus_file_path}, runtime: {round(t1-t0, 4)} sec")
     return response
 
 

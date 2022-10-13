@@ -6,9 +6,12 @@ import argparse
 import time
 from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds, set_index, set_waterbody_details_table, export_waterbody_details_table
 from flaskr.utils import update_geometry_bounds, p_update_geometry_bounds, update_waterbody_fids
-from flaskr.aggregate import aggregate, retry_failed, p_aggregate
+from flaskr.aggregate import aggregate, retry_failed, p_aggregate, get_images, generate_conus_image
 from flaskr.report import generate_state_reports, generate_alpinelake_report
+from flaskr.geometry import get_waterbody
+from flaskr.raster import mosaic_rasters, get_colormap, clip_raster
 import logging
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyan-waterbody")
@@ -31,6 +34,7 @@ parser.add_argument('--add_waterbody_fids', action='store_true', help='Update Wa
 parser.add_argument('--add_waterbody_elevation', action='store_true', help='Update Waterbody database to include waterbody elevation data from USGS')
 parser.add_argument('--export_waterbody_elevation', action='store_true', help='Export the waterbody elevation data table to csv')
 parser.add_argument('--file', type=str, help="File path for input or output depending on the primary argument.")
+parser.add_argument('--generate_conus_image', action='store_true', help='Test generating cyan image for day/year for all CONUS masking out all non-wb pixels.')
 
 PARALLEL = True
 
@@ -51,7 +55,10 @@ def async_aggregate(year: int, day: int, daily: bool):
     except Exception as e:
         logger.critical("ERROR processing data for waterbody aggregation. Message: {}".format(e))
     t1 = time.time()
-    logger.info("Runtime: {} sec".format(round(t1 - t0, 4)))
+    logger.info(f"Completed waterbody {'daily' if daily else 'weekly'} aggregation for year: {year}, day: {day}, runtime: {round(t1 - t0, 4)} sec")
+    generate_conus_image(day=int(args.day), year=int(args.year), daily=daily)
+    t2 = time.time()
+    logger.info(f"Completed generating conus {'daily' if daily else 'weekly'} image for year: {year}, day: {day}, runtime: {round(t2 - t1, 4)} sec")
 
 
 def async_retry():
@@ -127,11 +134,19 @@ if __name__ == "__main__":
             print("Generating state reports requires the year and day parameters.")
             exit()
         generate_state_reports(year=int(args.year), day=int(args.day), parallel=True)
-    elif args.generate_alpine_lake_reports:
+    elif args.generate_alpine_lake_report:
         if args.year is None or args.day is None:
             print("Generating alpine lake report requires the year and day parameters.")
             exit()
         generate_alpinelake_report(year=int(args.year), day=int(args.day), parallel=True)
+    elif args.generate_conus_image:
+        daily = True
+        if args.year is None or args.day is None:
+            print("Generating waterbody mask image requires the year and day parameters.")
+            exit()
+        if args.daily:
+            daily = bool(args.daily)
+        generate_conus_image(day=int(args.day), year=int(args.year), daily=daily)
     else:
         print("")
         logger.info("Invalid input arguments\n")
