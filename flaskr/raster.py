@@ -109,6 +109,11 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
     if isinstance(raster, types.GeneratorType):
         crs_0 = DST_CRS
         boundary = boundary.to_crs(crs=DST_CRS)
+
+        if isinstance(boundary, gpd.GeoDataFrame):
+            boundary_list = [feature["geometry"] for i, feature in boundary.iterrows()]
+            # boundary = boundary.to_json()
+            boundary = boundary_list
     elif not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
         crs_0 = raster.crs
         boundary = boundary.to_crs(crs=raster.crs)
@@ -235,3 +240,4 @@ def get_dataset_reader(data, transform, crs):
             # dataset_reader = dataset
             yield dataset
     # return dataset_reader
+

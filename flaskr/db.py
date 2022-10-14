@@ -100,6 +100,7 @@ def get_waterbody_data(objectid: str, daily: bool = True, start_year: int = None
         if end_day:
             query = query + " AND day <= ?"
             values.append(end_day)
+
         cur.execute(query, tuple(values))
         data_rows = cur.fetchall()
         data = {}

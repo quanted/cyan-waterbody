@@ -12,6 +12,9 @@ import pandas as pd
 import copy
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from PIL import Image
+from PIL.PngImagePlugin import PngInfo
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyan-waterbody")
@@ -205,3 +208,59 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
             return None, colormap
     return data, colormap
 
+
+def generate_conus_image(year: int, day: int, daily: bool):
+    t0 = time.time()
+    images = get_images(year=year, day=day, daily=daily)
+    mosaic = mosaic_rasters(images)
+
+    colormap = get_colormap(images[0])
+    colormap[0] = (0, 0, 0, 0)
+    colormap[254] = (0, 0, 0, 0)
+    colormap[255] = (0, 0, 0, 0)
+
+    bounds = None
+
+    data = None
+    for r in mosaic:
+        bounds = r.bounds
+        data = r.read()[0]
+    mosaic.close()
+
+    str_bounds = {"bottom": bounds.bottom, "left": bounds.left, "right": bounds.right, "top": bounds.top}
+
+    converted_data = [[(0, 0, 0, 0) for i in range(data.shape[1])] for j in range(data.shape[0])]
+    for y in range(0, data.shape[1]):
+        for x in range(0, data.shape[0]):
+            converted_data[x][y] = list(colormap[data[x][y]])
+
+    converted_data = np.array(converted_data, dtype=np.uint8)
+
+    png_metadata = PngInfo()
+    png_metadata.add_text("Bounds", str(str_bounds))
+    png_metadata.add_text("Daily", str(daily))
+    png_metadata.add_text("Year", str(year))
+    png_metadata.add_text("Day", str(day))
+
+    png_img = Image.fromarray(converted_data, mode='RGBA')
+    png_img.save(f"{'daily' if daily else 'weekly'}_conus-{year}-{day}.png", 'PNG', pnginfo=png_metadata)
+    t1 = time.time()
+    logger.info(f"Waterbody CONUS Image Complete, year: {year}, day: {day}, request runtime: {round(t1 - t0, 3)} sec")
+
+
+def get_conus_file(year: int, day: int, daily: bool, tries: int = 14):
+    if tries <= 0:
+        return None
+    base_path = os.path.join("static", "raster_plots")
+    conus_file_name = f"{'daily' if daily else 'weekly'}-conus-{year}-{day}.png"
+    conus_file_path = os.path.join(base_path, conus_file_name)
+    if os.path.exists(conus_file_path):
+        return conus_file_path
+    else:
+        new_year = year
+        if day == 1:
+            new_year = new_year - 1
+            new_day = 365
+        else:
+            new_day = day - 1
+        return get_conus_file(new_year, new_day, daily, tries-1)

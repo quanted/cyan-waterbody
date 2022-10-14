@@ -75,7 +75,7 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
         return features, crs
 
 
-def get_waterbody(objectid: int = None, objectids: list = None, tojson: bool = False):
+def get_waterbody(objectid: int = None, objectids: list = None, tojson: bool = False, all: bool = False):
     features = []
     if tojson:
         with fiona.open(WATERBODY_DBF) as waterbodies:
@@ -104,6 +104,7 @@ def get_waterbody(objectid: int = None, objectids: list = None, tojson: bool = F
             return geojson
     else:
         i = 0
+        features_list = []
         with fiona.open(WATERBODY_DBF) as waterbodies:
             crs = waterbodies.crs
             for f in waterbodies:
@@ -116,9 +117,16 @@ def get_waterbody(objectid: int = None, objectids: list = None, tojson: bool = F
                     if f["properties"]["OBJECTID"] in objectids:
                         features.append(f)
                         continue
+                elif all:
+                    features_list.append(f)
                 else:
                     features.append(f)
-        # print(f"ObjectID: {objectid}, index: {i-1}")
+        if all:
+            feature_dict = {
+                "type": "FeatureCollection",
+                "features": features_list
+            }
+            features = gpd.GeoDataFrame.from_features(feature_dict, crs=crs)
         return features, crs
 
 
