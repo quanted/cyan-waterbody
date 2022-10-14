@@ -14,6 +14,10 @@ services:
       # - ../EPA-Cyano/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
+      - ./outputs:/src/outputs
+      - ./static/outputs:/src/static/outputs
+      - ./static/raster_plots:/src/static/raster_plots
+      - ./static/temp:/src/static/temp
       # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
@@ -23,7 +27,7 @@ services:
       - COUNTY_DBF=/mnts/geometry
       - STATE_DBF=/mnts/geometry
       - TRIBE_DBF=/mnts/geometry
-      - REDIS_HOSTNAME=redis
+      - REDIS_HOSTNAME=wb-redis
       - REDIS_PORT=6379
     env_file:
       - ./.env
@@ -34,7 +38,7 @@ services:
     image: ${WB_CELERY_IMAGE:-ghcr.io/quanted/wb-celery:gdit-dev}
     command: celery -A celery_worker.celery worker --loglevel=INFO -c 1
     depends_on:
-      - redis
+      - wb-redis
       - wb-flask
     volumes:
       - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
@@ -42,6 +46,10 @@ services:
       # - ../EPA-Cyano/images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
+      - ./outputs:/src/outputs
+      - ./static/outputs:/src/static/outputs
+      - ./static/raster_plots:/src/static/raster_plots
+      - ./static/temp:/src/static/temp
       # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
@@ -51,7 +59,7 @@ services:
       - COUNTY_DBF=/mnts/geometry
       - STATE_DBF=/mnts/geometry
       - TRIBE_DBF=/mnts/geometry
-      - REDIS_HOSTNAME=redis
+      - REDIS_HOSTNAME=wb-redis
       - REDIS_PORT=6379
       - WB_FLASK_URL=http://wb-flask:8080
       - NASA_IMAGE_PATH=/mnts/images
@@ -59,7 +67,7 @@ services:
     env_file:
       - ./.env
 
-  redis:
+  wb-redis:
     restart: unless-stopped
     container_name: wb-redis
     image: ${WB_REDIS_IMAGE:-ghcr.io/quanted/wb-redis:gdit-dev}

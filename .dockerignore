@@ -1,5 +1,8 @@
 cyan_rare/
 env/
 outputs/
+static/outputs/
+static/raster_plots/
+static/temp/
 .env
 __pycache__/
