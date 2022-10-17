@@ -193,17 +193,19 @@ def get_raster_bounds(image_path):
     return bounds
 
 
-def mosaic_rasters(images):
+def mosaic_rasters(images, dst_crs=None):
+    if dst_crs is None:
+        dst_crs = DST_CRS
     src_crs = rasterio.open(images[0]).crs
     mosaic, out_trans = merge(images)
     mosaic, out_trans = warp.reproject(
         source=mosaic,
         src_crs=src_crs,
         src_transform=out_trans,
-        dst_crs=DST_CRS,
+        dst_crs=dst_crs,
         resampling=Resampling.nearest
     )
-    mosaic_reader_gen = get_dataset_reader(mosaic, out_trans, crs=DST_CRS)
+    mosaic_reader_gen = get_dataset_reader(mosaic, out_trans, crs=dst_crs)
     # for i in images:
     #     src = rasterio.open(i)
     #     pyplot.imshow(src.read(1))
