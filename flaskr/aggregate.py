@@ -212,7 +212,7 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
 def generate_conus_image(year: int, day: int, daily: bool):
     t0 = time.time()
     images = get_images(year=year, day=day, daily=daily)
-    mosaic = mosaic_rasters(images)
+    mosaic = mosaic_rasters(images, dst_crs={"init": "EPSG:3857"})
 
     colormap = get_colormap(images[0])
     colormap[0] = (0, 0, 0, 0)
