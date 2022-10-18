@@ -11,6 +11,7 @@ from flaskr.report import generate_state_reports, generate_alpinelake_report
 from flaskr.geometry import get_waterbody
 from flaskr.raster import mosaic_rasters, get_colormap, clip_raster
 import logging
+import datetime
 
 
 logging.basicConfig(level=logging.INFO)
@@ -141,12 +142,22 @@ if __name__ == "__main__":
         generate_alpinelake_report(year=int(args.year), day=int(args.day), parallel=True)
     elif args.generate_conus_image:
         daily = True
-        if args.year is None or args.day is None:
-            print("Generating waterbody mask image requires the year and day parameters.")
-            exit()
+        year = None
+        day = None
+        current_date = datetime.datetime.now()
+        if "year" in args:
+            year = int(args["year"])
+        else:
+            year = current_date.year
+        if "day" in args:
+            day = int(args["day"])
+        else:
+            day = current_date.timetuple().tm_yday
+        if "daily" in args:
+            daily = (args["daily"] == "True")
         if args.daily:
             daily = bool(args.daily)
-        generate_conus_image(day=int(args.day), year=int(args.year), daily=daily)
+        generate_conus_image(day=day, year=year, daily=daily)
     else:
         print("")
         logger.info("Invalid input arguments\n")

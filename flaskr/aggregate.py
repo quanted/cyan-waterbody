@@ -211,6 +211,7 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
 def generate_conus_image(year: int, day: int, daily: bool):
     t0 = time.time()
     images = get_images(year=year, day=day, daily=daily)
+    logger.info(f"CyANO CONUS Image Generator started - year: {year}, day: {day}, daily: {daily}, n images: {len(images)}")
     mosaic = mosaic_rasters(images, dst_crs={"init": "EPSG:3857"})
 
     colormap = get_colormap(images[0])
@@ -248,7 +249,7 @@ def generate_conus_image(year: int, day: int, daily: bool):
     png_img = Image.fromarray(converted_data, mode='RGBA')
     png_img.save(conus_file_path, 'PNG', pnginfo=png_metadata)
     t1 = time.time()
-    logger.info(f"Waterbody CONUS Image Complete, year: {year}, day: {day}, request runtime: {round(t1 - t0, 3)} sec")
+    logger.info(f"CyANO CONUS Image Generator completed, year: {year}, day: {day}, request runtime: {round(t1 - t0, 3)} sec")
 
 
 def get_conus_file(year: int, day: int, daily: bool, tries: int = 14):
