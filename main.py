@@ -146,15 +146,15 @@ if __name__ == "__main__":
         day = None
         current_date = datetime.datetime.now()
         if "year" in args:
-            year = int(args["year"])
+            year = int(args.year)
         else:
             year = current_date.year
         if "day" in args:
-            day = int(args["day"])
+            day = int(args.day)
         else:
             day = current_date.timetuple().tm_yday
         if "daily" in args:
-            daily = (args["daily"] == "True")
+            daily = (args.daily == "True")
         if args.daily:
             daily = bool(args.daily)
         generate_conus_image(day=day, year=year, daily=daily)
