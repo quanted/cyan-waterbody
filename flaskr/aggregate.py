@@ -242,8 +242,12 @@ def generate_conus_image(year: int, day: int, daily: bool):
     png_metadata.add_text("Year", str(year))
     png_metadata.add_text("Day", str(day))
 
+    base_path = os.path.join("static", "raster_plots")
+    conus_file_name = f"{'daily' if daily else 'weekly'}-conus-{year}-{day}.png"
+    conus_file_path = os.path.join(base_path, conus_file_name)
+
     png_img = Image.fromarray(converted_data, mode='RGBA')
-    png_img.save(f"{'daily' if daily else 'weekly'}_conus-{year}-{day}.png", 'PNG', pnginfo=png_metadata)
+    png_img.save(conus_file_path, 'PNG', pnginfo=png_metadata)
     t1 = time.time()
     logger.info(f"Waterbody CONUS Image Complete, year: {year}, day: {day}, request runtime: {round(t1 - t0, 3)} sec")
 
