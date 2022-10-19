@@ -1,6 +1,6 @@
 import numpy as np
 from pathlib import PurePath
-from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_dataset_reader, rasterize_boundary
+from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_dataset_reader, rasterize_boundary, mosaic_raster_gdal
 from flaskr.geometry import get_waterbody, get_waterbody_by_fids
 from flaskr.db import get_tiles_by_objectid, get_conn, save_data, get_waterbody_fid
 import geopandas as gpd
@@ -211,11 +211,13 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
 def generate_conus_image(year: int, day: int, daily: bool):
     t0 = time.time()
     images = get_images(year=year, day=day, daily=daily)
+
     logger.info(f"CyANO CONUS Image Generator started - year: {year}, day: {day}, daily: {daily}, n images: {len(images)}")
     if len(images) == 0:
         logger.warn("No images found for conus image generator.")
         return
-    mosaic = mosaic_rasters(images, dst_crs={"init": "EPSG:3857"})
+    mosaic, mosaic_file = mosaic_raster_gdal(images, dst_crs={"init": "EPSG:3857"})
+    logger.info("CyANO CONUS Image Rasters Merged")
 
     colormap = get_colormap(images[0])
     colormap[0] = (0, 0, 0, 0)
@@ -232,11 +234,12 @@ def generate_conus_image(year: int, day: int, daily: bool):
 
     str_bounds = {"bottom": bounds.bottom, "left": bounds.left, "right": bounds.right, "top": bounds.top}
 
-    converted_data = [[(0, 0, 0, 0) for i in range(data.shape[1])] for j in range(data.shape[0])]
-    for y in range(0, data.shape[1]):
-        for x in range(0, data.shape[0]):
-            converted_data[x][y] = list(colormap[data[x][y]])
+    logger.info(f"Starting CyANO CONUS Image colormapping, size: {data.shape}")
+    converted_data = np.full((data.shape[0], data.shape[1], 4,), (0, 0, 0, 0), dtype=np.uint8)
+    for color, color_value in colormap.items():
+        converted_data[data == color] = color_value
 
+    logger.info("Completed CyANO CONUS Image colormapping")
     converted_data = np.array(converted_data, dtype=np.uint8)
 
     png_metadata = PngInfo()
@@ -251,6 +254,7 @@ def generate_conus_image(year: int, day: int, daily: bool):
 
     png_img = Image.fromarray(converted_data, mode='RGBA')
     png_img.save(conus_file_path, 'PNG', pnginfo=png_metadata)
+    os.remove(mosaic_file)
     t1 = time.time()
     logger.info(f"CyANO CONUS Image Generator completed, year: {year}, day: {day}, request runtime: {round(t1 - t0, 3)} sec")
 
