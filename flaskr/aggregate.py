@@ -16,6 +16,8 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 import os
 
+from memory_profiler import profile
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyan-waterbody")
 
@@ -209,6 +211,7 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
     return data, colormap
 
 
+@profile
 def generate_conus_image(year: int, day: int, daily: bool):
     t0 = time.time()
     images = get_images(year=year, day=day, daily=daily)

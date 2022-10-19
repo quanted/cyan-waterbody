@@ -95,6 +95,9 @@ def generate_report(
         report_id = report_id
     else:
         report_id = uuid.uuid4()
+
+    if not os.path.exists(os.path.join(STATIC_ROOT, "temp")):
+        os.mkdir(os.path.join(STATIC_ROOT, "temp"))
     report_root = os.path.join(STATIC_ROOT, "temp", str(report_id))
     os.mkdir(report_root)
     waterbodies, group_type = get_waterbody_collection(objectids=objectids, conus=conus, regions=regions, states=states,
