@@ -6,9 +6,13 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
 from rasterio import mask, warp, crs, MemoryFile, features, plot
+from rasterio.warp import calculate_default_transform
 from rasterio.merge import merge
 from rasterio.enums import Resampling
 from rasterio.profiles import DefaultGTiffProfile
+
+from osgeo import gdal
+import uuid
 from matplotlib import pyplot
 import matplotlib.pyplot as plt
 # from osgeo import gdal, osr
@@ -206,14 +210,37 @@ def mosaic_rasters(images, dst_crs=None):
         resampling=Resampling.nearest
     )
     mosaic_reader_gen = get_dataset_reader(mosaic, out_trans, crs=dst_crs)
-    # for i in images:
-    #     src = rasterio.open(i)
-    #     pyplot.imshow(src.read(1))
-    #     pyplot.show()
-    # for r in mosaic_reader_gen:
-    #     pyplot.imshow(r.read(1))
-    #     pyplot.show()
     return mosaic_reader_gen
+
+
+def mosaic_raster_gdal(image_list, dst_crs=None):
+    if dst_crs is None:
+        dst_crs = DST_CRS
+    src_crs = rasterio.open(image_list[0]).crs
+    uid = str(uuid.uuid4())
+    mosaic_file = os.path.join("static", "temp", f"{uid}-temp.tif")
+    open(mosaic_file, 'w').close()
+    g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'], options=["COMPRESS=LZW", "TILED=YES"])
+    with rasterio.open(mosaic_file) as src:
+        transform, width, height = calculate_default_transform(
+            src.crs, dst_crs, src.width, src.height, *src.bounds)
+        kwargs = src.meta.copy()
+        kwargs.update({
+            'crs': dst_crs,
+            'transform': transform,
+            'width': width,
+            'height': height
+        })
+        mosaic, out_trans = warp.reproject(
+            source=rasterio.band(src, 1),
+            src_crs=src_crs,
+            dst_crs=dst_crs,
+            src_transform=src.transform,
+            resampling=Resampling.nearest
+        )
+    mosaic_reader_gen = get_dataset_reader(mosaic, transform, crs=dst_crs)
+    g = None
+    return mosaic_reader_gen, mosaic_file
 
 
 def rasterize_boundary(image, boundary, affine, crs, value: int=256):
