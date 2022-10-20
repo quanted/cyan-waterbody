@@ -263,6 +263,9 @@ def generate_conus_image(year: int, day: int, daily: bool):
     conus_file_name = f"{'daily' if daily else 'weekly'}-conus-{year}-{day}.png"
     conus_file_path = os.path.join(base_path, conus_file_name)
 
+    if os.path.exists(conus_file_path):
+        os.remove(conus_file_path)
+
     png_img = Image.fromarray(converted_data, mode='RGBA')
     png_img.save(conus_file_path, 'PNG', pnginfo=png_metadata)
     os.remove(mosaic_file)
