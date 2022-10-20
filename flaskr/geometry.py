@@ -9,6 +9,7 @@ import requests
 import json
 import numpy as np
 from shapely.geometry import Polygon, MultiPolygon, Point
+from pyproj import Proj, transform
 
 import time
 
@@ -287,3 +288,10 @@ def get_waterbody_elevation(fid: int, n: int = 10, delay: int = 2, countdown: in
     del points
     min_elevation = round(np.min(elevations), 2)
     return fid, min_elevation
+
+
+def convert_coordinates(x, y, in_crs, out_crs='4326'):
+    in_proj = Proj(init=in_crs)
+    out_proj = Proj(init=f'epsg:{out_crs}')
+    new_x, new_y = transform(in_proj, out_proj, x, y)
+    return new_x, new_y

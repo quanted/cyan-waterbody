@@ -342,8 +342,8 @@ def get_conus_image():
     )
     response.set_cookie("cyano_conus_bounds", str(
         {
-            'bottom': 22.802171214983044, 'left': -131.1651209108407,
-            'right': -65.04027865759939, 'top': 52.921760353630894
+            'bottom': 24.623340905712205, 'left': -131.1651209108407,
+            'right': -65.03986894612699, 'top': 52.9220879731627
         }
     ))
     t1 = time.time()

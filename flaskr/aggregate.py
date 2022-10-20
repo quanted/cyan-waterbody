@@ -1,7 +1,7 @@
 import numpy as np
 from pathlib import PurePath
 from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_dataset_reader, rasterize_boundary, mosaic_raster_gdal
-from flaskr.geometry import get_waterbody, get_waterbody_by_fids
+from flaskr.geometry import get_waterbody, get_waterbody_by_fids, convert_coordinates
 from flaskr.db import get_tiles_by_objectid, get_conn, save_data, get_waterbody_fid
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
@@ -227,12 +227,23 @@ def generate_conus_image(year: int, day: int, daily: bool):
     bounds = None
 
     data = None
+    mosaic_crs = None
     for r in mosaic:
         bounds = r.bounds
+        mosaic_crs = r.crs.data["init"]
         data = r.read()[0]
     mosaic.close()
 
-    str_bounds = {"bottom": bounds.bottom, "left": bounds.left, "right": bounds.right, "top": bounds.top}
+    # str_bounds = {"bottom": bounds.bottom, "left": bounds.left, "right": bounds.right, "top": bounds.top}
+
+    proj_x1, proj_y1 = convert_coordinates(y=bounds.bottom, x=bounds.left, in_crs=mosaic_crs)
+    proj_x2, proj_y2 = convert_coordinates(y=bounds.top, x=bounds.right, in_crs=mosaic_crs)
+    str_bounds = {
+        "bottom": proj_y1,
+        "left": proj_x1,
+        "right": proj_x2,
+        "top": proj_y2
+    }
 
     logger.info(f"Starting CyANO CONUS Image colormapping, size: {data.shape}")
     converted_data = np.full((data.shape[0], data.shape[1], 4,), (0, 0, 0, 0), dtype=np.uint8)
