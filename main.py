@@ -57,7 +57,7 @@ def async_aggregate(year: int, day: int, daily: bool):
         logger.critical("ERROR processing data for waterbody aggregation. Message: {}".format(e))
     t1 = time.time()
     logger.info(f"Completed waterbody {'daily' if daily else 'weekly'} aggregation for year: {year}, day: {day}, runtime: {round(t1 - t0, 4)} sec")
-    generate_conus_image(day=int(args.day), year=int(args.year), daily=daily)
+    generate_conus_image(day=int(day), year=int(year), daily=daily)
     t2 = time.time()
     logger.info(f"Completed generating conus {'daily' if daily else 'weekly'} image for year: {year}, day: {day}, runtime: {round(t2 - t1, 4)} sec")
 
