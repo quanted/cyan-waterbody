@@ -4,7 +4,8 @@ services:
   cyan-wb:
     restart: unless-stopped
     container_name: cyan-wb
-    build: .
+    image: cyan-wb-test-01
+#    build: .
     ports:
       - "8085:8080"
     volumes:

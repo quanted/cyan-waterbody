@@ -1,7 +1,5 @@
 import warnings
 
-import gdal
-
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path

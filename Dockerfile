@@ -1,53 +1,49 @@
-FROM python:3.8
+FROM continuumio/miniconda3:4.10.3p0-alpine as base
 
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-ENV PATH /opt/conda/bin:/opt/conda/envs/env/bin:$PATH
+ARG CONDA_ENV_BASE=pyenv
 
-RUN apt-get update --fix-missing
-RUN apt-get install -y wget bzip2 ca-certificates \
-    libglib2.0-0 libxext6 libsm6 libxrender1 \
-    python3-pip software-properties-common build-essential \
-    make sqlite3 gfortran python-dev \
-    git mercurial subversion
+RUN apk update
+RUN apk upgrade
+RUN apk add --no-cache geos gdal cmake git gfortran sqlite sqlite-dev
+RUN pip install -U pip
 
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.3-Linux-x86_64.sh -O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh && \
-    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate base" >> ~/.bashrc
+COPY environment.yml /tmp/environment.yml
 
-ARG TINI_VERSION=0.19.0
-RUN apt-get install -y curl grep sed dpkg && \
-    curl -L "https://github.com/krallin/tini/releases/download/v$TINI_VERSION/tini_$TINI_VERSION.deb" > tini.deb && \
-    dpkg -i tini.deb && \
-    rm tini.deb && \
-    apt-get clean
+RUN conda config --add channels conda-forge
+RUN conda env create -n $CONDA_ENV_BASE --file /tmp/environment.yml
+RUN conda install -n $CONDA_ENV_BASE uwsgi
+RUN conda install --force-reinstall -n $CONDA_ENV_BASE gdal
+RUN conda install --force-reinstall -n $CONDA_ENV_BASE fiona
+RUN conda install --force-reinstall -n $CONDA_ENV_BASE geopandas
 
-RUN apt update -y && apt install -y --fix-missing --no-install-recommends \
-    python3-pip software-properties-common build-essential \
-    cmake sqlite3 gfortran python-dev
+RUN conda run -n $CONDA_ENV_BASE --no-capture-output conda clean -acfy && \
+    find /opt/conda -follow -type f -name '*.a' -delete && \
+    find /opt/conda -follow -type f -name '*.pyc' -delete && \
+    find /opt/conda -follow -type f -name '*.js.map' -delete
 
-# gdal vesion restriction due to fiona not supporting gdal>2.4.3
-ARG GDAL_VERSION=3.1.4
-ARG CONDA_ENV="base"
+FROM continuumio/miniconda3:4.10.3p0-alpine as prime
 
-COPY environment.yml /src/environment.yml
-RUN conda env update -n=$CONDA_ENV -f /src/environment.yml
-RUN conda install -n=$CONDA_ENV -c conda-forge gdal=$GDAL_VERSION -y
+ENV APP_USER=www-data
+ENV CONDA_ENV=/home/www-data/pyenv
 
-RUN activate $CONDA_ENV
-RUN conda update conda -y
-RUN conda info
+RUN adduser -S $APP_USER -G $APP_USER
 
-COPY . /src/
+RUN apk update
+RUN apk upgrade
+RUN apk add --no-cache geos gdal sqlite sqlite-dev
 
-# Updating Anaconda packages
-RUN conda install -n=$CONDA_ENV -c conda-forge uwsgi
-COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
-
-WORKDIR /src
+COPY uwsgi.ini /etc/uwsgi/
+COPY . /src/cyan_waterbody
+WORKDIR /src/
 EXPOSE 8080
-#ENTRYPOINT ["uwsgi", "--ini", "/etc/uwsgi/uwsgi.ini"]
-#ENTRYPOINT ["flask", "run", "-p", "8080", "-h", "0.0.0.0", "--debugger"]
-ENTRYPOINT ["python", "wb_flask.py"]
+
+COPY --from=base /opt/conda/envs/pyenv $CONDA_ENV
+
+ENV PYTHONPATH $CONDA_ENV:/src:/src/cyan_waterbody/:$PYTHONPATH
+ENV PATH $CONDA_ENV:/src:/src/cyan_waterbody/:$PATH
+
+RUN chown $APP_USER:$APP_USER /src/
+RUN chown $APP_USER:$APP_USER $CONDA_ENV
+USER $APP_USER
+
+CMD ["conda", "run", "-p", "$CONDA_ENV", "--no-capture-output", "python", "wb_flask.py"]
