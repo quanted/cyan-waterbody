@@ -34,7 +34,7 @@ RUN apk add --no-cache geos gdal sqlite sqlite-dev
 
 COPY uwsgi.ini /etc/uwsgi/
 COPY . /src/cyan_waterbody
-WORKDIR /src/
+WORKDIR /src/cyan_waterbody/
 EXPOSE 8080
 
 COPY --from=base /opt/conda/envs/pyenv $CONDA_ENV
