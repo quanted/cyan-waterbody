@@ -15,7 +15,6 @@ RUN conda install -n $CONDA_ENV_BASE uwsgi
 RUN conda install --force-reinstall -n $CONDA_ENV_BASE gdal
 RUN conda install --force-reinstall -n $CONDA_ENV_BASE fiona
 RUN conda install --force-reinstall -n $CONDA_ENV_BASE geopandas
-RUN conda install -y -n $CONDA_ENV_BASE celery redis
 
 RUN conda run -n $CONDA_ENV_BASE --no-capture-output conda clean -acfy && \
     find /opt/conda -follow -type f -name '*.a' -delete && \
