@@ -24,7 +24,7 @@ RUN conda run -n $CONDA_ENV_BASE --no-capture-output conda clean -acfy && \
 FROM continuumio/miniconda3:4.10.3p0-alpine as prime
 
 ENV APP_USER=www-data
-ENV CONDA_ENV=/home/www-data/pyenv
+ENV CONDA_ENV=/opt/conda/envs/pyenv
 
 RUN adduser -S $APP_USER -G $APP_USER
 

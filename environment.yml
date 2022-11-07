@@ -17,4 +17,6 @@ dependencies:
   - python-kaleido
   - boto3
   - uwsgi
+  - celery
+  - redis
 #  - gdal
