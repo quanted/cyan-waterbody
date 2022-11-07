@@ -17,7 +17,6 @@ dependencies:
   - python-kaleido
   - boto3
   - uwsgi
-  - celery
-  # - redis
-  - Redis
+  - celery==5.0.5
+  - redis==3.5.3
   - apscheduler
