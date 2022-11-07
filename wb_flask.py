@@ -301,7 +301,7 @@ def get_image():
         send_file(
             png_file,
             as_attachment=True,
-            attachment_filename=f"{objectid}_{year}-{day}.png",
+            download_name=f"{objectid}_{year}-{day}.png",
             mimetype='image/png'
         )
     )
@@ -341,7 +341,7 @@ def get_conus_image():
         send_file(
             conus_file_path,
             as_attachment=True,
-            attachment_filename=f"{conus_file_path}",
+            download_name=f"{conus_file_path}",
             mimetype='image/png'
         )
     )
