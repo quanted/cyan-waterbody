@@ -18,5 +18,6 @@ dependencies:
   - boto3
   - uwsgi
   - celery
-  - redis
+  # - redis
+  - Redis
   - apscheduler
