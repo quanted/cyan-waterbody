@@ -332,7 +332,7 @@ def get_conus_image():
     if "daily" in args:
         daily = (args["daily"] == "True")
 
-    conus_file_path = get_conus_file(year=year, day=day, daily=daily, tile=tile, tries=3 if daily else 8)
+    conus_file_path, bounds = get_conus_file(year=year, day=day, daily=daily, tile=tile, tries=3 if daily else 8)
     if conus_file_path is None:
         return {"year": year, "day": day, "daily": daily, "message": "No conus cyano image found for the inputs provided."}
 
