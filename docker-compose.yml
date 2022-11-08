@@ -15,9 +15,9 @@ services:
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - ./outputs:/src/outputs
-      - ./static/outputs:/src/static/outputs
-      - ./static/raster_plots:/src/static/raster_plots
-      - ./static/temp:/src/static/temp
+      - ./static/outputs:/src/cyan_waterbody/static/outputs
+      - ./static/raster_plots:/src/cyan_waterbody/static/raster_plots
+      - ./static/temp:/src/cyan_waterbody/static/temp
       # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
@@ -47,9 +47,9 @@ services:
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - ./outputs:/src/outputs
-      - ./static/outputs:/src/static/outputs
-      - ./static/raster_plots:/src/static/raster_plots
-      - ./static/temp:/src/static/temp
+      - ./static/outputs:/src/cyan_waterbody/static/outputs
+      - ./static/raster_plots:/src/cyan_waterbody/static/raster_plots
+      - ./static/temp:/src/cyan_waterbody/static/temp
       # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
