@@ -246,13 +246,19 @@ def generate_conus_image(year: int, day: int, daily: bool, save_bounds: bool = T
         m = image_name[-2]
         n = image_name[-1].split(".")[0]
 
-        proj_x1, proj_y1 = convert_coordinates(y=bounds[1], x=bounds[0], in_crs=crs)
-        proj_x2, proj_y2 = convert_coordinates(y=bounds[3], x=bounds[2], in_crs=crs)
+        # proj_x1, proj_y1 = convert_coordinates(y=bounds[1], x=bounds[0], in_crs=crs)
+        # proj_x2, proj_y2 = convert_coordinates(y=bounds[3], x=bounds[2], in_crs=crs)
+        # str_bounds = {
+        #     "bottom": proj_y1,
+        #     "left": proj_x1,
+        #     "right": proj_x2,
+        #     "top": proj_y2
+        # }
         str_bounds = {
-            "bottom": proj_y1,
-            "left": proj_x1,
-            "right": proj_x2,
-            "top": proj_y2
+            "bottom": bounds[1],
+            "left": bounds[0],
+            "right": bounds[2],
+            "top": bounds[3]
         }
         all_bounds[f"{m}-{n}"] = str_bounds
 

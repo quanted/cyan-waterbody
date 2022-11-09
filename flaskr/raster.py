@@ -198,10 +198,21 @@ def get_raster_bounds(image_path):
 def get_raster(image_path):
     dst_crs = 'EPSG:4326'
     raster = rasterio.open(image_path)
-    bounds = warp.transform_bounds(src_crs=raster.crs, dst_crs=dst_crs, left=raster.bounds.left,
+    src_crs = raster.crs
+    raster_data = raster.read(1)
+
+    data, out_trans = warp.reproject(
+        source=raster_data,
+        src_crs=src_crs,
+        src_transform=raster.transform,
+        dst_crs=dst_crs,
+        resampling=Resampling.nearest
+    )
+    # bounds = warp.transform_bounds(src_crs=raster.crs, dst_crs=dst_crs, left=raster.bounds.left,
+    #                                bottom=raster.bounds.bottom, right=raster.bounds.right, top=raster.bounds.top)
+    bounds = warp.transform_bounds(src_crs=raster.crs, dst_crs='EPSG:4326', left=raster.bounds.left,
                                    bottom=raster.bounds.bottom, right=raster.bounds.right, top=raster.bounds.top)
-    data = raster.read(1)
-    return data, bounds, dst_crs
+    return data[0], bounds, dst_crs
 
 
 def mosaic_rasters(images, dst_crs=None):
