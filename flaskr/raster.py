@@ -30,8 +30,13 @@ gdal.UseExceptions()
 IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
 DST_CRS = 'EPSG:4326'
 
+CONUS_TILES = ['1_1', '1_2', '1_3', '1_4', '2_1', '2_2', '2_3', '2_4', '3_1', '3_2', '3_3',
+               '3_4', '3_5', '4_1', '4_2', '4_3', '4_4', '4_5', '5_1', '5_2', '5_3', '5_4', '5_5',
+               '6_1', '6_2', '6_3', '6_4', '6_5', '7_1', '7_2', '7_3', '7_4', '7_5', '8_1', '8_2',
+               '8_3', '8_4']
 
-def get_images(year: int, day: int, daily: bool=True):
+
+def get_images(year: int, day: int, daily: bool=True, filtered: bool = False):
     """
     Returns the list of images in the IMAGE_DIR for the specified year and day,
     defaults to daily otherwise will look for weekly images
@@ -47,8 +52,12 @@ def get_images(year: int, day: int, daily: bool=True):
         date1 = date0 + datetime.timedelta(days=6)
         base_image_name = "L{}{}{}{}.L3m_7D_CYAN_CI_cyano_CYAN_CONUS_300m".format(date0.year, f'{date0.timetuple().tm_yday:03}', date1.year, f'{date1.timetuple().tm_yday:03}')
 
-    image_files = [str(os.path.join(IMAGE_DIR, f)) for f in os.listdir(IMAGE_DIR) if
-                   (".tif" in f and base_image_name in f)]
+    if filtered:
+        image_files = [str(os.path.join(IMAGE_DIR, f)) for f in os.listdir(IMAGE_DIR) if
+                       (".tif" in f and base_image_name in f and any(tile in f for tile in CONUS_TILES))]
+    else:
+        image_files = [str(os.path.join(IMAGE_DIR, f)) for f in os.listdir(IMAGE_DIR) if
+                       (".tif" in f and base_image_name in f)]
     return image_files
 
 
@@ -238,8 +247,8 @@ def mosaic_raster_gdal(image_list, dst_crs=None):
     uid = str(uuid.uuid4())
     mosaic_file = os.path.join("static", "temp", f"{uid}-temp.tif")
     open(mosaic_file, 'w').close()
-    g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'])
-    # g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'], options=["COMPRESS=LZW", "TILED=YES"])
+    # g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'])
+    g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'], options=["COMPRESS=LZW", "TILED=YES"])
     with rasterio.open(mosaic_file) as src:
         transform, width, height = calculate_default_transform(
             src.crs, dst_crs, src.width, src.height, *src.bounds)

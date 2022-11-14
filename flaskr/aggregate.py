@@ -211,8 +211,7 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
 
 def generate_conus_image(year: int, day: int, daily: bool, save_bounds: bool = True):
     t0 = time.time()
-    images = get_images(year=year, day=day, daily=daily)
-    all_bounds = {}
+    images = get_images(year=year, day=day, daily=daily, filtered=True)
     logger.info(
         f"CyANO CONUS Image Generator started - year: {year}, day: {day}, daily: {daily}, n images: {len(images)}")
 
@@ -221,85 +220,69 @@ def generate_conus_image(year: int, day: int, daily: bool, save_bounds: bool = T
     colormap[254] = (0, 0, 0, 0)
     colormap[255] = (0, 0, 0, 0)
 
-    for image in tqdm(images, desc="Converting tiles to png"):
+    if len(images) == 0:
+        logger.warn("No images found for conus image generator.")
+        return
 
-        if len(images) == 0:
-            logger.warn("No images found for conus image generator.")
-            return
-        # mosaic, mosaic_file = mosaic_raster_gdal(images, dst_crs={"init": "EPSG:3857"})
-        # logger.info("CyANO CONUS Image Rasters Merged")
+    mosaic, mosaic_file = mosaic_raster_gdal(images, dst_crs={"init": "EPSG:3857"})
+    logger.info("CyANO CONUS Image Rasters Merged")
+    bounds = None
+    data = None
+    crs = None
+    for r in mosaic:
+        bounds = r.bounds
+        crs = r.crs.data["init"]
+        data = r.read()[0]
+    mosaic.close()
 
-        data, bounds, crs = get_raster(image)
+    proj_x1, proj_y1 = convert_coordinates(y=bounds[1], x=bounds[0], in_crs=crs)
+    proj_x2, proj_y2 = convert_coordinates(y=bounds[3], x=bounds[2], in_crs=crs)
+    str_bounds = {
+        "bottom": proj_y1,
+        "left": proj_x1,
+        "right": proj_x2,
+        "top": proj_y2
+    }
 
-        # bounds = None
-        # data = None
-        # crs = None
-        # for r in mosaic:
-        #     bounds = r.bounds
-        #     crs = r.crs.data["init"]
-        #     data = r.read()[0]
-        # mosaic.close()
+    # str_bounds = {"bottom": bounds.bottom, "left": bounds.left, "right": bounds.right, "top": bounds.top}
 
-        # str_bounds = {"bottom": bounds.bottom, "left": bounds.left, "right": bounds.right, "top": bounds.top}
-        image_name = image.split("_")
-        m = image_name[-2]
-        n = image_name[-1].split(".")[0]
+    logger.info(f"Starting CyANO CONUS Image colormapping, size: {data.shape}")
+    converted_data = np.full((data.shape[0], data.shape[1], 4,), (0, 0, 0, 0), dtype=np.uint8)
+    for color, color_value in colormap.items():
+        converted_data[data == color] = color_value
 
-        # proj_x1, proj_y1 = convert_coordinates(y=bounds[1], x=bounds[0], in_crs=crs)
-        # proj_x2, proj_y2 = convert_coordinates(y=bounds[3], x=bounds[2], in_crs=crs)
-        # str_bounds = {
-        #     "bottom": proj_y1,
-        #     "left": proj_x1,
-        #     "right": proj_x2,
-        #     "top": proj_y2
-        # }
-        str_bounds = {
-            "bottom": bounds[1],
-            "left": bounds[0],
-            "right": bounds[2],
-            "top": bounds[3]
-        }
-        all_bounds[f"{m}-{n}"] = str_bounds
+    logger.info("Completed CyANO CONUS Image colormapping")
+    converted_data = np.array(converted_data, dtype=np.uint8)
 
-        # logger.info(f"Starting CyANO CONUS Image colormapping, size: {data.shape}")
-        converted_data = np.full((data.shape[0], data.shape[1], 4,), (0, 0, 0, 0), dtype=np.uint8)
-        for color, color_value in colormap.items():
-            converted_data[data == color] = color_value
+    png_metadata = PngInfo()
+    png_metadata.add_text("Bounds", str(str_bounds))
+    png_metadata.add_text("Daily", str(daily))
+    png_metadata.add_text("Year", str(year))
+    png_metadata.add_text("Day", str(day))
 
-        # logger.info("Completed CyANO CONUS Image colormapping")
-        converted_data = np.array(converted_data, dtype=np.uint8)
+    base_path = os.path.join("static", "raster_plots")
+    conus_file_name = f"{'daily' if daily else 'weekly'}-conus-{year}-{day}.png"
+    conus_file_path = os.path.join(base_path, conus_file_name)
 
-        # value_count = np.count_nonzero(np.logical_and(converted_data < 254, converted_data > 0).flatten())
+    if os.path.exists(conus_file_path):
+        os.remove(conus_file_path)
 
-        png_metadata = PngInfo()
-        png_metadata.add_text("Bounds", str(str_bounds))
-        png_metadata.add_text("Daily", str(daily))
-        png_metadata.add_text("Year", str(year))
-        png_metadata.add_text("Day", str(day))
+    png_img = Image.fromarray(converted_data, mode='RGBA')
+    png_img.save(conus_file_path, 'PNG', pnginfo=png_metadata)
 
-        base_path = os.path.join("static", "raster_plots")
-        conus_file_name = f"{'daily' if daily else 'weekly'}-conus-{year}-{day}_{m}-{n}.png"
-        conus_file_path = os.path.join(base_path, conus_file_name)
+    if daily:
+        p_day = day - 1 if day > 0 else 365
+    else:
+        p_day = day - 7 if day - 7 > 0 else day + 365 - 7
+    p_year = year - 1 if p_day == 365 else year
+    previous_file = os.path.join(base_path, f"{'daily' if daily else 'weekly'}-conus-{p_year}-{p_day}.png")
+    if os.path.exists(previous_file):
+        os.remove(previous_file)
 
-        if os.path.exists(conus_file_path):
-            os.remove(conus_file_path)
-
-        png_img = Image.fromarray(converted_data, mode='RGBA')
-        png_img.save(conus_file_path, 'PNG', pnginfo=png_metadata)
-
-        if daily:
-            p_day = day - 1 if day > 0 else 365
-        else:
-            p_day = day - 7 if day - 7 > 0 else day + 365 - 7
-        p_year = year - 1 if p_day == 365 else year
-        previous_file = os.path.join(base_path, f"{'daily' if daily else 'weekly'}-conus-{p_year}-{p_day}_{m}-{n}.png")
-        if os.path.exists(previous_file):
-            os.remove(previous_file)
-
-    # os.remove(mosaic_file)
+    os.remove(mosaic_file)
     if save_bounds:
         with open(os.path.join("static", "conus_raster_bounds.json"), "w") as json_file:
-            json_file.write(json.dumps(all_bounds, indent=4))
+            json_file.write(json.dumps(str_bounds, indent=4))
     t1 = time.time()
     logger.info(f"CyANO CONUS Image Generator completed, year: {year}, day: {day}, request runtime: {round(t1 - t0, 3)} sec")
 
