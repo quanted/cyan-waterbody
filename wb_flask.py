@@ -324,15 +324,15 @@ def get_conus_image():
         day = int(args["day"])
     else:
         day = current_date.timetuple().tm_yday
-    if "tile" in args:
-        tile = str(args["tile"])
-    else:
-        return "Missing required tile parameter, such as '1_1'", 200
+    # if "tile" in args:
+    #     tile = str(args["tile"])
+    # else:
+    #     return "Missing required tile parameter, such as '1_1'", 200
 
     if "daily" in args:
         daily = (args["daily"] == "True")
 
-    conus_file_path, bounds = get_conus_file(year=year, day=day, daily=daily, tile=tile, tries=3 if daily else 8)
+    conus_file_path, bounds = get_conus_file(year=year, day=day, daily=daily, tries=3 if daily else 8)
     if conus_file_path is None:
         return {"year": year, "day": day, "daily": daily, "message": "No conus cyano image found for the inputs provided."}
 
