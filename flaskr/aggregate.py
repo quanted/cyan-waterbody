@@ -288,11 +288,11 @@ def generate_conus_image(year: int, day: int, daily: bool, save_bounds: bool = T
     logger.info(f"CyANO CONUS Image Generator completed, year: {year}, day: {day}, request runtime: {round(t1 - t0, 3)} sec")
 
 
-def get_conus_file(year: int, day: int, daily: bool, tile: str, tries: int = 14):
+def get_conus_file(year: int, day: int, daily: bool, tries: int = 14):
     if tries <= 0:
         return None
     base_path = os.path.join("static", "raster_plots")
-    conus_file_name = f"{'daily' if daily else 'weekly'}-conus-{year}-{day}_{tile}.png"
+    conus_file_name = f"{'daily' if daily else 'weekly'}-conus-{year}-{day}.png"
     conus_file_path = os.path.join(base_path, conus_file_name)
     if os.path.exists(conus_file_path):
         return conus_file_path
@@ -303,4 +303,4 @@ def get_conus_file(year: int, day: int, daily: bool, tile: str, tries: int = 14)
             new_day = 365
         else:
             new_day = day - 1
-        return get_conus_file(new_year, new_day, daily, tile, tries-1)
+        return get_conus_file(new_year, new_day, daily, tries-1)
