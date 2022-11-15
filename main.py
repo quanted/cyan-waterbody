@@ -154,9 +154,8 @@ if __name__ == "__main__":
         else:
             day = current_date.timetuple().tm_yday
         if "daily" in args:
-            daily = (args.daily == "True")
-        # if args.daily:
-        #     daily = bool(args.daily)
+            # NOTE: Using parser.parse_args returns bools in args instead of strings
+            daily = bool(args.daily)
         print("Daily: {}".format(daily))
         generate_conus_image(day=day, year=year, daily=daily)
     else:
