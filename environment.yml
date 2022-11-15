@@ -1,22 +1,23 @@
-name: cyan-waterbody
+name: cyan-waterbody-2
 channels:
   - conda-forge
+  - defaults
 dependencies:
   - rasterio
-  - geopandas
+  - geopandas=0.9.0
   - numpy
-  - python=3.8
+  - python=3.9
   - pillow
   - flask=2.2.2
   - tqdm
   - fiona
   - libspatialindex
   - flask-cors
-  - xhtml2pdf
+  - xhtml2pdf=0.2.5
   - plotly
   - python-kaleido
   - boto3
-  - uwsgi
   - celery==5.0.5
   - redis==3.5.3
   - apscheduler
+  - gdal=3.1.4

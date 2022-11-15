@@ -247,11 +247,12 @@ def mosaic_raster_gdal(image_list, dst_crs=None):
     uid = str(uuid.uuid4())
     mosaic_file = os.path.join("static", "temp", f"{uid}-temp.tif")
     open(mosaic_file, 'w').close()
-    # g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'])
-    g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'], options=["COMPRESS=LZW", "TILED=YES"])
+    g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'])
+    # g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'], options=["COMPRESS=LZW", "TILED=YES"])
     with rasterio.open(mosaic_file) as src:
+        src_crs = src.crs
         transform, width, height = calculate_default_transform(
-            src.crs, dst_crs, src.width, src.height, *src.bounds)
+            src_crs, dst_crs, src.width, src.height, *src.bounds)
         kwargs = src.meta.copy()
         kwargs.update({
             'crs': dst_crs,
