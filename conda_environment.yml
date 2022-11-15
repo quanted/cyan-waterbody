@@ -1,0 +1,19 @@
+name: cyan-waterbody2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - rasterio
+  - geopandas
+  - numpy
+  - python=3.8
+  - pillow
+  - flask
+  - tqdm
+  - fiona
+  - xhtml2pdf
+  - plotly
+  - flask_cors
+  - jupyterlab
+  - scikit-learn
+  - boto3

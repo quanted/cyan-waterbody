@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     container_name: cyan-wb
     image: cyan-wb-test-01
-    command: conda run -p /opt/conda/envs/pyenv --no-capture-output celery -A celery_worker.celery worker --loglevel=INFO -c 1
+#    command: conda run -p /opt/conda/envs/pyenv --no-capture-output celery -A celery_worker.celery worker --loglevel=INFO -c 1
 #    build: .
     ports:
       - "8085:8080"

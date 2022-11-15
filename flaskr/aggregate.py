@@ -212,8 +212,7 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
 def generate_conus_image(year: int, day: int, daily: bool, save_bounds: bool = True):
     t0 = time.time()
     images = get_images(year=year, day=day, daily=daily, filtered=True)
-    logger.info(
-        f"CyANO CONUS Image Generator started - year: {year}, day: {day}, daily: {daily}, n images: {len(images)}")
+    logger.info(f"CyANO CONUS Image Generator started - year: {year}, day: {day}, daily: {daily}, n images: {len(images)}")
 
     colormap = get_colormap(images[0])
     colormap[0] = (0, 0, 0, 0)
@@ -264,8 +263,8 @@ def generate_conus_image(year: int, day: int, daily: bool, save_bounds: bool = T
     conus_file_name = f"{'daily' if daily else 'weekly'}-conus-{year}-{day}.png"
     conus_file_path = os.path.join(base_path, conus_file_name)
 
-    if os.path.exists(conus_file_path):
-        os.remove(conus_file_path)
+    # if os.path.exists(conus_file_path):
+        # os.remove(conus_file_path)
 
     png_img = Image.fromarray(converted_data, mode='RGBA')
     png_img.save(conus_file_path, 'PNG', pnginfo=png_metadata)
