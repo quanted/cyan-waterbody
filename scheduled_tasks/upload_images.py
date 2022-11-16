@@ -77,6 +77,9 @@ class AdminLogin:
         file_name = file_path.split("\\")[-1]
         check_file_url = self.check_upload_url + file_name
         headers = {'Accept': 'application/json, text/javascript, */*; q=0.01'}
+        logging.warning("Checking file URL:\nURL={}\nHeaders={}\nCookies={}".format(
+            self.check_upload_url, headers, cookies
+        ))
         response = requests.get(check_file_url, headers=headers, cookies=self.cookies, verify=False)
         response_json = json.loads(response.content)
         if response_json["success"] is True:
@@ -86,6 +89,9 @@ class AdminLogin:
                 'sessionid': self.session_id
             }
             image_file = {'file': open(file_path, 'rb')}
+            logging.warning("Uploading files:\nURL={}\nRequest body={}\nFiles={}\nHeaders={}\nCookies={}".format(
+                self.upload_url, request_body, image_file, headers, self.cookies
+            ))
             upload_response = requests.post(self.upload_url, request_body, files=image_file, headers=headers, cookies=self.cookies, verify=False)
             logging.info("File upload complete")
             logging.info("Upload response: {}".format(upload_response))
