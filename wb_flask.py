@@ -3,7 +3,7 @@ import numpy as np
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from flask import Flask, request, send_file, make_response, send_from_directory
+from flask import Flask, request, send_file, make_response, send_from_directory, g
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, \
     check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, get_waterbody_by_fids, get_elevation
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties, get_waterbody_byID
@@ -27,6 +27,10 @@ import rasterio
 from rasterio.io import MemoryFile
 
 
+
+from celery_tasks import CeleryHandler
+
+
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
@@ -34,6 +38,8 @@ logger = logging.getLogger("cyan-waterbody")
 logger.info("CyAN Waterbody Flask App")
 
 cors = CORS(app, origins=["http://localhost:4200"])
+
+celery_handler = CeleryHandler()
 
 
 @app.route('/')
@@ -164,7 +170,7 @@ def get_objectid():
     if "name" in args:
         gnis = str(args["name"])
     error = []
-    if lat is None:
+    if lat is None: 
         error.append("Missing required latitude parameter 'lat'")
     if lng is None:
         error.append("Missing required longitude parameter 'lng'")
@@ -332,7 +338,7 @@ def get_conus_image():
     if "daily" in args:
         daily = (args["daily"] == "True")
 
-    conus_file_path, bounds = get_conus_file(year=year, day=day, daily=daily, tries=3 if daily else 8)
+    conus_file_path = get_conus_file(year=year, day=day, daily=daily, tries=3 if daily else 8)
     if conus_file_path is None:
         return {"year": year, "day": day, "daily": daily, "message": "No conus cyano image found for the inputs provided."}
 
@@ -457,11 +463,12 @@ def get_report():
     day = None
     missing = []
     if "county" in args:
-        county = list(args["county"].split(","))
+        county = list(int(county) for county in args["county"].split(","))
     if "tribe" in args:
-        tribes = list(args["tribe"].split(","))
+        tribes = list(int(tribe) for tribe in args["tribe"].split(","))
     if "objectids" in args:
-        objectids = list(args["objectids"].split(","))
+        objectids = list(int(objectid) for objectid in args["objectids"].split(","))
+        # objectids = list(args["objectids"].split(","))
     if not any([county, tribes, objectids]):
         missing.append("Missing required spatial area of interest. Options include: county, tribe or objectids")
     if "year" in args:
@@ -487,18 +494,71 @@ def get_report():
     if ('high' not in args or 'med' not in args or 'low' not in args) and use_custom:
         missing.append("Missing bin categories for data. Requires high, med and low.")
     if use_custom:
-        ranges = [[[1, colors['low']], [colors['low'], colors['med']], [colors['med'], colors['high']]]]
+        # ranges = [[[1, colors['low']], [colors['low'], colors['med']], [colors['med'], colors['high']]]]
+        ranges = [[1, colors['low']], [colors['low'], colors['med']], [colors['med'], colors['high']]]
     if len(missing) > 0:
         return "; ".join(missing), 200
-    report_id = uuid.uuid4()
-    th = threading.Thread(target=generate_report, kwargs={'year': year, 'day': day, 'objectids': objectids,
-                                                          'tribes': tribes, 'counties': county, 'ranges': ranges,
-                                                          'report_id': report_id})
-    th.start()
-    return {
-        'year': year, 'day': day, 'objectids': objectids, 'tribes': tribes,
-        'counties': county, 'ranges': ranges, 'report_id': report_id
-           }, 200
+
+    request_dict = {
+        'year': year,
+        'day': day,
+        'objectids': objectids,
+        'tribes': tribes,
+        'counties': county,
+        'ranges': ranges,
+        'report_id': str(uuid.uuid4()),
+        'token': args.get('token'),
+        'origin': args.get('origin'),
+        'app_name': args.get('app_name')
+        # 'token': g.token
+    }
+
+    # Checks that aggregation has been completed for the requests day/year/data type:
+    results = check_status(day=day, year=year, daily=True)
+
+    if results.get("status") != "COMPLETED":
+        request_dict['report_id'] = None
+        request_dict['status'] = False
+        return request_dict, 200  # NOTE: return a non-200 code?
+
+    # Starts report generation with celery worker:
+    response = celery_handler.start_task(request_dict)
+
+    # # Starts report generation with thread:
+    # th = threading.Thread(target=generate_report, kwargs=request_dict)
+    # th.start()
+    
+    return request_dict, 200
+
+
+@app.route('/waterbody/report/status')
+def report_status():
+    """
+    Checks status of celery task.
+    """
+    args = request.args
+    report_id = None
+    if 'report_id' in args:
+        report_id = str(args["report_id"])
+    if not report_id:
+        return "Missing required report_id", 400
+    # report_path = get_report_path(report_id=report_id)
+    # if not report_path:
+    #     return "Report has not completed or does not exist", 404
+    # return {"status": True, "message": "Report ready to download", "report_id": report_id}
+    status = celery_handler.check_celery_job_status(report_id)
+    return {"report_id": report_id, "report_status": status}
+
+
+@app.route('/waterbody/report/cancel')
+def cancel_report():
+    # NOTE: Does a cancel make sense, could use reports for other users' requests
+    # NOTE: cyanweb flask should ensure the cancel is only from the user that started request
+    args = request.args
+    report_id = args["report_id"]
+    # username = args["username"]
+    response = celery_handler.revoke_task(report_id)
+    return response
 
 
 @app.route('/waterbody/report/download/')
@@ -537,6 +597,13 @@ def get_report_counties():
 def get_report_tribes():
     tribes = get_all_tribes()
     return {"tribes": tribes}, 200
+
+
+@app.route('/celery')
+def test_celery():
+    celery_result = celery_handler.test_celery()
+    logging.warning("Celery result: {}".format(celery_result))
+    return celery_result
 
 
 if __name__ == "__main__":
