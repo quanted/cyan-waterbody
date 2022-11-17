@@ -5,7 +5,7 @@ services:
   wb-flask:
     restart: unless-stopped
     container_name: wb-flask
-    image: ${WB_FLASK_IMAGE:-ghcr.io/quanted/wb-flask:gdit-dev}
+    image: ${WB_API_IMAGE:-ghcr.io/quanted/wb-api:gdit-dev}
     ports:
       - "8085:8080"
     volumes:
@@ -35,7 +35,7 @@ services:
   wb-celery:
     restart: unless-stopped
     container_name: wb-celery
-    image: ${WB_CELERY_IMAGE:-ghcr.io/quanted/wb-celery:gdit-dev}
+    image: ${WB_API_IMAGE:-ghcr.io/quanted/wb-api:gdit-dev}
     command: conda run -p /opt/conda/envs/pyenv --no-capture-output celery -A celery_worker.celery worker --loglevel=INFO -c 1
     depends_on:
       - wb-redis
