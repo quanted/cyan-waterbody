@@ -11,7 +11,7 @@ COPY conda_environment.yml /tmp/environment.yml
 
 RUN conda config --add channels conda-forge
 RUN conda env create -n $CONDA_ENV_BASE --file /tmp/environment.yml
-RUN conda install -n $CONDA_ENV_BASE uwsgi
+#RUN conda install -n $CONDA_ENV_BASE uwsgi
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE gdal=3.1.4
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE fiona=1.8.18
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE geopandas=0.9.0
@@ -26,11 +26,11 @@ FROM continuumio/miniconda3:4.10.3p0-alpine as prime
 ENV APP_USER=www-data
 ENV CONDA_ENV=/opt/conda/envs/pyenv
 
-RUN adduser -S $APP_USER -G $APP_USER
+RUN adduser -S $APP_USER -G $APP_USER -G root
 
 RUN apk update
 RUN apk upgrade
-RUN apk add --no-cache geos gdal sqlite sqlite-dev
+RUN apk add --no-cache geos gdal sqlite sqlite-dev wget curl
 
 COPY uwsgi.ini /etc/uwsgi/
 COPY . /src/cyan_waterbody
