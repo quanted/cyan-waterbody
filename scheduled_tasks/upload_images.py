@@ -78,7 +78,7 @@ class AdminLogin:
         check_file_url = self.check_upload_url + file_name
         headers = {'Accept': 'application/json, text/javascript, */*; q=0.01'}
         logging.warning("Checking file URL:\nURL={}\nHeaders={}\nCookies={}".format(
-            self.check_upload_url, headers, cookies
+            self.check_upload_url, headers, self.cookies
         ))
         response = requests.get(check_file_url, headers=headers, cookies=self.cookies, verify=False)
         response_json = json.loads(response.content)
