@@ -62,7 +62,7 @@ def get_env():
 
 
 def get_report_path(report_id: str):
-    report_file = os.path.join(OUTPUT_DIR, f"cyanwb_report_{report_id}.pdf")
+    report_file = os.path.join(OUTPUT_DIR, f"cyano-report_{report_id}.pdf")
     if not os.path.isfile(report_file):
         return None
     return report_file
@@ -259,6 +259,13 @@ def generate_report(
             report_path = os.path.join(report_path, f"cyano-report_{report_id}.pdf")
     else:
         os.makedirs(report_path)
+
+    # if group_type == "State":
+    #     report_path = os.path.join(report_path, f"cyanwb_{states[0]}_{year}-{day}.pdf")
+    # else:
+    #     logging.warning("Setting report path.")
+    #     report_path = os.path.join(report_path, f"cyanwb_report_{report_id}.pdf")
+        
     report_file = open(report_path, "w+b")
     pisa_status = pisa.CreatePDF(html, dest=report_file)
     report_file.close()
@@ -290,8 +297,8 @@ def generate_report(
         logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
     else:
         logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
-    # email report/delete report temp directory
-    return True
+    
+    return report_id
 
 
 def get_title(year: int, day: int, j_env=None, title: str = None, page_title: str = None, location_title: str = None):
@@ -1143,6 +1150,7 @@ def generate_all_wb_rasters(year: int, day: int, parallel: bool = True):
     else:
         for oid in objectids:
             _ = get_report_waterbody_raster(objectid=oid, report_id="", year=year, day=day)
+
 
 
 if __name__ == "__main__":

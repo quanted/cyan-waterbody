@@ -1,4 +1,5 @@
 __pycache__/
+__pycache__/*
 env/
 *.pyc
 cyan_rare/
@@ -6,3 +7,4 @@ cyan_rare/
 outputs/
 static/raster_plots/
 static/temp/
+.env

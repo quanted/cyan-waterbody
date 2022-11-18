@@ -1,22 +1,24 @@
 version: '3.1'
 
 services:
-  cyan-wb:
+
+  wb-flask:
     restart: unless-stopped
-    container_name: cyan-wb
-    image: cyan-wb-test-01
-#    command: conda run -p /opt/conda/envs/pyenv --no-capture-output celery -A celery_worker.celery worker --loglevel=INFO -c 1
-#    build: .
+    container_name: wb-flask
+    image: ${WB_FLASK_IMAGE:-ghcr.io/quanted/wb-flask:gdit-dev}
     ports:
       - "8085:8080"
     volumes:
-#      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
-#      - ./cyan_rare/mounts/database:/mnts/database
-#      - ./cyan_rare/mounts/geometry:/mnts/geometry
-      - /D/data/cyan_rare/mounts/images:/mnts/images
-      - /D/data/cyan_rare/mounts/database:/mnts/database
-      - /D/data/cyan_rare/mounts/geometry:/mnts/geometry
-      - .:/src
+      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+      # - ./cyan_rare/mounts/images:/mnts/images
+      # - ../EPA-Cyano/images:/mnts/images
+      - ./cyan_rare/mounts/database:/mnts/database
+      - ./cyan_rare/mounts/geometry:/mnts/geometry
+      - ./outputs:/src/outputs
+      - ./static/outputs:/src/cyan_waterbody/static/outputs
+      - ./static/raster_plots:/src/cyan_waterbody/static/raster_plots
+      - ./static/temp:/src/cyan_waterbody/static/temp
+      # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
       - WATERBODY_DB=/mnts/database
@@ -25,3 +27,49 @@ services:
       - COUNTY_DBF=/mnts/geometry
       - STATE_DBF=/mnts/geometry
       - TRIBE_DBF=/mnts/geometry
+      - REDIS_HOSTNAME=wb-redis
+      - REDIS_PORT=6379
+    env_file:
+      - ./.env
+
+  wb-celery:
+    restart: unless-stopped
+    container_name: wb-celery
+    image: ${WB_CELERY_IMAGE:-ghcr.io/quanted/wb-celery:gdit-dev}
+    command: conda run -p /opt/conda/envs/pyenv --no-capture-output celery -A celery_worker.celery worker --loglevel=INFO -c 1
+    depends_on:
+      - wb-redis
+      - wb-flask
+    volumes:
+      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+      # - ./cyan_rare/mounts/images:/mnts/images
+      # - ../EPA-Cyano/images:/mnts/images
+      - ./cyan_rare/mounts/database:/mnts/database
+      - ./cyan_rare/mounts/geometry:/mnts/geometry
+      - ./outputs:/src/outputs
+      - ./static/outputs:/src/cyan_waterbody/static/outputs
+      - ./static/raster_plots:/src/cyan_waterbody/static/raster_plots
+      - ./static/temp:/src/cyan_waterbody/static/temp
+      # - .:/src
+    environment:
+      - IMAGE_DIR=/mnts/images
+      - WATERBODY_DB=/mnts/database
+      - WATERBODY_DBF=/mnts/geometry
+      - FLASK_APP=wb_flask.py
+      - COUNTY_DBF=/mnts/geometry
+      - STATE_DBF=/mnts/geometry
+      - TRIBE_DBF=/mnts/geometry
+      - REDIS_HOSTNAME=wb-redis
+      - REDIS_PORT=6379
+      - WB_FLASK_URL=http://wb-flask:8080
+      - NASA_IMAGE_PATH=/mnts/images
+      - ADMIN_TOOL_URL=${ADMIN_TOOL_URL}
+    env_file:
+      - ./.env
+
+  wb-redis:
+    restart: unless-stopped
+    container_name: wb-redis
+    image: ${WB_REDIS_IMAGE:-ghcr.io/quanted/wb-redis:gdit-dev}
+    expose:
+      - "6379"
