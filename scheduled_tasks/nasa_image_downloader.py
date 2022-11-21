@@ -132,9 +132,9 @@ class NasaImageDownloads:
 
             subprocess.run([
                 "wget",
-                # "--user", username,
-                # "--password", password,
-                # "--auth-no-challenge", "on",
+                "--user", username,
+                "--password", password,
+                "--auth-no-challenge", "on",
                 "--directory-prefix", self.image_path,
                 image_url
             ])
