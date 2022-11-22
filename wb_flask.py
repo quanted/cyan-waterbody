@@ -37,7 +37,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("cyan-waterbody")
 logger.info("CyAN Waterbody Flask App")
 
-cors = CORS(app, origins=["http://localhost:4200"])
+cors = CORS(app, origins=["http://localhost:4200"], expose_headers=["Content-Disposition"])
 
 celery_handler = CeleryHandler()
 
