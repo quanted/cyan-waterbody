@@ -183,14 +183,20 @@ def get_objectid():
         results = {"waterbodies": data if len(data) > 0 else "NA"}
         objectid = "NA"
     else:
+        logging.warning("get_waterbody_bypoint getting called.")
         objectid, fid, gnis = get_waterbody_bypoint(lat=lat, lng=lng, return_fid=True)
+        logging.warning("get_waterbody_bypoint returned objectid: {}, fid: {}, gnis: {}".format(objectid, fid, gnis))
         if objectid is not None:
+            logging.warning("get_waterbody_byID getting called.")
             data = get_waterbody_byID(id=objectid, fid=int(fid))
+            logging.warning("get_waterbody_byID returned data: {}".format(data))
             # data = get_waterbody_byname(gnis)
             results = {"lat": lat, "lng": lng,
                        "waterbodies": data if len(data) > 0 else "NA"}
+            logging.warning("results: {}".format(results))
         else:
             results = {"lat": lat, "lng": lng, "OBJECTID": int(objectid) if objectid is not None else "NA"}
+            logging.warning("results: {}".format(results))
     t1 = time.time()
     print(f"Waterbody Search Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return results, 200
