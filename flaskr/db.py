@@ -216,7 +216,7 @@ def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
         return None, None, None
     objectid = None
     gnis_name = None
-    logging.warning("Getting point with geopandas.")
+    logging.warning("Getting point with geopandas. lng: {}, lat: {}, wb[1]: {}".format(lng, lat, wb[1]))
     point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
     logging.warning("Point: {}".format(point))
     for features in wb[0]:

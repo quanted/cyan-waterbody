@@ -10,6 +10,7 @@ import json
 import numpy as np
 from shapely.geometry import Polygon, MultiPolygon, Point
 from pyproj import Proj, transform
+import logging
 
 import time
 
@@ -74,19 +75,29 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
                 geojson.append(poly.to_json())
             return geojson
     else:
+        logging.warning("geometry.py get_waterbody_by_fids else")
         with fiona.open(WATERBODY_DBF) as waterbodies:
+            logging.warning("Opened WATERBODY_DBF as waterbodies, fid: {}".format(fid))
             crs = waterbodies.crs
+
             if fid is not None:
+                logging.warning("Getting waterbody with fid")
                 f = waterbodies.get(fid)
+                logging.warning("Found waterbody with fid: {}".format(f))
                 features.append(f)
                 names[int(f["properties"]["OBJECTID"])] = f["properties"]["GNIS_NAME"]
             if fids is not None:
+                logging.warning("Getting waterbody with FIDS")
                 for _fid in fids:
+                    logging.warning("Getting WB with _fid: {}".format(_fid))
                     f = waterbodies.get(_fid)
+                    logging.warning("Found: {}".format(f))
                     features.append(f)
                     names[int(f["properties"]["OBJECTID"])] = f["properties"]["GNIS_NAME"]
         if name_only:
+            logging.warning("Returning name only")
             return names
+        logging.warning("Returning features: {}\ncrs: {}".format(features, crs))
         return features, crs
 
 
