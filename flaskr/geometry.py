@@ -81,7 +81,7 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
             crs = waterbodies.crs
 
             if fid is not None:
-                logging.warning("Getting waterbody with fid")
+                logging.warning("Getting waterbody with fid: {}".format(fid))
                 f = waterbodies.get(fid)
                 logging.warning("Found waterbody with fid: {}".format(f))
                 features.append(f)
