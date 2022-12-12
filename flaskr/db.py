@@ -218,8 +218,14 @@ def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
     gnis_name = None
     logging.warning("Getting point with geopandas. lng: {}, lat: {}, wb[1]: {}".format(lng, lat, wb[1]))
     # point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
-    point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(4269)
-    logging.warning("Point: {}".format(point))
+    # point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(4269)
+
+    _point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326')
+    logging.warning("EPSG:4326 Point: {}".format(_point))
+
+    point = _point.to_crs(4269)
+    logging.warning("Point reprojected from 4326 to 4269: {}".format(point))
+
     for features in wb[0]:
 
         logging.warning("Looping features: {}".format(features))
