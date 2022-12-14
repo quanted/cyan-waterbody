@@ -43,8 +43,8 @@ COPY --from=base /opt/conda/envs/pyenv $CONDA_ENV
 ENV PYTHONPATH /src:/src/cyan_waterbody/:$CONDA_ENV:$PYTHONPATH
 ENV PATH /src:/src/cyan_waterbody/:$CONDA_ENV:$PATH
 
-RUN chown -R $APP_USER:$APP_USER /src/
-RUN chown $APP_USER:$APP_USER $CONDA_ENV
-USER $APP_USER
+#RUN chown -R $APP_USER:$APP_USER /src/
+#RUN chown $APP_USER:$APP_USER $CONDA_ENV
+#USER $APP_USER
 
-CMD ["conda", "run", "-p", "$CONDA_ENV", "--no-capture-output", "sh", "start_flask.sh"]
+CMD ["conda", "run", "-p", "$CONDA_ENV", "--no-capture-output", "sh", "/src/cyan_waterbody/start_flask.sh"]
