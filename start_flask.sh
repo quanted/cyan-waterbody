@@ -1,3 +1,2 @@
-#!/bin/bash
-
+#!/bin/sh
 exec uwsgi /etc/uwsgi/uwsgi.ini
