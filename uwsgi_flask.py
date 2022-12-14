@@ -8,9 +8,7 @@
 
 # print(sys.path)
 
-import wb_flask
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
-from werkzeug.wrappers import Response
+from cyan_waterbody.wb_flask import app
 
 print("Starting WSGI - Flask")
-application = wb_flask.app
+application = app
