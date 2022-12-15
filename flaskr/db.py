@@ -12,6 +12,9 @@ import multiprocessing as mp
 import logging
 import csv
 
+from pyproj import Proj, transform
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyan-waterbody")
 
@@ -216,15 +219,14 @@ def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
         return None, None, None
     objectid = None
     gnis_name = None
+
     logging.warning("Getting point with geopandas. lng: {}, lat: {}, wb[1]: {}".format(lng, lat, wb[1]))
-    # point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
-    # point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(4269)
-
-    _point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326')
-    logging.warning("EPSG:4326 Point: {}".format(_point))
-
-    point = _point.to_crs(4269)
-    logging.warning("Point reprojected from 4326 to 4269: {}".format(point))
+    out_proj = Proj(wb[1])
+    logging.warning("out_proj: {}".format(out_proj))
+    _lng, _lat = out_proj(lng, lat)
+    logging.warning("_lat: {}, _lng: {}".format(_lat, _lng))
+    point = gpd.GeoSeries(Point(_lng, _lat), crs=wb[1])
+    logging.warning("point: {}".format(point))
 
     for features in wb[0]:
 

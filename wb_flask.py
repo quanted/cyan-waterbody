@@ -22,12 +22,6 @@ import logging
 import json
 import uuid
 import time
-import base64
-import rasterio
-from rasterio.io import MemoryFile
-
-
-
 from celery_tasks import CeleryHandler
 
 

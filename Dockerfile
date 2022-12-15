@@ -11,7 +11,7 @@ COPY conda_environment.yml /tmp/environment.yml
 
 RUN conda config --add channels conda-forge
 RUN conda env create -n $CONDA_ENV_BASE --file /tmp/environment.yml
-#RUN conda install -n $CONDA_ENV_BASE uwsgi
+RUN conda install -n $CONDA_ENV_BASE uwsgi
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE gdal=3.1.4
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE fiona=1.8.18
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE geopandas=0.9.0
@@ -34,17 +34,17 @@ RUN apk add --no-cache geos gdal sqlite sqlite-dev wget curl
 
 COPY uwsgi.ini /etc/uwsgi/
 COPY . /src/cyan_waterbody
-WORKDIR /src/cyan_waterbody/
+RUN chmod 755 /src/cyan_waterbody/start_flask.sh
 EXPOSE 8080
+WORKDIR /src/
 
 COPY --from=base /opt/conda/envs/pyenv $CONDA_ENV
 
-ENV PYTHONPATH $CONDA_ENV:/src:/src/cyan_waterbody/:$PYTHONPATH
-ENV PATH $CONDA_ENV:/src:/src/cyan_waterbody/:$PATH
+ENV PYTHONPATH /src:/src/cyan_waterbody/:$CONDA_ENV:$PYTHONPATH
+ENV PATH /src:/src/cyan_waterbody/:$CONDA_ENV:$PATH
 
-# RUN chown $APP_USER:$APP_USER /src/
-# RUN chown $APP_USER:$APP_USER $CONDA_ENV
-# USER $APP_USER
+#RUN chown -R $APP_USER:$APP_USER /src/
+#RUN chown $APP_USER:$APP_USER $CONDA_ENV
+#USER $APP_USER
 
-CMD ["conda", "run", "-p", "$CONDA_ENV", "--no-capture-output", "python", "wb_flask.py"]
-
+CMD ["conda", "run", "-p", "$CONDA_ENV", "--no-capture-output", "sh", "/src/cyan_waterbody/start_flask.sh"]
