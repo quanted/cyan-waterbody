@@ -11,11 +11,11 @@ from rasterio.profiles import DefaultGTiffProfile
 
 from osgeo import gdal
 import uuid
-from matplotlib import pyplot
-import matplotlib.pyplot as plt
-# from osgeo import gdal, osr
+import pyproj
 from pyproj import Proj, CRS
 from pyproj import transform as pyt
+from shapely.geometry import Polygon
+from shapely.ops import transform
 import numpy as np
 import types
 import copy
@@ -119,15 +119,20 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
 
     if isinstance(raster, types.GeneratorType):
         crs_0 = DST_CRS
-        boundary = boundary.to_crs(crs=DST_CRS)
-
+        # proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster_crs))
+        # poly = transform(proj_transformer.transform, boundary.geometry.values[0])
+        # boundary = gpd.GeoSeries(poly, crs=raster_crs)
+        # boundary = boundary.to_crs(crs=DST_CRS)
         if isinstance(boundary, gpd.GeoDataFrame):
             boundary_list = [feature["geometry"] for i, feature in boundary.iterrows()]
             # boundary = boundary.to_json()
             boundary = boundary_list
     elif not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
         crs_0 = raster.crs
-        boundary = boundary.to_crs(crs=raster.crs)
+        proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster.crs))
+        poly = transform(proj_transformer.transform, boundary.geometry.values[0])
+        boundary = gpd.GeoSeries(poly, crs=raster.crs)
+        # boundary = boundary.to_crs(crs=raster.crs)
 
     height, width = None, None
     bounds = None
@@ -273,7 +278,10 @@ def mosaic_raster_gdal(image_list, dst_crs=None):
 
 
 def rasterize_boundary(image, boundary, affine, crs, value: int=256):
-    boundary = boundary.to_crs(crs)
+    proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(crs))
+    poly = transform(proj_transformer.transform, boundary.geometry.values[0])
+    boundary = gpd.GeoSeries(poly, crs=crs)
+    # boundary = boundary.to_crs(crs)
     image = image.astype(np.int16)
     rasterized = features.rasterize(boundary, fill=value, all_touched=True, out_shape=image[0].shape, transform=affine)
     result = np.where(rasterized < value, image[0], value)

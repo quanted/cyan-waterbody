@@ -24,6 +24,9 @@ import pandas as pd
 import geopandas as gpd
 import multiprocessing as mp
 from shapely.geometry import Polygon, MultiPolygon
+import pyproj
+from pyproj import Proj, CRS
+from shapely.ops import transform
 import time
 import copy
 import uuid
@@ -558,7 +561,12 @@ def get_report_waterbody_raster(objectid: int, report_id: str, day: int, year: i
     fig.suptitle(f'Satellite Imagery for Waterbody', fontsize=12)
     raster_data = rasterio.plot.reshape_as_raster(converted_data)
     rasterio.plot.show(raster_data, transform=image_data[1], ax=ax)
-    boundary = image_data[4].to_crs(image_data[2])
+
+    proj_transformer = pyproj.Transformer.from_proj(Proj(image_data[4].crs), Proj(image_data[2]))
+    poly = transform(proj_transformer.transform, image_data[4].geometry.values[0])
+    boundary = gpd.GeoSeries(poly, crs=image_data[2])
+
+    # boundary = image_data[4].to_crs(image_data[2])
     boundary.plot(ax=ax, facecolor='none', edgecolor='#3388ff', linewidth=1.5)
     # plt.show()
     plt.axis('off')

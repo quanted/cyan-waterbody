@@ -38,33 +38,33 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
     features = []
     names = {}
     
-    logging.warning("get_waterbody_by_fids() called")
+    # logging.warning("get_waterbody_by_fids() called")
 
     if fid is None and fids is None:
         logging.warning("fid is None and fids is None, returning features: {}".format(features))
         return features
     if tojson:
-        logging.warning("Opening WATERBODY_DBF")
+        # logging.warning("Opening WATERBODY_DBF")
         with fiona.open(WATERBODY_DBF) as waterbodies:
             logging.warning("waterbodies: {}".format(waterbodies))
             crs = waterbodies.crs
-            logging.warning("crs: {}".format(crs))
+            # logging.warning("crs: {}".format(crs))
             if fid is not None:
-                logging.warning("getting fid")
+                # logging.warning("getting fid")
                 f = waterbodies.get(fid)
-                logging.warning("f: {}".format(f))
+                # logging.warning("f: {}".format(f))
                 features.append(f)
             if fids is not None:
-                logging.warning("getting fids")
+                # logging.warning("getting fids")
                 for _fid in fids:
-                    logging.warning("fid: {}".format(_fid))
+                    # logging.warning("fid: {}".format(_fid))
                     f = waterbodies.get(_fid)
-                    logging.warning("f: {}".format(f))
+                    # logging.warning("f: {}".format(f))
                     features.append(f)
-            logging.warning("features: {}".format(features))
+            # logging.warning("features: {}".format(features))
             geojson = []
             for feature in features:
-                logging.warning("Looping feature: {}".format(feature))
+                # logging.warning("Looping feature: {}".format(feature))
                 if feature["geometry"]["type"] == "MultiPolygon":
                     poly_geos = []
                     for p in feature["geometry"]["coordinates"]:
@@ -75,29 +75,29 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
                 geojson.append(poly.to_json())
             return geojson
     else:
-        logging.warning("geometry.py get_waterbody_by_fids else")
+        # logging.warning("geometry.py get_waterbody_by_fids else")
         with fiona.open(WATERBODY_DBF) as waterbodies:
-            logging.warning("Opened WATERBODY_DBF as waterbodies, fid: {}".format(fid))
+            # logging.warning("Opened WATERBODY_DBF as waterbodies, fid: {}".format(fid))
             crs = waterbodies.crs
 
             if fid is not None:
-                logging.warning("Getting waterbody with fid: {}".format(fid))
+                # logging.warning("Getting waterbody with fid: {}".format(fid))
                 f = waterbodies.get(fid)
-                logging.warning("Found waterbody with fid: {}".format(f))
+                # logging.warning("Found waterbody with fid: {}".format(f))
                 features.append(f)
                 names[int(f["properties"]["OBJECTID"])] = f["properties"]["GNIS_NAME"]
             if fids is not None:
-                logging.warning("Getting waterbody with FIDS")
+                # logging.warning("Getting waterbody with FIDS")
                 for _fid in fids:
-                    logging.warning("Getting WB with _fid: {}".format(_fid))
+                    # logging.warning("Getting WB with _fid: {}".format(_fid))
                     f = waterbodies.get(_fid)
-                    logging.warning("Found: {}".format(f))
+                    # logging.warning("Found: {}".format(f))
                     features.append(f)
                     names[int(f["properties"]["OBJECTID"])] = f["properties"]["GNIS_NAME"]
         if name_only:
-            logging.warning("Returning name only")
+            # logging.warning("Returning name only")
             return names
-        logging.warning("Returning features: {}\ncrs: {}".format(features, crs))
+        # logging.warning("Returning features: {}\ncrs: {}".format(features, crs))
         return features, crs
 
 

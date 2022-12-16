@@ -180,10 +180,10 @@ def get_waterbody_fid(objectid: int):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     query = "SELECT FID FROM WaterbodyBounds WHERE OBJECTID==?"
-    logging.warning("Running query: {}".format(query))
+    # logging.warning("Running query: {}".format(query))
     cur.execute(query, (int(objectid),))
     fid = cur.fetchall()
-    logging.warning("fid: {}".format(fid))
+    # logging.warning("fid: {}".format(fid))
     return fid[0][0]
 
 
