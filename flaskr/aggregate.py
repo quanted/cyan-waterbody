@@ -177,11 +177,11 @@ def retry_failed(daily: bool = True):
 def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = True, retry: int = 5, reproject: bool = True, daily: bool = True):
     fid = get_waterbody_fid(objectid=objectid)
     features, crs = get_waterbody_by_fids(fid=fid)
-    # logging.warn(f"get_waterbody_raster - number of waterbodies in features: {len(features)}")
+    logging.warn(f"get_waterbody_raster - number of waterbodies in features: {len(features)}")
     if len(features) == 0:
         return None, None
     images = get_images(year=year, day=day, daily=daily)
-    # logging.warn(f"get_waterbody_raster - number of images: {len(images)}")
+    logging.warn(f"get_waterbody_raster - number of images: {len(images)}")
     if len(images) == 0:
         return None, None
     image_base = PurePath(images[0]).parts[-1].split(".tif")
@@ -195,15 +195,17 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
         poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
     else:
         poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
-    # logging.warn("get_waterbody_raster - waterbody polygon created")
+    logging.warn("get_waterbody_raster - waterbody polygon created")
     f_images = get_tiles_by_objectid(objectid, image_base)
-    # logging.warn(f"get_waterbody_raster - number of image tiles: {len(f_images)}")
+    logging.warn(f"get_waterbody_raster - number of image tiles: {len(f_images)}")
     if len(f_images) > 1:
         mosaic = mosaic_rasters(f_images)
     else:
         mosaic = f_images[0]
+    logging.warn("get_waterbody_raster - image merge completed")
     colormap = get_colormap(f_images[0])
     try:
+        logging.warn("get_waterbody_raster - starting raster clipping")
         data = list(clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'}, histogram=False, get_bounds=get_bounds, reproject=reproject))
     except Exception as e:
         print(f"Error attempting to clip raster for objectid: {objectid}, year: {year}, day: {day}, retry: {retry}, error: {e}")
