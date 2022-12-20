@@ -23,9 +23,12 @@ import rasterio
 import geopandas as gpd
 import os
 import datetime
+import logging
 
 gdal.UseExceptions()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("cyan-waterbody")
 
 IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
 DST_CRS = 'EPSG:4326'
@@ -133,6 +136,8 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         poly = transform(proj_transformer.transform, boundary.geometry.values[0])
         boundary = gpd.GeoSeries(poly, crs=raster.crs)
         # boundary = boundary.to_crs(crs=raster.crs)
+        
+    logger.warn("clip_raster - boundary polygon set")
 
     height, width = None, None
     bounds = None
@@ -161,7 +166,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         if verbose:
             print("ERROR: {}".format(e))
         return None
-
+    logger.warn("clip_raster - boundary successfully rasterized")
     if len(clipped.shape) >= 3:
         clipped = clipped[0]
 
@@ -183,6 +188,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
             dst_crs=crs,
             resampling=Resampling.nearest
         )
+        logger.warn("clip_raster - raster reprojected")
         clipped = reproject_raster[0]
         affine = reproject_affine
         if get_bounds:
