@@ -178,7 +178,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         # output = None
         # transform, width, height = warp.calculate_default_transform(
         #     crs_0, crs, width, height, *bounds)
-
+        logger.warn("clip_raster - collected CRS from rasterio")
         reproject_raster, reproject_affine = warp.reproject(
             source_raster,
             # destination=output,
