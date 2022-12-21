@@ -197,6 +197,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
                 width=reproject_raster.shape[1],
                 transform=reproject_affine
             )
+            logger.warn("clip_raster - obtaining raster bounds")
             proj0 = Proj(crs)
             proj1 = Proj('epsg:4326')
             bbox = [pyt(proj0, proj1, bounds[2], bounds[1]), pyt(proj0, proj1, bounds[0], bounds[3])]
