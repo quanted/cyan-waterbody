@@ -32,7 +32,9 @@ RUN adduser -S $APP_USER -G $APP_USER -G root
 
 RUN apk update
 RUN apk upgrade
-RUN apk add --no-cache gcc cmake geos gdal sqlite sqlite-dev wget curl uwsgi uwsgi-http linux-headers libc-dev libffi-dev python3
+RUN apk add --no-cache gcc cmake geos gdal sqlite sqlite-dev wget curl \
+    uwsgi uwsgi-http uwsgi-python3 \
+    python3 python3-dev
 
 COPY uwsgi.ini /etc/uwsgi/
 COPY . /src/cyan_waterbody

@@ -1,2 +1,2 @@
 #!/bin/bash
-exec uwsgi /etc/uwsgi/uwsgi.ini
+exec uwsgi --plugins http,python3 /etc/uwsgi/uwsgi.ini
