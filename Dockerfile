@@ -46,6 +46,7 @@ COPY --from=base /opt/conda/envs/pyenv $CONDA_ENV
 
 ENV PYTHONPATH /src:/src/cyan_waterbody/:$CONDA_ENV:$PYTHONPATH
 ENV PATH /src:/src/cyan_waterbody/:$CONDA_ENV:$PATH
+ENV PYTHONHOME /opt/conda/envs/pyenv
 
 #RUN chown -R $APP_USER:$APP_USER /src/
 #RUN chown $APP_USER:$APP_USER $CONDA_ENV
