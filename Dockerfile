@@ -4,7 +4,7 @@ ARG CONDA_ENV_BASE=pyenv
 
 RUN apk update
 RUN apk upgrade
-RUN apk add --no-cache geos gdal cmake git gfortran sqlite sqlite-dev pcre-dev uwsgi
+RUN apk add --no-cache gcc geos gdal cmake git gfortran sqlite sqlite-dev pcre-dev linux-headers libc-dev libffi-dev
 RUN pip install -U pip
 
 COPY conda_environment.yml /tmp/environment.yml
@@ -12,8 +12,8 @@ COPY conda_environment.yml /tmp/environment.yml
 RUN conda config --add channels conda-forge
 RUN conda create -n $CONDA_ENV_BASE python=3.8 gdal=3.6.1 geopandas rasterio flask fiona
 RUN conda env update -n $CONDA_ENV_BASE --file /tmp/environment.yml
+
 #RUN conda install -n $CONDA_ENV_BASE uwsgi
-#RUN conda run -n $CONDA_ENV_BASE pip install uwsgi
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE gdal=3.5.3
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE fiona=1.8.18
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE geopandas=0.9.0
@@ -32,7 +32,7 @@ RUN adduser -S $APP_USER -G $APP_USER -G root
 
 RUN apk update
 RUN apk upgrade
-RUN apk add --no-cache geos gdal sqlite sqlite-dev wget curl uwsgi uwsgi-python3 uwsgi-http
+RUN apk add --no-cache gcc cmake geos gdal sqlite sqlite-dev wget curl uwsgi uwsgi-http linux-headers libc-dev libffi-dev python3
 
 COPY uwsgi.ini /etc/uwsgi/
 COPY . /src/cyan_waterbody
