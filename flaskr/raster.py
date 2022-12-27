@@ -9,12 +9,12 @@ from rasterio.merge import merge
 from rasterio.enums import Resampling
 from rasterio.profiles import DefaultGTiffProfile
 
-from osgeo import gdal
+from osgeo import gdal, osr
 import uuid
 import pyproj
 from pyproj import Proj, CRS
 from pyproj import transform as pyt
-from shapely.geometry import Polygon
+# from shapely.geometry import Polygon
 from shapely.ops import transform
 import numpy as np
 import types
@@ -181,13 +181,14 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         logger.warn("clip_raster - collected CRS from rasterio")
         reproject_raster, reproject_affine = warp.reproject(
             source_raster,
-            # destination=output,
             src_transform=affine,
             src_crs=crs_0,
             # dst_transform=transform,
             dst_crs=crs,
             resampling=Resampling.nearest
         )
+        _reprojected_raster = reproject_dataset(source_raster, epsg_from=4326, epsg_to=int(crs["init"].split(":")[1]))
+
         logger.warn("clip_raster - raster reprojected")
         clipped = reproject_raster[0]
         affine = reproject_affine
@@ -314,3 +315,51 @@ def get_dataset_reader(data, transform, crs):
             yield dataset
     # return dataset_reader
 
+
+def reproject_dataset(dataset, pixel_spacing=5000., epsg_from=4326, epsg_to=27700):
+    """
+    Taken from: https://jgomezdans.github.io/gdal_notes/reprojection.html
+    A sample function to reproject and resample a GDAL dataset from within
+    Python. The idea here is to reproject from one system to another, as well
+    as to change the pixel size. The procedure is slightly long-winded, but
+    goes like this:
+
+    1. Set up the two Spatial Reference systems.
+    2. Open the original dataset, and get the geotransform
+    3. Calculate bounds of new geotransform by projecting the UL corners
+    4. Calculate the number of pixels with the new projection & spacing
+    5. Create an in-memory raster dataset
+    6. Perform the projection
+    """
+    # Define the UK OSNG, see <http://spatialreference.org/ref/epsg/27700/>
+    osng = osr.SpatialReference()
+    osng.ImportFromEPSG(epsg_to)
+    wgs84 = osr.SpatialReference()
+    wgs84.ImportFromEPSG(epsg_from)
+    tx = osr.CoordinateTransformation(wgs84, osng)
+    # Up to here, all  the projection have been defined, as well as a
+    # transformation from the from to the  to :)
+    # Now, we create an in-memory raster
+    mem_drv = gdal.GetDriverByName('MEM')
+    # We now open the dataset
+    g = gdal.Open(dataset)
+    # Get the Geotransform vector
+    geo_t = g.GetGeoTransform()
+    x_size = g.RasterXSize  # Raster xsize
+    y_size = g.RasterYSize  # Raster ysize
+    # Work out the boundaries of the new dataset in the target projection
+    (ulx, uly, ulz) = tx.TransformPoint(geo_t[0], geo_t[3])
+    (lrx, lry, lrz) = tx.TransformPoint(geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size)
+    # See how using 27700 and WGS84 introduces a z-value!
+    # The size of the raster is given the new projection and pixel spacing
+    # Using the values we calculated above. Also, setting it to store one band
+    # and to use Float32 data type.
+    dest = mem_drv.Create('', int((lrx - ulx) / pixel_spacing), int((uly - lry) / pixel_spacing), 1, gdal.GDT_Float32)
+    # Calculate the new geotransform
+    new_geo = (ulx, pixel_spacing, geo_t[2], uly, geo_t[4], -pixel_spacing)
+    # Set the geotransform
+    dest.SetGeoTransform(new_geo)
+    dest.SetProjection(osng.ExportToWkt())
+    # Perform the projection/resampling
+    res = gdal.ReprojectImage(g, dest, wgs84.ExportToWkt(), osng.ExportToWkt(), gdal.GRA_Bilinear)
+    return dest.ReadAsArray()
