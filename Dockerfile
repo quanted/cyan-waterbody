@@ -12,7 +12,8 @@ COPY conda_environment.yml /tmp/environment.yml
 RUN conda config --add channels conda-forge
 RUN conda create -n $CONDA_ENV_BASE python=3.8 gdal=3.6.1 geopandas rasterio flask fiona
 RUN conda env update -n $CONDA_ENV_BASE --file /tmp/environment.yml
-RUN conda install --force-reinstall -n $CONDA_ENV_BASE uwsgi
+#RUN conda install --force-reinstall -n $CONDA_ENV_BASE uwsgi
+RUN conda run -n $CONDA_ENV_BASE pip install uwsgi
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE gdal=3.5.3
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE fiona=1.8.18
 #RUN conda install --force-reinstall -n $CONDA_ENV_BASE geopandas=0.9.0
