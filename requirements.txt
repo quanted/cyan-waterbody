@@ -11,3 +11,4 @@ xhtml2pdf==0.2.8
 plotly==5.11.0
 flask_cors==3.0.10
 boto3
+rasterio
