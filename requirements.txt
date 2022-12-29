@@ -1,0 +1,13 @@
+flask==2.2.2
+flask-restful==0.3.9
+pyshp==2.3.1
+requests==2.28.1
+shapely==2.0.0
+celery
+redis
+apscheduler==3.9.1
+tqdm==4.64.1
+xhtml2pdf==0.2.8
+plotly==5.11.0
+flask_cors==3.0.10
+boto3

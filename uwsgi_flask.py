@@ -8,7 +8,6 @@
 
 # print(sys.path)
 
-from cyan_waterbody.wb_flask import app
+from cyan_waterbody.wb_flask import app as application
 
 print("Starting WSGI - Flask")
-application = app
