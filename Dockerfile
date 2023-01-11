@@ -42,6 +42,8 @@ RUN conda info
 
 COPY . /src/
 
+RUN chmod 755 /src/start_flask.sh
+
 # Updating Anaconda packages
 RUN conda install -n=$CONDA_ENV -c conda-forge uwsgi
 COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
@@ -49,4 +51,5 @@ COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
 WORKDIR /src
 EXPOSE 8080
 
-CMD ["python", "wb_flask.py"]
+# CMD ["python", "wb_flask.py"]
+CMD ["sh", "start_flask.sh"]

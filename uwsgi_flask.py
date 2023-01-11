@@ -1,6 +1,13 @@
-import wb_flask
+# import os
+# import sys
+#
+# # Change working directory so relative paths (and template lookup) work again
+# os.chdir(os.path.dirname(__file__))
+# curr_wd = os.getcwd()
+# print("WSGI Current working directory: {}".format(curr_wd))
 
-app = wb_flask.app
+# print(sys.path)
 
-if __name__ == "__main__":
-    app.run()
+from wb_flask import app as application
+
+print("Starting WSGI - Flask")
