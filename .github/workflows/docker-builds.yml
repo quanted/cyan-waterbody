@@ -3,7 +3,7 @@ name: Create and publish a Docker image
 
 on:
   push:
-    branches: ['gdit-dev']
+    branches: ['gdit-dev', 'image-test']
 
 env:
   REGISTRY: ghcr.io
@@ -35,7 +35,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.FLASK_IMAGE }}
           tags: |
-            type=raw,value=${{github.ref_name}}
+            type=raw,value=${{github.ref_name}}-${{github.sha}}
 
       - name: Build and push cyan-waterbody flask image
         uses: docker/build-push-action@v2
@@ -69,7 +69,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.CELERY_IMAGE }}
           tags: |
-            type=raw,value=${{github.ref_name}}
+            type=raw,value=${{github.ref_name}}-${{github.sha}}
 
       - name: Build and push cyan-waterbody celery image
         uses: docker/build-push-action@v2
