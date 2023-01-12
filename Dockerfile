@@ -10,7 +10,7 @@ RUN apt-get install -y wget bzip2 ca-certificates \
     make sqlite3 gfortran python-dev \
     git mercurial subversion
 
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.3-Linux-x86_64.sh -O ~/miniconda.sh && \
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.12.0-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
@@ -35,9 +35,11 @@ ARG CONDA_ENV="base"
 COPY environment.yml /src/environment.yml
 RUN conda env update -n=$CONDA_ENV -f /src/environment.yml
 RUN conda install -n=$CONDA_ENV -c conda-forge gdal=$GDAL_VERSION -y
+RUN conda install -n=$CONDA_ENV -c conda-forge rasterio fiona
+RUN conda install -n=$CONDA_ENV -c conda-forge geopandas
 
 RUN activate $CONDA_ENV
-RUN conda update conda -y
+#RUN conda update conda -y
 RUN conda info
 
 COPY . /src/
