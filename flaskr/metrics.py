@@ -156,7 +156,7 @@ def calculate_magnitude(data: pd.DataFrame, detect_columns: list, all_columns: l
 
     for comid in objectids:
         wb_data = get_waterbody_by_fids(waterbody_fids[comid])
-        area_normalized_magnitude[int(comid)] = round(magnitude_wb[str(comid)] / wb_data[0][0]['properties']['AREASQKM'], 4)
+        area_normalized_magnitude[int(comid)] = round(magnitude_wb[str(comid)] / wb_data[0][0]['properties']['areasqkm'], 4)
 
     chia_area_normalized_bloom = {}
     for k, v in area_normalized_magnitude.items():

@@ -4,12 +4,12 @@ import calendar
 from xhtml2pdf import pisa
 from pathlib import Path
 from flaskr.geometry import get_waterbody_properties, get_waterbody, get_county_boundary, get_state_boundary, \
-    get_tribe_boundary, get_waterbody_objectids, get_waterbody_by_fids
+    get_tribe_boundary, get_waterbody_objectids, get_waterbody_by_fids, OUT_OF_BOUNDS
 from flaskr.aggregate import get_waterbody_raster
 from flaskr.db import get_conus_objectids, get_eparegion_objectids, get_state_objectids, get_tribe_objectids, \
     get_county_objectids, get_waterbody_data, get_group_metrics, get_county_state, get_county_geoid, \
     get_all_state_counties, get_tribe_geoid, get_state_name, get_states_from_wb, get_all_states, get_waterbody_fid, \
-    set_wb_report_file, get_alpine_objectids, get_elevation
+    set_wb_report_file, get_alpine_objectids, get_elevation, get_waterbody_state
 from flaskr.raster import rasterize_boundary
 from flaskr.utils import DEFAULT_RANGE, get_colormap, rgb, convert_dn
 from flaskr.metrics import calculate_metrics
@@ -197,6 +197,15 @@ def generate_report(
                                                              # mag_area_norm=wb_metrics["Area Normalized Magnitude"][objectid],
                                                              # chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],
                                                              p_days=report_day)
+                        renaming = True
+                        _i = 1
+                        _i_name = i_name
+                        while renaming:
+                            if _i_name in wbs_html:
+                                _i_name = i_name + _i
+                                _i += 1
+                            else:
+                                renaming = False
                         wbs_html[i_name] = i_html
                 #TODO: Add sorting by magnitude option
                 for wb in sorted(wbs_html.keys()):
@@ -396,6 +405,8 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
                                                  report_id=report_id, year=year, day=day, groupid=group_id, p_days=p_days)
 
     grouped_metrics = calculate_metrics(objectids=objectids, year=year, day=day, historic_days=p_days, report=True)
+    extent = grouped_metrics['Extent'] if 'Extent' in grouped_metrics.keys() else "NA"
+    frequency = grouped_metrics['Frequency'] if 'Frequency' in grouped_metrics.keys() else "NA"
 
     group_properties = {
         "Number of waterbodies": len(objectids),
@@ -409,8 +420,8 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
         "Waterbodies with high cell count detection (previous week)": len(week_color_mapping["high"]),
         "Waterbodies with very high cell count detection (current)": len(current_color_mapping["very high"]),
         "Waterbodies with very high cell count detection (previous week)": len(week_color_mapping["very high"]),
-        "Extent": f"{grouped_metrics['Extent']} %",
-        "Frequency": f"{grouped_metrics['Frequency']} %",
+        "Extent": f"{extent} %",
+        "Frequency": f"{frequency} %",
     }
 
     waterbody_names = get_waterbody_by_fids(fids=fids, name_only=True)
@@ -424,8 +435,8 @@ def get_group_block(report_id: str, year: int, day: int, group_type: str, group_
     waterbody_metrics_order = []
     for i in range(len(waterbody_names)):
         waterbody_metrics_order.append(
-            (waterbody_frequency_order[i][0], round(100*waterbody_frequency_order[i][1], 2),
-             waterbody_extent_order[i][0], round(100*waterbody_extent_order[i][1]), 2)
+            (waterbody_frequency_order[i][0], waterbody_frequency_order[i][1],
+             waterbody_extent_order[i][0], waterbody_extent_order[i][1])
         )
 
     template = j_env.get_template("report_3_group.html")
@@ -453,7 +464,7 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
     report_root = os.path.join(STATIC_ROOT, "temp", str(report_id))
     fid = get_waterbody_fid(objectid=objectid)
     waterbody_properties = get_waterbody_properties(objectid=objectid, fid=fid)
-    waterbody_name = waterbody_properties["GNIS_NAME"]
+    waterbody_name = "NA" if waterbody_properties["gnis_name"] is None else waterbody_properties["gnis_name"]
     waterbody_properties_cleaned = {}
     wb_area = 0
 
@@ -461,7 +472,7 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
         if name in KEEP_PROPERTIES.keys():
             if value:
                 waterbody_properties_cleaned[KEEP_PROPERTIES[name][0]] = KEEP_PROPERTIES[name][1](value)
-                if name == "AREASQKM":
+                if name == "areasqkm":
                     wb_area = KEEP_PROPERTIES[name][1](value)
             else:
                 waterbody_properties_cleaned[KEEP_PROPERTIES[name][0]] = "NA"
@@ -479,9 +490,10 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
     report_datetime = date(year=year, month=1, day=1) + timedelta(days=day - 1)
     report_date = report_datetime.strftime("%d %B %Y")
     template = j_env.get_template("report_4_stats.html")
+    state = ", ".join(get_waterbody_state(objectid=objectid))
     html = template.render(
         WATER_BODY_NAME=waterbody_name,
-        STATE=waterbody_properties["STATE_ABBR"],
+        STATE=state,
         WATER_BODY_STATS=waterbody_properties_cleaned,
         REPORT_DATE=report_date,
         REPORT_ROOT=f"{report_root}{os.sep}",
@@ -1111,6 +1123,10 @@ def get_waterbody_collection(
     else:
         wb_collection["user_selected"] = objectids if objectids else []
         wb_type = "User Selected Waterbodies"
+    for k, v in wb_collection.items():
+        for oid in OUT_OF_BOUNDS:
+            if oid in v:
+                v.remove(oid)
     return wb_collection, wb_type
 
 
@@ -1166,19 +1182,19 @@ if __name__ == "__main__":
 
     t0 = time.time()
     year = 2021
-    day = 276
+    day = 210
     # states = ["MI"]
     # objectids = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
     # objectids = [6267342, 3007550]
     # objectids = [1445670]
-    # states = ["MI", "MN"]
-    county = ['13067', '12093']
+    states = ["MI", "MN"]
+    # county = ['13067', '12093']
     tribe = ['5550']
     # county = ['13049', '13067']
     # generate_all_wb_rasters(year=year, day=day)
     # generate_report(year=year, day=day, objectids=objectids)
-    generate_report(year=year, day=day, counties=county)
-    # generate_report(year=year, day=day, tribes=tribe)
+    # generate_report(year=year, day=day, counties=county)
+    generate_report(year=year, day=day, tribes=tribe)
     # generate_report(year=year, day=day, states=states, parallel=True)
     # generate_state_reports(year=year, day=day)
     # generate_alpinelake_report(year=year, day=day, parallel=False)

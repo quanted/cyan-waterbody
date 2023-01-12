@@ -4,7 +4,7 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point, Polygon, MultiPolygon, shape
-from flaskr.geometry import get_waterbody, get_waterbody_count, get_waterbody_by_fids, get_waterbody_fids, get_waterbody_elevation
+from flaskr.geometry import get_waterbody, get_waterbody_count, get_waterbody_by_fids, get_waterbody_fids, get_waterbody_elevation, OUT_OF_BOUNDS
 from flaskr.raster import get_images, clip_raster, get_images_by_tile, get_raster_bounds
 import datetime
 from tqdm import tqdm
@@ -19,7 +19,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyan-waterbody")
 
 IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
-DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data_0.2.sqlite")
+# DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data_0.2.sqlite")
+DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "cyan_waterbody-2023.sqlite")
 N_VALUES = 256
 
 BAD_OBJECTIDS = [8439286, 7951918, 3358607, 3012931, 2651373, 480199]
@@ -179,38 +180,26 @@ def get_custon_waterbody_data(geojson, daily: bool = True, start_year: int = Non
 def get_waterbody_fid(objectid: int):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    query = "SELECT FID FROM WaterbodyBounds WHERE OBJECTID==?"
-    # logging.warning("Running query: {}".format(query))
+    query = "SELECT fid FROM WaterbodyBounds WHERE OBJECTID==?"
     cur.execute(query, (int(objectid),))
     fid = cur.fetchall()
-    # logging.warning("fid: {}".format(fid))
+    if len(fid) == 0:
+        logger.warn(f"No waterbody found with objectid: {objectid}")
+        return None
     return fid[0][0]
 
 
 def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
-
-    logging.warning("get_waterbody_bypoint() called")
-
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    query = "SELECT OBJECTID, FID FROM WaterbodyBounds WHERE y_max>=? AND x_min<=? AND y_min<=? AND x_max>=?"
+    query = "SELECT OBJECTID, fid FROM WaterbodyBounds WHERE y_max>=? AND x_min<=? AND y_min<=? AND x_max>=?"
     values = (lat, lng, lat, lng,)
-
-    logging.warning("Executing query: {}".format(query))
-
     cur.execute(query, values)
     lakes = cur.fetchall()
-
-    logging.warning("LAKES: {}".format(lakes))
-
     crs = None
     if len(lakes) > 0:
         features = []
         for lake in lakes:
-
-            logging.warning("Lake: {}".format(lake))
-
-            # w = get_waterbody(int(lake[0]))
             w = get_waterbody_by_fids(fid=lake[1])
             features.append(w[0][0])
             crs = w[1]
@@ -220,54 +209,28 @@ def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
     objectid = None
     gnis_name = None
 
-    logging.warning("Getting point with geopandas. lng: {}, lat: {}, wb[1]: {}".format(lng, lat, wb[1]))
     out_proj = Proj(wb[1])
-    logging.warning("out_proj: {}".format(out_proj))
     _lng, _lat = out_proj(lng, lat)
-    logging.warning("_lat: {}, _lng: {}".format(_lat, _lng))
     point = gpd.GeoSeries(Point(_lng, _lat), crs=wb[1])
-    logging.warning("point: {}".format(point))
 
     for features in wb[0]:
-
-        logging.warning("Looping features: {}".format(features))
-
         if features["geometry"]["type"] == "MultiPolygon":
             poly_geos = []
-
-            logging.warning("Geometry type is MultiPolygon")
-
             for p in features["geometry"]["coordinates"]:
-                logging.warning("~~~ p: {}".format(p))
                 poly_geos.append(Polygon(p[0]))
-
-            logging.warning("Setting poly")
             poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=wb[1])
-            logging.warning("Poly: {}".format(poly))
         else:
-            logging.warning("Geometry type is not MultiPolygon")
             poly = gpd.GeoSeries(Polygon(features["geometry"]["coordinates"][0]), crs=wb[1])
-            logging.warning("Poly: {}".format(poly))
         in_wb = poly.contains(point)
-
-        logging.warning("in_wb: {}".format(in_wb))
 
         if in_wb.loc[0]:
             objectid = features["properties"]["OBJECTID"]
-            gnis_name = features["properties"]["GNIS_NAME"]
-
-            logging.warning("ObjectID: {}, gnis_name: {}".format(objectid, gnis_name))
-
+            gnis_name = "NA" if features["properties"]["gnis_name"] is None else features["properties"]["gnis_name"]
             break
     conn.close()
-
-    logging.warning("Db connection closed.")
-
     if return_fid and objectid is not None:
-        logging.warning("Returning objectid and running get_waterbody_fid()")
         return objectid, get_waterbody_fid(objectid), gnis_name
     else:
-        logging.warning("Returning objectid, None, gnis_name")
         return objectid, None, gnis_name
 
 
@@ -546,7 +509,7 @@ def get_conus_objectids():
         cur.execute(query, value)
         results[state] = []
         for w in cur.fetchall():
-            if w not in BAD_OBJECTIDS:
+            if w[0] not in BAD_OBJECTIDS and w[0] not in OUT_OF_BOUNDS:
                 results[state].append(w)
     conn.close()
     return results
@@ -563,7 +526,7 @@ def get_eparegion_objectids(regions: list):
         cur.execute(query, value)
         results[region] = []
         for w in cur.fetchall():
-            if w[0] not in BAD_OBJECTIDS:
+            if w[0] not in BAD_OBJECTIDS and w[0] not in OUT_OF_BOUNDS:
                 results[region].append(w[0])
     conn.close()
     return results
@@ -588,7 +551,8 @@ def get_state_objectids(states: list, with_counties: bool = True):
             cur.execute(query, values)
             results[state] = []
             for c in cur.fetchall():
-                results[state].append(c[0])
+                if c[0] not in BAD_OBJECTIDS and c[0] not in OUT_OF_BOUNDS:
+                    results[state].append(c[0])
     conn.close()
     return results
 
@@ -618,7 +582,7 @@ def get_tribe_objectids(tribes: list):
         cur.execute(query, value)
         results[tribe_name] = []
         for w in cur.fetchall():
-            if w[0] not in BAD_OBJECTIDS:
+            if w[0] not in BAD_OBJECTIDS and w[0] not in OUT_OF_BOUNDS:
                 results[tribe_name].append(w[0])
     conn.close()
     return results
@@ -638,7 +602,7 @@ def get_county_objectids(counties: list):
         cur.execute(query, value)
         results[county_name] = []
         for w in cur.fetchall():
-            if w[0] not in BAD_OBJECTIDS:
+            if w[0] not in BAD_OBJECTIDS and w[0] not in OUT_OF_BOUNDS:
                 results[county_name].append(w[0])
     conn.close()
     return results
@@ -871,6 +835,8 @@ def set_waterbody_details_table(input_file: str = None):
         for elev in tqdm(elevation_data, "Writing results to database"):
             elevation = elev[1]
             fid = elev[0]
+            # if elevation == -9999 or elevation == -9998:
+            #     continue
             comid = fid_dict[fid]
             query = "INSERT INTO WaterbodyDetails (OBJECTID, fid, elevation) VALUES (?,?,?)"
             values = (comid, fid, float(elevation))
@@ -916,3 +882,16 @@ def export_waterbody_details_table():
     df = pd.read_sql("SELECT * FROM WaterbodyDetails", conn)
     conn.close()
     return df
+
+
+def get_waterbody_state(objectid):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    query = "SELECT DISTINCT STUSPS FROM WaterBodyState WHERE OBJECTID=?"
+    values = (objectid,)
+    cur.execute(query, values)
+    states = []
+    for r in cur.fetchall():
+        states.append(r[0])
+    conn.close()
+    return states

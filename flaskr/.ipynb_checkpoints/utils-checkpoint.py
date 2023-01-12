@@ -152,7 +152,7 @@ def update_waterbody_fids():
     cur = conn.cursor()
     try:
         # attempt to create new column
-        print("Adding FID column to WaterbodyBounds.")
+        print("Adding fid column to WaterbodyBounds.")
         add_column_query = "ALTER TABLE WaterbodyBounds Add COLUMN FID integer"
         cur.execute(add_column_query)
     except Exception:

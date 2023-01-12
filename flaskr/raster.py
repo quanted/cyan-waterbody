@@ -112,32 +112,31 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
                 reference system of the raster.
 
     """
-    crs_0 = None
-    if isinstance(raster, Path):
-        raster = str(raster)
-    if isinstance(raster, str):
-        raster = rasterio.open(raster)
-    if isinstance(boundary, dict):
-        boundary = gpd.GeoDataFrame(boundary).set_geometry('geometry')
+    try:
+        crs_0 = None
+        if isinstance(raster, Path):
+            raster = str(raster)
+        if isinstance(raster, str):
+            raster = rasterio.open(raster)
+        if isinstance(boundary, dict):
+            boundary = gpd.GeoDataFrame(boundary).set_geometry('geometry')
 
-    if isinstance(raster, types.GeneratorType):
-        crs_0 = DST_CRS
-        # proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster_crs))
-        # poly = transform(proj_transformer.transform, boundary.geometry.values[0])
-        # boundary = gpd.GeoSeries(poly, crs=raster_crs)
-        # boundary = boundary.to_crs(crs=DST_CRS)
-        if isinstance(boundary, gpd.GeoDataFrame):
-            boundary_list = [feature["geometry"] for i, feature in boundary.iterrows()]
-            # boundary = boundary.to_json()
-            boundary = boundary_list
-    elif not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
-        crs_0 = raster.crs
-        proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster.crs))
-        poly = transform(proj_transformer.transform, boundary.geometry.values[0])
-        boundary = gpd.GeoSeries(poly, crs=raster.crs)
-        # boundary = boundary.to_crs(crs=raster.crs)
-        
-    logger.warn("clip_raster - boundary polygon set")
+        if isinstance(raster, types.GeneratorType):
+            crs_0 = DST_CRS
+            if isinstance(boundary, gpd.GeoDataFrame):
+                boundary_list = [feature["geometry"] for i, feature in boundary.iterrows()]
+                boundary = boundary_list
+        elif not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
+            crs_0 = raster.crs
+            proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster.crs))
+            poly = transform(proj_transformer.transform, boundary.geometry.values[0])
+            boundary = gpd.GeoSeries(poly, crs=raster.crs)
+    except Exception as e:
+        if verbose:
+            print("ERROR: {}".format(e))
+        return None
+
+    # logger.warn("clip_raster - boundary polygon set")
 
     height, width = None, None
     bounds = None
@@ -166,43 +165,46 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         if verbose:
             print("ERROR: {}".format(e))
         return None
-    logger.warn("clip_raster - boundary successfully rasterized")
+    # logger.warn("clip_raster - boundary successfully rasterized")
     if len(clipped.shape) >= 3:
         clipped = clipped[0]
-
-    bbox = None
-    if raster_crs and reproject:
-        source_raster = copy.copy(clipped)
-        crs = rasterio.crs.CRS.from_dict(raster_crs)
-        # src_crs = rasterio.crs.CRS(init=crs_0)
-        # output = None
-        # transform, width, height = warp.calculate_default_transform(
-        #     crs_0, crs, width, height, *bounds)
-        logger.warn("clip_raster - collected CRS from rasterio")
-        reproject_raster, reproject_affine = warp.reproject(
-            source_raster,
-            src_transform=affine,
-            src_crs=crs_0,
-            # dst_transform=transform,
-            dst_crs=crs,
-            resampling=Resampling.nearest
-        )
-        _reprojected_raster = reproject_dataset(source_raster, epsg_from=4326, epsg_to=int(crs["init"].split(":")[1]))
-
-        logger.warn("clip_raster - raster reprojected")
-        clipped = reproject_raster[0]
-        affine = reproject_affine
-        if get_bounds:
-            bounds = rasterio.transform.array_bounds(
-                height=reproject_raster.shape[0],
-                width=reproject_raster.shape[1],
-                transform=reproject_affine
+    try:
+        bbox = None
+        if raster_crs and reproject:
+            source_raster = copy.copy(clipped)
+            crs = rasterio.crs.CRS.from_dict(raster_crs)
+            # src_crs = rasterio.crs.CRS(init=crs_0)
+            # output = None
+            # transform, width, height = warp.calculate_default_transform(
+            #     crs_0, crs, width, height, *bounds)
+            # logger.warn("clip_raster - collected CRS from rasterio")
+            reproject_raster, reproject_affine = warp.reproject(
+                source_raster,
+                src_transform=affine,
+                src_crs=crs_0,
+                # dst_transform=transform,
+                dst_crs=crs,
+                resampling=Resampling.nearest
             )
-            logger.warn("clip_raster - obtaining raster bounds")
-            proj0 = Proj(crs)
-            proj1 = Proj('epsg:4326')
-            bbox = [pyt(proj0, proj1, bounds[2], bounds[1]), pyt(proj0, proj1, bounds[0], bounds[3])]
+            # _reprojected_raster = reproject_dataset(source_raster, epsg_from=4326, epsg_to=int(crs["init"].split(":")[1]))
 
+            # logger.warn("clip_raster - raster reprojected")
+            clipped = reproject_raster[0]
+            affine = reproject_affine
+            if get_bounds:
+                bounds = rasterio.transform.array_bounds(
+                    height=reproject_raster.shape[0],
+                    width=reproject_raster.shape[1],
+                    transform=reproject_affine
+                )
+                # logger.warn("clip_raster - obtaining raster bounds")
+                proj0 = Proj(crs)
+                proj1 = Proj('epsg:4326')
+                bbox = [pyt(proj0, proj1, bounds[2], bounds[1]), pyt(proj0, proj1, bounds[0], bounds[3])]
+    except Exception as e:
+        if verbose:
+            print("ERROR: {}".format(e))
+        return None
     # plot.show(clipped, transform=affine)
     # plt.show()
 

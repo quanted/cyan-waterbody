@@ -14,10 +14,14 @@ import logging
 
 import time
 
-WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "waterbodies_9.dbf")
+# WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "waterbodies_9.dbf")
 COUNTY_DBF = os.path.join(os.getenv("COUNTY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_county_500k.dbf")
 STATE_DBF = os.path.join(os.getenv("STATE_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_state_500k.dbf")
 TRIBE_DBF = os.path.join(os.getenv("TRIBE_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cb_2020_us_aiannh_500k.dbf")
+
+WATERBODY_DBF = os.path.join(os.getenv("WATERBODY_DBF", "D:\\data\cyan_rare\\mounts\\geometry"), "cyan-waterbodies-hr2023.shp")
+
+OUT_OF_BOUNDS = (1641546, 3826162,)
 
 
 def get_waterbody_fids(return_dict: bool = False):
@@ -27,44 +31,35 @@ def get_waterbody_fids(return_dict: bool = False):
         results = []
     with fiona.open(WATERBODY_DBF) as waterbodies:
         for f in waterbodies:
+            objectid = int(f["properties"]["OBJECTID"])
+            if objectid in OUT_OF_BOUNDS:
+                continue
             if return_dict:
-                results[int(f["properties"]["OBJECTID"])] = int(f["id"])
+                results[objectid] = int(f["id"])
             else:
-                results.append((int(f["properties"]["OBJECTID"]), int(f["id"])))
+                results.append((objectid, int(f["id"])))
     return results
 
 
 def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = False, name_only: bool = False):
     features = []
     names = {}
-    
-    # logging.warning("get_waterbody_by_fids() called")
-
     if fid is None and fids is None:
         logging.warning("fid is None and fids is None, returning features: {}".format(features))
         return features
     if tojson:
-        # logging.warning("Opening WATERBODY_DBF")
         with fiona.open(WATERBODY_DBF) as waterbodies:
             logging.warning("waterbodies: {}".format(waterbodies))
             crs = waterbodies.crs
-            # logging.warning("crs: {}".format(crs))
             if fid is not None:
-                # logging.warning("getting fid")
                 f = waterbodies.get(fid)
-                # logging.warning("f: {}".format(f))
                 features.append(f)
             if fids is not None:
-                # logging.warning("getting fids")
                 for _fid in fids:
-                    # logging.warning("fid: {}".format(_fid))
                     f = waterbodies.get(_fid)
-                    # logging.warning("f: {}".format(f))
                     features.append(f)
-            # logging.warning("features: {}".format(features))
             geojson = []
             for feature in features:
-                # logging.warning("Looping feature: {}".format(feature))
                 if feature["geometry"]["type"] == "MultiPolygon":
                     poly_geos = []
                     for p in feature["geometry"]["coordinates"]:
@@ -75,29 +70,23 @@ def get_waterbody_by_fids(fid: int = None, fids: list = None, tojson: bool = Fal
                 geojson.append(poly.to_json())
             return geojson
     else:
-        # logging.warning("geometry.py get_waterbody_by_fids else")
         with fiona.open(WATERBODY_DBF) as waterbodies:
-            # logging.warning("Opened WATERBODY_DBF as waterbodies, fid: {}".format(fid))
             crs = waterbodies.crs
-
             if fid is not None:
-                # logging.warning("Getting waterbody with fid: {}".format(fid))
                 f = waterbodies.get(fid)
-                # logging.warning("Found waterbody with fid: {}".format(f))
                 features.append(f)
-                names[int(f["properties"]["OBJECTID"])] = f["properties"]["GNIS_NAME"]
+                oid = int(f["properties"]["OBJECTID"])
+                name = f"NA-{oid}" if f["properties"]["gnis_name"] is None else f["properties"]["gnis_name"]
+                names[oid] = name
             if fids is not None:
-                # logging.warning("Getting waterbody with FIDS")
                 for _fid in fids:
-                    # logging.warning("Getting WB with _fid: {}".format(_fid))
                     f = waterbodies.get(_fid)
-                    # logging.warning("Found: {}".format(f))
                     features.append(f)
-                    names[int(f["properties"]["OBJECTID"])] = f["properties"]["GNIS_NAME"]
+                    oid = int(f["properties"]["OBJECTID"])
+                    name = f"NA-{oid}" if f["properties"]["gnis_name"] is None else f["properties"]["gnis_name"]
+                    names[int(f["properties"]["OBJECTID"])] = name
         if name_only:
-            # logging.warning("Returning name only")
             return names
-        # logging.warning("Returning features: {}\ncrs: {}".format(features, crs))
         return features, crs
 
 
@@ -161,61 +150,54 @@ def get_waterbody_byname(gnis_name: str):
     waterbody = []
     with fiona.open(WATERBODY_DBF) as waterbodies:
         for f in waterbodies:
-            if gnis_name.lower() in f["properties"]["GNIS_NAME"].lower():
+            gname = f["properties"]["gnis_name"]
+            if gname is None:
+                continue
+            if gnis_name.lower() in gname.lower():
                 wb = {
-                    "name": f["properties"]["GNIS_NAME"],
+                    "name": gname,
                     "objectid": int(f["properties"]["OBJECTID"]),
                     "centroid_lat": float(f["properties"]["c_lat"]),
                     "centroid_lng": float(f["properties"]["c_lng"]),
-                    "areasqkm": float(f["properties"]["AREASQKM"]),
-                    "state_abbr": f["properties"]["STATE_ABBR"]
+                    "areasqkm": float(f["properties"]["areasqkm"]),
                 }
                 waterbody.append(wb)
     return waterbody
 
 
 def get_waterbody_byID(id: int, fid: int = None):
-    logging.warning("inside get_waterbody_byID, id: {}, fid: {}".format(id, fid))
     if id is None and fid is None:
         return {}
     waterbody = []
     t0 = time.time()
     if not fid:
-        logging.warning("No fid Opening WATERBODY_DBF")
         with fiona.open(WATERBODY_DBF) as waterbodies:
             for f in waterbodies:
-                logging.warning("Waterbody: {}".format(f))
+                gname = "NA" if f["properties"]["gnis_name"] is None else f["properties"]["gnis_name"]
                 if id == int(f["properties"]["OBJECTID"]):
                     wb = {
-                        "name": f["properties"]["GNIS_NAME"],
+                        "name": gname,
                         "objectid": int(f["properties"]["OBJECTID"]),
                         "centroid_lat": float(f["properties"]["c_lat"]),
                         "centroid_lng": float(f["properties"]["c_lng"]),
-                        "areasqkm": float(f["properties"]["AREASQKM"]),
-                        "state_abbr": f["properties"]["STATE_ABBR"]
+                        "areasqkm": float(f["properties"]["areasqkm"]),
                     }
                     waterbody = [wb]
                     break
     else:
-        logging.warning("with fid Opening WATERBODY_DBF")
         with fiona.open(WATERBODY_DBF) as waterbodies:
             f = waterbodies.get(fid)
-            logging.warning("waterbodies: {}".format(f))
-            logging.warning("Id: {}".format(id))
-            logging.warning('f["properties"]["OBJECTID"]: {}'.format(f["properties"]["OBJECTID"]))
             if int(f["properties"]["OBJECTID"]) == id:
+                gname = "NA" if f["properties"]["gnis_name"] is None else f["properties"]["gnis_name"]
                 wb = {
-                    "name": f["properties"]["GNIS_NAME"],
+                    "name": gname,
                     "objectid": int(f["properties"]["OBJECTID"]),
                     "centroid_lat": float(f["properties"]["c_lat"]),
                     "centroid_lng": float(f["properties"]["c_lng"]),
-                    "areasqkm": float(f["properties"]["AREASQKM"]),
-                    "state_abbr": f["properties"]["STATE_ABBR"]
+                    "areasqkm": float(f["properties"]["areasqkm"]),
                 }
-                logging.warning("Found wb: {}".format(wb))
                 waterbody = [wb]
             else:
-                logging.warning("Trying to run get_waterbody_byID again.")
                 return get_waterbody_byID(id=id)
     t1 = time.time()
     print(f"Search runtime: {round(t1-t0, 3)} sec")
@@ -243,7 +225,9 @@ def get_waterbody_objectids():
     objectids = []
     with fiona.open(WATERBODY_DBF) as waterbodies:
         for f in waterbodies:
-            objectids.append(int(f["properties"]["OBJECTID"]))
+            oid = int(f["properties"]["OBJECTID"])
+            if oid not in OUT_OF_BOUNDS:
+                objectids.append(oid)
     return objectids
 
 
@@ -311,14 +295,14 @@ def get_waterbody_elevation(fid: int, n: int = 10, delay: int = 2, countdown: in
             response = json.loads(requests.get(query_url).content)
         except Exception:
             if countdown == 0:
-                return bad_request, fid
+                return fid, bad_request
             time.sleep(delay)
             return get_waterbody_elevation(fid=fid, delay=delay+2, countdown=countdown-1)
         elev = response["USGS_Elevation_Point_Query_Service"]["Elevation_Query"]["Elevation"]
         if elev != '-1000000':
             elevations.append(elev)
     if len(elevations) == 0:
-        return missing_data, fid
+        return fid, missing_data
     del points
     min_elevation = round(np.min(elevations), 2)
     return fid, min_elevation

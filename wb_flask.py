@@ -134,6 +134,10 @@ def get_all_data():
     data_df = pd.DataFrame(_data_df, columns=columns)
     data_df.set_index('date', inplace=True)
     data_df = data_df.sort_values(by=['date'])
+    data_df.attrs["Date"] = "The date of the original satellite imagery raster."
+    data_df.attrs["objectid"] = "The NHD HR waterbody objectid."
+    data_df.attrs["DN"] = "A digital number corresponding to a pixel value between 0 and 255 which the satellite imagery raster is assigned after processing, " \
+                          "and which can be converted into a cyanobacteria cell concentration."
     data_df.attrs["DN/CN Column Units"] = "The number of 300m x 300m cells with the specified estimated concentration value (CN)"
     data_df.attrs["DN=0"] = "Below Detection"
     data_df.attrs["DN=254"] = "Land"
@@ -177,20 +181,13 @@ def get_objectid():
         results = {"waterbodies": data if len(data) > 0 else "NA"}
         objectid = "NA"
     else:
-        logging.warning("get_waterbody_bypoint getting called.")
         objectid, fid, gnis = get_waterbody_bypoint(lat=lat, lng=lng, return_fid=True)
-        logging.warning("get_waterbody_bypoint returned objectid: {}, fid: {}, gnis: {}".format(objectid, fid, gnis))
         if objectid is not None:
-            logging.warning("get_waterbody_byID getting called.")
             data = get_waterbody_byID(id=objectid, fid=int(fid))
-            logging.warning("get_waterbody_byID returned data: {}".format(data))
-            # data = get_waterbody_byname(gnis)
             results = {"lat": lat, "lng": lng,
                        "waterbodies": data if len(data) > 0 else "NA"}
-            logging.warning("results: {}".format(results))
         else:
             results = {"lat": lat, "lng": lng, "OBJECTID": int(objectid) if objectid is not None else "NA"}
-            logging.warning("results: {}".format(results))
     t1 = time.time()
     print(f"Waterbody Search Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return results, 200
@@ -208,9 +205,11 @@ def get_properties():
     else:
         return "Missing required waterbody objectid parameter 'OBJECTID'", 200
     fid = get_waterbody_fid(objectid=objectid)
+    if fid is None:
+        return {"objectid": objectid, "error": "No waterbody found for the provided objectid."}
     data = get_waterbody_properties(objectid=objectid, fid=fid)
     data["ELEVATION"] = get_elevation(objectid=objectid, meters=True)
-    del data["path"]
+    # del data["path"]
     bounds = get_waterbody_bounds(objectid)
 
     data["x_min"] = bounds[1]
@@ -338,7 +337,7 @@ def get_conus_image():
     if "daily" in args:
         daily = (args["daily"] == "True")
 
-    conus_file_path = get_conus_file(year=year, day=day, daily=daily, tries=3 if daily else 8)
+    conus_file_path, file_name = get_conus_file(year=year, day=day, daily=daily, tries=3 if daily else 8)
     if conus_file_path is None:
         return {"year": year, "day": day, "daily": daily, "message": "No conus cyano image found for the inputs provided."}
 
@@ -347,7 +346,7 @@ def get_conus_image():
         send_file(
             conus_file_path,
             as_attachment=True,
-            download_name=f"{conus_file_path}",
+            download_name=f"{file_name}",
             mimetype='image/png'
         )
     )

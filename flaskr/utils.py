@@ -38,7 +38,8 @@ rgb = {
     'vhigh': (255, 0, 0)
 }
 
-DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data_0.2.sqlite")
+# DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "waterbody-data_0.2.sqlite")
+DB_FILE = os.path.join(os.getenv("WATERBODY_DB", "D:\\data\cyan_rare\\mounts\\database"), "cyan_waterbody-2023.sqlite")
 
 DEFAULT_RANGE = [
     [1, 100],
