@@ -17,4 +17,4 @@ CopyDevImages:
   script:
     - crane auth login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - crane copy "ghcr.io/quanted/wb-api:${WB_API_IMAGE_TAG:-gdit-dev}" "$CI_REGISTRY_IMAGE/wb-api:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
-    - crane copy "ghcr.io/quanted/wb-redis:${WB_API_IMAGE_TAG:-gdit-dev}" "$CI_REGISTRY_IMAGE/wb-redis:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    - crane copy "ghcr.io/quanted/wb-redis:${WB_REDIS_IMAGE_TAG:-gdit-dev}" "$CI_REGISTRY_IMAGE/wb-redis:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
