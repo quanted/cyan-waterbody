@@ -12,6 +12,9 @@ import multiprocessing as mp
 import logging
 import csv
 
+from pyproj import Proj, transform
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyan-waterbody")
 
@@ -177,22 +180,38 @@ def get_waterbody_fid(objectid: int):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     query = "SELECT FID FROM WaterbodyBounds WHERE OBJECTID==?"
+    # logging.warning("Running query: {}".format(query))
     cur.execute(query, (int(objectid),))
     fid = cur.fetchall()
+    # logging.warning("fid: {}".format(fid))
+    if len(fid) == 0:
+        return None
     return fid[0][0]
 
 
 def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
+
+    logging.warning("get_waterbody_bypoint() called")
+
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     query = "SELECT OBJECTID, FID FROM WaterbodyBounds WHERE y_max>=? AND x_min<=? AND y_min<=? AND x_max>=?"
     values = (lat, lng, lat, lng,)
+
+    logging.warning("Executing query: {}".format(query))
+
     cur.execute(query, values)
     lakes = cur.fetchall()
+
+    logging.warning("LAKES: {}".format(lakes))
+
     crs = None
     if len(lakes) > 0:
         features = []
         for lake in lakes:
+
+            logging.warning("Lake: {}".format(lake))
+
             # w = get_waterbody(int(lake[0]))
             w = get_waterbody_by_fids(fid=lake[1])
             features.append(w[0][0])
@@ -202,24 +221,55 @@ def get_waterbody_bypoint(lat: float, lng: float, return_fid: bool=False):
         return None, None, None
     objectid = None
     gnis_name = None
-    point = gpd.GeoSeries(Point(lng, lat), crs='EPSG:4326').to_crs(wb[1])
+
+    logging.warning("Getting point with geopandas. lng: {}, lat: {}, wb[1]: {}".format(lng, lat, wb[1]))
+    out_proj = Proj(wb[1])
+    logging.warning("out_proj: {}".format(out_proj))
+    _lng, _lat = out_proj(lng, lat)
+    logging.warning("_lat: {}, _lng: {}".format(_lat, _lng))
+    point = gpd.GeoSeries(Point(_lng, _lat), crs=wb[1])
+    logging.warning("point: {}".format(point))
+
     for features in wb[0]:
+
+        logging.warning("Looping features: {}".format(features))
+
         if features["geometry"]["type"] == "MultiPolygon":
             poly_geos = []
+
+            logging.warning("Geometry type is MultiPolygon")
+
             for p in features["geometry"]["coordinates"]:
+                logging.warning("~~~ p: {}".format(p))
                 poly_geos.append(Polygon(p[0]))
+
+            logging.warning("Setting poly")
             poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=wb[1])
+            logging.warning("Poly: {}".format(poly))
         else:
+            logging.warning("Geometry type is not MultiPolygon")
             poly = gpd.GeoSeries(Polygon(features["geometry"]["coordinates"][0]), crs=wb[1])
+            logging.warning("Poly: {}".format(poly))
         in_wb = poly.contains(point)
+
+        logging.warning("in_wb: {}".format(in_wb))
+
         if in_wb.loc[0]:
             objectid = features["properties"]["OBJECTID"]
             gnis_name = features["properties"]["GNIS_NAME"]
+
+            logging.warning("ObjectID: {}, gnis_name: {}".format(objectid, gnis_name))
+
             break
     conn.close()
+
+    logging.warning("Db connection closed.")
+
     if return_fid and objectid is not None:
+        logging.warning("Returning objectid and running get_waterbody_fid()")
         return objectid, get_waterbody_fid(objectid), gnis_name
     else:
+        logging.warning("Returning objectid, None, gnis_name")
         return objectid, None, gnis_name
 
 
