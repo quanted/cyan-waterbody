@@ -61,7 +61,7 @@ services:
       - TRIBE_DBF=/mnts/geometry
       - REDIS_HOSTNAME=wb-redis
       - REDIS_PORT=6379
-      - WB_FLASK_URL=http://wb-flask:8080
+      # - WB_FLASK_URL=http://wb-flask:8080
       - NASA_IMAGE_PATH=/mnts/images
       - ADMIN_TOOL_URL=${ADMIN_TOOL_URL}
     env_file:

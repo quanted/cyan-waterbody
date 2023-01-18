@@ -4,8 +4,8 @@ import logging
 import requests
 import json
 import time
-# import sqlite3
-# import fiona
+import sqlite3
+import fiona
 import datetime
 import calendar
 
@@ -22,6 +22,8 @@ class WaterbodyBatch:
 	Batch processing of cyan-waterbody aggregation.
 	"""
 	def __init__(self, start_date, end_date, data_type):
+
+		print("Start Date: {}\nEnd Date: {}\nData Type: {}".format(start_date, end_date, data_type))
 
 		self.start_date = start_date  # YYYY-MM-DD 
 		self.end_date = end_date  # YYYY-MM-DD
