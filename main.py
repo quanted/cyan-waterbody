@@ -4,12 +4,10 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import os
 import argparse
 import time
-from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds, set_index, set_waterbody_details_table, export_waterbody_details_table
-from flaskr.utils import update_geometry_bounds, p_update_geometry_bounds, update_waterbody_fids
-from flaskr.aggregate import aggregate, retry_failed, p_aggregate, get_images, generate_conus_image
+from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds, set_waterbody_details_table, export_waterbody_details_table
+from flaskr.utils import p_update_geometry_bounds, update_waterbody_fids
+from flaskr.aggregate import aggregate, retry_failed, p_aggregate, generate_conus_image
 from flaskr.report import generate_state_reports, generate_alpinelake_report
-from flaskr.geometry import get_waterbody
-from flaskr.raster import mosaic_rasters, get_colormap, clip_raster
 import logging
 import datetime
 
@@ -154,9 +152,9 @@ if __name__ == "__main__":
         else:
             day = current_date.timetuple().tm_yday
         if "daily" in args:
-            daily = (args.daily == "True")
-        if args.daily:
+            # NOTE: Using parser.parse_args returns bools in args instead of strings
             daily = bool(args.daily)
+        print("Daily: {}".format(daily))
         generate_conus_image(day=day, year=year, daily=daily)
     else:
         print("")

@@ -1,6 +1,7 @@
 import numpy as np
+import numpy.ma as ma
 from pathlib import PurePath
-from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_dataset_reader, rasterize_boundary, mosaic_raster_gdal
+from flaskr.raster import get_images, clip_raster, mosaic_rasters, get_colormap, get_raster, get_dataset_reader, rasterize_boundary, mosaic_raster_gdal
 from flaskr.geometry import get_waterbody, get_waterbody_by_fids, convert_coordinates
 from flaskr.db import get_tiles_by_objectid, get_conn, save_data, get_waterbody_fid
 import geopandas as gpd
@@ -9,7 +10,7 @@ import multiprocessing as mp
 import logging
 import time
 import pandas as pd
-import copy
+import json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from PIL import Image
@@ -175,10 +176,14 @@ def retry_failed(daily: bool = True):
 
 def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = True, retry: int = 5, reproject: bool = True, daily: bool = True):
     fid = get_waterbody_fid(objectid=objectid)
+    if fid is None:
+        return None, None
     features, crs = get_waterbody_by_fids(fid=fid)
+    # logging.warn(f"get_waterbody_raster - number of waterbodies in features: {len(features)}")
     if len(features) == 0:
         return None, None
     images = get_images(year=year, day=day, daily=daily)
+    # logging.warn(f"get_waterbody_raster - number of images: {len(images)}")
     if len(images) == 0:
         return None, None
     image_base = PurePath(images[0]).parts[-1].split(".tif")
@@ -192,13 +197,17 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
         poly = gpd.GeoSeries(MultiPolygon(poly_geos), crs=crs)
     else:
         poly = gpd.GeoSeries(Polygon(f["geometry"]["coordinates"][0]), crs=crs)
+    # logging.warn("get_waterbody_raster - waterbody polygon created")
     f_images = get_tiles_by_objectid(objectid, image_base)
+    # logging.warn(f"get_waterbody_raster - number of image tiles: {len(f_images)}")
     if len(f_images) > 1:
         mosaic = mosaic_rasters(f_images)
     else:
         mosaic = f_images[0]
+    # logging.warn("get_waterbody_raster - image merge completed")
     colormap = get_colormap(f_images[0])
     try:
+        # logging.warn("get_waterbody_raster - starting raster clipping")
         data = list(clip_raster(mosaic, poly, boundary_crs=crs, raster_crs={'init': 'epsg:3857'}, histogram=False, get_bounds=get_bounds, reproject=reproject))
     except Exception as e:
         print(f"Error attempting to clip raster for objectid: {objectid}, year: {year}, day: {day}, retry: {retry}, error: {e}")
@@ -209,42 +218,41 @@ def get_waterbody_raster(objectid: int, year: int, day: int, get_bounds: bool = 
     return data, colormap
 
 
-def generate_conus_image(year: int, day: int, daily: bool):
+def generate_conus_image(year: int, day: int, daily: bool, save_bounds: bool = True):
     t0 = time.time()
-    images = get_images(year=year, day=day, daily=daily)
-
+    images = get_images(year=year, day=day, daily=daily, filtered=True)
     logger.info(f"CyANO CONUS Image Generator started - year: {year}, day: {day}, daily: {daily}, n images: {len(images)}")
-    if len(images) == 0:
-        logger.warn("No images found for conus image generator.")
-        return
-    mosaic, mosaic_file = mosaic_raster_gdal(images, dst_crs={"init": "EPSG:3857"})
-    logger.info("CyANO CONUS Image Rasters Merged")
 
     colormap = get_colormap(images[0])
     colormap[0] = (0, 0, 0, 0)
     colormap[254] = (0, 0, 0, 0)
     colormap[255] = (0, 0, 0, 0)
 
-    bounds = None
+    if len(images) == 0:
+        logger.warn("No images found for conus image generator.")
+        return
 
+    mosaic, mosaic_file = mosaic_raster_gdal(images, dst_crs={"init": "EPSG:3857"})
+    logger.info("CyANO CONUS Image Rasters Merged")
+    bounds = None
     data = None
-    mosaic_crs = None
+    crs = None
     for r in mosaic:
         bounds = r.bounds
-        mosaic_crs = r.crs.data["init"]
+        crs = r.crs.data["init"]
         data = r.read()[0]
     mosaic.close()
 
-    # str_bounds = {"bottom": bounds.bottom, "left": bounds.left, "right": bounds.right, "top": bounds.top}
-
-    proj_x1, proj_y1 = convert_coordinates(y=bounds.bottom, x=bounds.left, in_crs=mosaic_crs)
-    proj_x2, proj_y2 = convert_coordinates(y=bounds.top, x=bounds.right, in_crs=mosaic_crs)
+    proj_x1, proj_y1 = convert_coordinates(y=bounds[1], x=bounds[0], in_crs=crs)
+    proj_x2, proj_y2 = convert_coordinates(y=bounds[3], x=bounds[2], in_crs=crs)
     str_bounds = {
         "bottom": proj_y1,
         "left": proj_x1,
         "right": proj_x2,
         "top": proj_y2
     }
+
+    # str_bounds = {"bottom": bounds.bottom, "left": bounds.left, "right": bounds.right, "top": bounds.top}
 
     logger.info(f"Starting CyANO CONUS Image colormapping, size: {data.shape}")
     converted_data = np.full((data.shape[0], data.shape[1], 4,), (0, 0, 0, 0), dtype=np.uint8)
@@ -269,7 +277,20 @@ def generate_conus_image(year: int, day: int, daily: bool):
 
     png_img = Image.fromarray(converted_data, mode='RGBA')
     png_img.save(conus_file_path, 'PNG', pnginfo=png_metadata)
+
+    if daily:
+        p_day = day - 1 if day > 0 else 365
+    else:
+        p_day = day - 7 if day - 7 > 0 else day + 365 - 7
+    p_year = year - 1 if p_day == 365 else year
+    previous_file = os.path.join(base_path, f"{'daily' if daily else 'weekly'}-conus-{p_year}-{p_day}.png")
+    if os.path.exists(previous_file):
+        os.remove(previous_file)
+
     os.remove(mosaic_file)
+    if save_bounds:
+        with open(os.path.join("static", "conus_raster_bounds.json"), "w") as json_file:
+            json_file.write(json.dumps(str_bounds, indent=4))
     t1 = time.time()
     logger.info(f"CyANO CONUS Image Generator completed, year: {year}, day: {day}, request runtime: {round(t1 - t0, 3)} sec")
 

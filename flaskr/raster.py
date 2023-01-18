@@ -1,7 +1,5 @@
 import warnings
 
-import gdal
-
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from pathlib import Path
@@ -11,13 +9,13 @@ from rasterio.merge import merge
 from rasterio.enums import Resampling
 from rasterio.profiles import DefaultGTiffProfile
 
-from osgeo import gdal
+from osgeo import gdal, osr
 import uuid
-from matplotlib import pyplot
-import matplotlib.pyplot as plt
-# from osgeo import gdal, osr
+import pyproj
 from pyproj import Proj, CRS
 from pyproj import transform as pyt
+# from shapely.geometry import Polygon
+from shapely.ops import transform
 import numpy as np
 import types
 import copy
@@ -25,15 +23,23 @@ import rasterio
 import geopandas as gpd
 import os
 import datetime
+import logging
 
 gdal.UseExceptions()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("cyan-waterbody")
 
 IMAGE_DIR = os.getenv('IMAGE_DIR', "D:\\data\cyan_rare\\mounts\\images")
 DST_CRS = 'EPSG:4326'
 
+CONUS_TILES = ['1_1', '1_2', '1_3', '1_4', '2_1', '2_2', '2_3', '2_4', '3_1', '3_2', '3_3',
+               '3_4', '3_5', '4_1', '4_2', '4_3', '4_4', '4_5', '5_1', '5_2', '5_3', '5_4', '5_5',
+               '6_1', '6_2', '6_3', '6_4', '6_5', '7_1', '7_2', '7_3', '7_4', '7_5', '8_1', '8_2',
+               '8_3', '8_4']
 
-def get_images(year: int, day: int, daily: bool=True):
+
+def get_images(year: int, day: int, daily: bool = True, filtered: bool = False):
     """
     Returns the list of images in the IMAGE_DIR for the specified year and day,
     defaults to daily otherwise will look for weekly images
@@ -45,12 +51,19 @@ def get_images(year: int, day: int, daily: bool=True):
     if daily:
         base_image_name = "L{}{}.L3m_DAY_CYAN_CI_cyano_CYAN_CONUS_300m".format(year, f'{day:03}')
     else:
-        date0 = datetime.date(year, 1, 1) + datetime.timedelta(days=day-1)
+        date0 = datetime.date(year, 1, 1) + datetime.timedelta(days=day - 1)
         date1 = date0 + datetime.timedelta(days=6)
-        base_image_name = "L{}{}{}{}.L3m_7D_CYAN_CI_cyano_CYAN_CONUS_300m".format(date0.year, f'{date0.timetuple().tm_yday:03}', date1.year, f'{date1.timetuple().tm_yday:03}')
+        base_image_name = "L{}{}{}{}.L3m_7D_CYAN_CI_cyano_CYAN_CONUS_300m".format(date0.year,
+                                                                                  f'{date0.timetuple().tm_yday:03}',
+                                                                                  date1.year,
+                                                                                  f'{date1.timetuple().tm_yday:03}')
 
-    image_files = [str(os.path.join(IMAGE_DIR, f)) for f in os.listdir(IMAGE_DIR) if
-                   (".tif" in f and base_image_name in f)]
+    if filtered:
+        image_files = [str(os.path.join(IMAGE_DIR, f)) for f in os.listdir(IMAGE_DIR) if
+                       (".tif" in f and base_image_name in f and any(tile in f for tile in CONUS_TILES))]
+    else:
+        image_files = [str(os.path.join(IMAGE_DIR, f)) for f in os.listdir(IMAGE_DIR) if
+                       (".tif" in f and base_image_name in f)]
     return image_files
 
 
@@ -67,7 +80,7 @@ def get_images_by_tile(tile: list, n_limit: int = 90):
         if any(t in f for t in tile) and ".tif" in f and "DAY" in f:
             i_year = f[1:5]
             i_yday = f[5:9]
-            date0 = datetime.date(int(i_year), 1, 1) + datetime.timedelta(days=int(i_yday)-1)
+            date0 = datetime.date(int(i_year), 1, 1) + datetime.timedelta(days=int(i_yday) - 1)
             if date0 >= n_date:
                 image_files.append(str(os.path.join(IMAGE_DIR, f)))
     return image_files
@@ -112,15 +125,22 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
 
     if isinstance(raster, types.GeneratorType):
         crs_0 = DST_CRS
-        boundary = boundary.to_crs(crs=DST_CRS)
-
+        # proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster_crs))
+        # poly = transform(proj_transformer.transform, boundary.geometry.values[0])
+        # boundary = gpd.GeoSeries(poly, crs=raster_crs)
+        # boundary = boundary.to_crs(crs=DST_CRS)
         if isinstance(boundary, gpd.GeoDataFrame):
             boundary_list = [feature["geometry"] for i, feature in boundary.iterrows()]
             # boundary = boundary.to_json()
             boundary = boundary_list
     elif not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
         crs_0 = raster.crs
-        boundary = boundary.to_crs(crs=raster.crs)
+        proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster.crs))
+        poly = transform(proj_transformer.transform, boundary.geometry.values[0])
+        boundary = gpd.GeoSeries(poly, crs=raster.crs)
+        # boundary = boundary.to_crs(crs=raster.crs)
+
+    # logger.warn("clip_raster - boundary polygon set")
 
     height, width = None, None
     bounds = None
@@ -133,14 +153,14 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
                 bounds = r.bounds
                 height = r.height
                 width = r.width
-                clipped, affine = mask.mask(dataset=r, shapes=boundary, crop=True,)
+                clipped, affine = mask.mask(dataset=r, shapes=boundary, crop=True, )
                 if histogram:
                     clipped = rasterize_boundary(clipped, boundary=boundary, affine=affine, crs=r.crs)
         else:
             bounds = raster.bounds
             height = raster.height
             width = raster.width
-            clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True,)
+            clipped, affine = mask.mask(dataset=raster, shapes=boundary, crop=True, )
             if not reproject:
                 raster_crs = raster.crs
             if histogram:
@@ -149,7 +169,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         if verbose:
             print("ERROR: {}".format(e))
         return None
-
+    # logger.warn("clip_raster - boundary successfully rasterized")
     if len(clipped.shape) >= 3:
         clipped = clipped[0]
 
@@ -161,16 +181,18 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
         # output = None
         # transform, width, height = warp.calculate_default_transform(
         #     crs_0, crs, width, height, *bounds)
-
+        # logger.warn("clip_raster - collected CRS from rasterio")
         reproject_raster, reproject_affine = warp.reproject(
             source_raster,
-            # destination=output,
             src_transform=affine,
             src_crs=crs_0,
             # dst_transform=transform,
             dst_crs=crs,
             resampling=Resampling.nearest
         )
+        # _reprojected_raster = reproject_dataset(source_raster, epsg_from=4326, epsg_to=int(crs["init"].split(":")[1]))
+
+        # logger.warn("clip_raster - raster reprojected")
         clipped = reproject_raster[0]
         affine = reproject_affine
         if get_bounds:
@@ -179,6 +201,7 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
                 width=reproject_raster.shape[1],
                 transform=reproject_affine
             )
+            # logger.warn("clip_raster - obtaining raster bounds")
             proj0 = Proj(crs)
             proj1 = Proj('epsg:4326')
             bbox = [pyt(proj0, proj1, bounds[2], bounds[1]), pyt(proj0, proj1, bounds[0], bounds[3])]
@@ -195,6 +218,26 @@ def get_raster_bounds(image_path):
     bounds = warp.transform_bounds(src_crs=raster.crs, dst_crs=dst_crs, left=raster.bounds.left,
                                    bottom=raster.bounds.bottom, right=raster.bounds.right, top=raster.bounds.top)
     return bounds
+
+
+def get_raster(image_path):
+    dst_crs = 'EPSG:4326'
+    raster = rasterio.open(image_path)
+    src_crs = raster.crs
+    raster_data = raster.read(1)
+
+    data, out_trans = warp.reproject(
+        source=raster_data,
+        src_crs=src_crs,
+        src_transform=raster.transform,
+        dst_crs=dst_crs,
+        resampling=Resampling.nearest
+    )
+    # bounds = warp.transform_bounds(src_crs=raster.crs, dst_crs=dst_crs, left=raster.bounds.left,
+    #                                bottom=raster.bounds.bottom, right=raster.bounds.right, top=raster.bounds.top)
+    bounds = warp.transform_bounds(src_crs=raster.crs, dst_crs='EPSG:4326', left=raster.bounds.left,
+                                   bottom=raster.bounds.bottom, right=raster.bounds.right, top=raster.bounds.top)
+    return data[0], bounds, dst_crs
 
 
 def mosaic_rasters(images, dst_crs=None):
@@ -223,8 +266,9 @@ def mosaic_raster_gdal(image_list, dst_crs=None):
     g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'])
     # g = gdal.Warp(mosaic_file, image_list, format="GTiff", dstSRS=dst_crs['init'], options=["COMPRESS=LZW", "TILED=YES"])
     with rasterio.open(mosaic_file) as src:
+        src_crs = src.crs
         transform, width, height = calculate_default_transform(
-            src.crs, dst_crs, src.width, src.height, *src.bounds)
+            src_crs, dst_crs, src.width, src.height, *src.bounds)
         kwargs = src.meta.copy()
         kwargs.update({
             'crs': dst_crs,
@@ -244,8 +288,11 @@ def mosaic_raster_gdal(image_list, dst_crs=None):
     return mosaic_reader_gen, mosaic_file
 
 
-def rasterize_boundary(image, boundary, affine, crs, value: int=256):
-    boundary = boundary.to_crs(crs)
+def rasterize_boundary(image, boundary, affine, crs, value: int = 256):
+    proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(crs))
+    poly = transform(proj_transformer.transform, boundary.geometry.values[0])
+    boundary = gpd.GeoSeries(poly, crs=crs)
+    # boundary = boundary.to_crs(crs)
     image = image.astype(np.int16)
     rasterized = features.rasterize(boundary, fill=value, all_touched=True, out_shape=image[0].shape, transform=affine)
     result = np.where(rasterized < value, image[0], value)
@@ -271,3 +318,51 @@ def get_dataset_reader(data, transform, crs):
             yield dataset
     # return dataset_reader
 
+
+def reproject_dataset(dataset, pixel_spacing=5000., epsg_from=4326, epsg_to=27700):
+    """
+    Taken from: https://jgomezdans.github.io/gdal_notes/reprojection.html
+    A sample function to reproject and resample a GDAL dataset from within
+    Python. The idea here is to reproject from one system to another, as well
+    as to change the pixel size. The procedure is slightly long-winded, but
+    goes like this:
+
+    1. Set up the two Spatial Reference systems.
+    2. Open the original dataset, and get the geotransform
+    3. Calculate bounds of new geotransform by projecting the UL corners
+    4. Calculate the number of pixels with the new projection & spacing
+    5. Create an in-memory raster dataset
+    6. Perform the projection
+    """
+    # Define the UK OSNG, see <http://spatialreference.org/ref/epsg/27700/>
+    osng = osr.SpatialReference()
+    osng.ImportFromEPSG(epsg_to)
+    wgs84 = osr.SpatialReference()
+    wgs84.ImportFromEPSG(epsg_from)
+    tx = osr.CoordinateTransformation(wgs84, osng)
+    # Up to here, all  the projection have been defined, as well as a
+    # transformation from the from to the  to :)
+    # Now, we create an in-memory raster
+    mem_drv = gdal.GetDriverByName('MEM')
+    # We now open the dataset
+    g = gdal.Open(dataset)
+    # Get the Geotransform vector
+    geo_t = g.GetGeoTransform()
+    x_size = g.RasterXSize  # Raster xsize
+    y_size = g.RasterYSize  # Raster ysize
+    # Work out the boundaries of the new dataset in the target projection
+    (ulx, uly, ulz) = tx.TransformPoint(geo_t[0], geo_t[3])
+    (lrx, lry, lrz) = tx.TransformPoint(geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size)
+    # See how using 27700 and WGS84 introduces a z-value!
+    # The size of the raster is given the new projection and pixel spacing
+    # Using the values we calculated above. Also, setting it to store one band
+    # and to use Float32 data type.
+    dest = mem_drv.Create('', int((lrx - ulx) / pixel_spacing), int((uly - lry) / pixel_spacing), 1, gdal.GDT_Float32)
+    # Calculate the new geotransform
+    new_geo = (ulx, pixel_spacing, geo_t[2], uly, geo_t[4], -pixel_spacing)
+    # Set the geotransform
+    dest.SetGeoTransform(new_geo)
+    dest.SetProjection(osng.ExportToWkt())
+    # Perform the projection/resampling
+    res = gdal.ReprojectImage(g, dest, wgs84.ExportToWkt(), osng.ExportToWkt(), gdal.GRA_Bilinear)
+    return dest.ReadAsArray()

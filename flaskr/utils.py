@@ -171,4 +171,3 @@ def update_waterbody_fids():
         i += 1
     cur.execute("COMMIT")
 
-
