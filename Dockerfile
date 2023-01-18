@@ -18,7 +18,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.12.0-Linu
     echo "conda activate base" >> ~/.bashrc
 
 ARG TINI_VERSION=0.19.0
-RUN apt-get install -y curl grep sed dpkg && \
+RUN apt-get install -y curl grep sed dpkg vim && \
     curl -L "https://github.com/krallin/tini/releases/download/v$TINI_VERSION/tini_$TINI_VERSION.deb" > tini.deb && \
     dpkg -i tini.deb && \
     rm tini.deb && \
