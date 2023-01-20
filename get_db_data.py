@@ -100,9 +100,9 @@ def insert_status_data():
 	for row in rows:
 		print("row: {}".format(row))
 		query = "INSERT OR REPLACE INTO DailyStatus(year, day, OBJECTID, status, timestamp, comments) VALUES(?,?,?,?,?,?)"
-		values = (row[0], row[1], row[2], row[3], row[4])
+		values = (row[0], row[1], row[2], row[3], row[4], row[5])
 		print("year: {}\nday: {}\nOBJECTID: {}\nstatus: {}\ntimestamp: {}\ncomments: {}".format(
-			row[0], row[1], row[2], row[3], row[4])
+			row[0], row[1], row[2], row[3], row[4], row[5])
 		)
 		cur.execute(query, values)
 	conn.close()
