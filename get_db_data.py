@@ -71,16 +71,56 @@ def insert_data():
 	file.close()
 
 
+def get_status_data():
+	conn = sqlite3.connect(DB_FILE)
+	cur = conn.cursor()
+	daily_data = []
+	for year in years:
+		for day in days:
+			print("Year: {}\nDay: {}".format(year, day))
+			# NOTE: Columns are (year, day, OBJECTID, value, count)
+			query = "SELECT * FROM DailyStatus WHERE day=? AND year=?"
+			values = (day, year,)
+			cur.execute(query, values)
+			row_data = cur.fetchall()
+			for row in row_data:
+				daily_data.append(list(row))
+	print("daily_data: {}".format(daily_data))
+	file = open("status_rows.json", "w")
+	file.write(json.dumps(daily_data))
+	file.close()
+	conn.close()
+
+
+def insert_status_data():
+	file = open("status_rows.json", "r")
+	rows = json.loads(file.read())
+	conn = sqlite3.connect(DB_FILE)
+	cur = conn.cursor()
+	for row in rows:
+		print("row: {}".format(row))
+		query = "INSERT OR REPLACE INTO DailyStatus(year, day, OBJECTID, status, timestamp, comments) VALUES(?,?,?,?,?,?)"
+		values = (row[0], row[1], row[2], row[3], row[4])
+		print("year: {}\nday: {}\nOBJECTID: {}\nstatus: {}\ntimestamp: {}\ncomments: {}".format(
+			row[0], row[1], row[2], row[3], row[4])
+		)
+		cur.execute(query, values)
+	conn.close()
+	file.close()
+
+
 
 if __name__ == "__main__":
 
 	func_type = None
 
-	error_message = "\nMust add func_type argument ('get_data' or 'insert_data').\nExample: python get_db_data.py get_data\n"
+	error_message = "\nMust add func_type argument ('get_data', 'insert_data', 'get_status_data', or 'insert_status_data').\nExample: python get_db_data.py get_data\n"
 
 	if len(sys.argv) < 2:
+		print("No enough args.")
 		print(error_message)
-	elif not sys.argv[1] in ["get_data", "insert_data"]:
+	elif not sys.argv[1] in ["get_data", "insert_data", "get_status_data", "insert_status_data"]:
+		print("Args don't match: {}".format(sys.argv[1]))
 		print(error_message)
 	else:
 		func_type = sys.argv[1]
@@ -91,4 +131,10 @@ if __name__ == "__main__":
 	elif func_type == "insert_data":
 		print("Inserting data.")
 		insert_data()
+	elif func_type == "get_status_data":
+		print("Getting status data.")
+		get_status_data()
+	elif func_type == "insert_status_data":
+		print("Inserting status data.")
+		insert_status_data()
 
