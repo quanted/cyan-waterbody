@@ -1,0 +1,14 @@
+numpy
+pillow
+flask
+tqdm==4.59.0
+libspatialindex==1.9.3
+flask-cors==3.0.10
+xhtml2pdf
+plotly
+python-kaleido
+celery==5.0.5
+redis==3.5.3
+APScheduler==3.8.0
+boto3
+jinja2<=3.0

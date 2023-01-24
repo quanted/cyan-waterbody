@@ -1,0 +1,28 @@
+version: '3.1'
+
+services:
+  cyan-wb:
+    restart: unless-stopped
+    container_name: cyan-wb
+    image: cyan-wb-test-01
+#    command: tail -f /dev/null
+#    command: conda run -p /opt/conda/envs/pyenv --no-capture-output celery -A celery_worker.celery worker --loglevel=INFO -c 1
+#    build: .
+    ports:
+      - "8085:8080"
+    volumes:
+#      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+#      - ./cyan_rare/mounts/database:/mnts/database
+#      - ./cyan_rare/mounts/geometry:/mnts/geometry
+      - /D/data/cyan_rare/mounts/images:/mnts/images
+      - /D/data/cyan_rare/mounts/database:/mnts/database
+      - /D/data/cyan_rare/mounts/geometry:/mnts/geometry
+      - .:/src
+    environment:
+      - IMAGE_DIR=/mnts/images
+      - WATERBODY_DB=/mnts/database
+      - WATERBODY_DBF=/mnts/geometry
+      - FLASK_APP=wb_flask.py
+      - COUNTY_DBF=/mnts/geometry
+      - STATE_DBF=/mnts/geometry
+      - TRIBE_DBF=/mnts/geometry
