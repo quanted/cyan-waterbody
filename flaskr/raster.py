@@ -135,10 +135,10 @@ def clip_raster(raster, boundary, boundary_layer=None, boundary_crs=None, verbos
             boundary = boundary_list
     elif not (boundary_crs == raster.crs or boundary_crs == raster.crs.data):
         crs_0 = raster.crs
-        proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster.crs))
-        poly = transform(proj_transformer.transform, boundary.geometry.values[0])
-        boundary = gpd.GeoSeries(poly, crs=raster.crs)
-        # boundary = boundary.to_crs(crs=raster.crs)
+        # proj_transformer = pyproj.Transformer.from_proj(Proj(boundary.crs), Proj(raster.crs))
+        # poly = transform(proj_transformer.transform, boundary.geometry.values[0])
+        # boundary = gpd.GeoSeries(poly, crs=raster.crs)
+        boundary = boundary.to_crs(crs=raster.crs)
 
     # logger.warn("clip_raster - boundary polygon set")
 
