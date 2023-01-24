@@ -71,19 +71,19 @@ def aggregate(year: int, day: int, daily: bool = True, objectid: str = None, off
             f_results[objectid] = [np.zeros(257), "FAILED", "No images found for provided OBJECTID"]
             continue
 
-        results = np.zeros(257)
-        if len(f_images) > 1:
-            mosaic = mosaic_rasters(f_images)
-        else:
-            mosaic = f_images[0]
-        data = clip_raster(mosaic, poly, boundary_crs=crs)
-        results = np.histogram(data[0], bins=257)
-
         # results = np.zeros(257)
-        # for i in f_images:
-        #     data = clip_raster(i, poly, boundary_crs=crs)
-        #     if data:
-        #         results = np.add(results, np.histogram(data[0], bins=257)[0])
+        # if len(f_images) > 1:
+        #     mosaic = mosaic_rasters(f_images)
+        # else:
+        #     mosaic = f_images[0]
+        # data = clip_raster(mosaic, poly, boundary_crs=crs)
+        # results = np.histogram(data[0], bins=257)
+
+        results = np.zeros(257)
+        for i in f_images:
+            data = clip_raster(i, poly, boundary_crs=crs)
+            if data:
+                results = np.add(results, np.histogram(data[0], bins=257)[0])
         f_results[objectid] = [results, "PROCESSED", ""]
         # df_data.append(list([objectid, f['properties']['AREASQKM'], np.sum(poly.area) * 10**4, round(np.sum(results) * 0.03, 4)]))
     # columns = ["objectid", "wb_area", "wb_geo_area", "wb_pixel_area"]
@@ -156,17 +156,17 @@ def p_feature_aggregate(feature, image_base, crs):
     if poly.geometry is None:
         return objectid, results, "FAILED", "Geometry unable to be loaded for objectid."
 
-    if len(f_images) > 1:
-        mosaic = mosaic_rasters(f_images)
-    else:
-        mosaic = f_images[0]
-    data = clip_raster(mosaic, poly, boundary_crs=crs)
-    results = np.histogram(data[0], bins=257)
-    #
-    # for i in f_images:
-    #     data = clip_raster(i, poly, boundary_crs=crs)
-    #     if data:
-    #         results = np.add(results, np.histogram(data[0], bins=257)[0])
+    # if len(f_images) > 1:
+    #     mosaic = mosaic_rasters(f_images)
+    # else:
+    #     mosaic = f_images[0]
+    # data = clip_raster(mosaic, poly, boundary_crs=crs)
+    # results = np.histogram(data[0], bins=257)
+
+    for i in f_images:
+        data = clip_raster(i, poly, boundary_crs=crs)
+        if data:
+            results = np.add(results, np.histogram(data[0], bins=257)[0])
     return objectid, results, "PROCESSED", ""
 
 
