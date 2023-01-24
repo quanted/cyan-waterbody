@@ -528,7 +528,9 @@ def check_overall_status(start_day: int, start_year: int, end_day: int, end_year
 
 
 def check_images(year: int, day: int, daily: bool=True):
+    logger.info("check_images() called.")
     images = get_images(year=year, day=day, daily=daily)
+    logger.info("got images: {}".format(images))
     if len(images) > 0:
         return True
     else:

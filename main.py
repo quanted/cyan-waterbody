@@ -39,7 +39,7 @@ PARALLEL = True
 
 
 def async_aggregate(year: int, day: int, daily: bool):
-    logger.info("Executing async waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
+    logger.info("~~ Executing async waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
     t0 = time.time()
     logger.info("Inside async_aggregate()")
     try:
