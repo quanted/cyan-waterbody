@@ -102,14 +102,10 @@ def p_aggregate(year: int, day: int, daily: bool = True, objectid: str = None, o
     :param objectid: The objectid of the waterbody being aggregated.
     :return: The histrogram of pixel values and their count.
     """
-    logger.info("p_aggregate called. Getting images.")
     images = get_images(year=year, day=day, daily=daily)
-    logger.info("images: {}".format(images))
     if len(images) == 0:
         return None, None, None
-    logger.info("Getting waterbody: {}".format(objectid))
     features, crs = get_waterbody(objectid=objectid)
-    logger.info("Waterbody retrieved: features: {}\ncrs: {}".format(features, crs))
     n_features = len(features)
     completed = False
     if offset is None:

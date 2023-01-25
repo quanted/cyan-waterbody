@@ -39,20 +39,16 @@ PARALLEL = True
 
 
 def async_aggregate(year: int, day: int, daily: bool):
-    logger.info("~~ Executing async waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
+    logger.info("Executing async waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
     t0 = time.time()
-    logger.info("Inside async_aggregate()")
     try:
         completed = False
         offset = None
         while not completed:
             if PARALLEL:
-                logger.info("Initiating p_aggregate()")
                 data, offset, completed = p_aggregate(year, day, daily, offset=offset)
             else:
-                logger.info("Initiating aggregate()")
                 data, offset, completed = aggregate(year, day, daily, offset=offset)
-            logger.info("Saving data.")
             save_data(year, day, data=data, daily=daily)
         logger.info("Completed processing waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
     except Exception as e:
