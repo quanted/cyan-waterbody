@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
     container_name: wb-celery
     image: ${WB_API_IMAGE:-ghcr.io/quanted/wb-api:gdit-dev}
-    command: celery -A celery_worker.celery worker --loglevel=INFO -c 1
+    command: celery -A celery_worker.celery worker -P threads --loglevel=INFO -c 1
     depends_on:
       - wb-redis
       - wb-flask

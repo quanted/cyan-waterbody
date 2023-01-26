@@ -8,9 +8,11 @@ from celery import Celery
 import uuid
 from datetime import datetime
 import json
+import requests
 
 from flaskr import report
-import requests
+from main import async_aggregate
+
 
 
 redis_hostname = os.environ.get("REDIS_HOSTNAME", "localhost")
@@ -58,6 +60,14 @@ def test_celery(*args):
     sleep(5)
     logging.warning("Celery successfully called.")
     return {"status": "celery task finished."}
+
+
+@celery_instance.task(bind=True)
+def run_aggregation(self, request_obj):
+    year = int(request_obj.get("year"))
+    day = int(request_obj.get("day"))
+    daily = bool(request_obj.get("daily"))
+    async_aggregate(year, day, daily)
 
 
 class CeleryHandler:
@@ -113,3 +123,12 @@ class CeleryHandler:
         except Exception as e:
             logging.error("revoke_task error: {}".format(e))
             return {"status": "Failed to cancel job"}
+
+    def start_aggregation(self, request_obj):
+        """
+        Runs aggregation on celery worker.
+        """
+        celery_job = run_aggregation.apply_async(
+            args=[request_obj], queue="celery"
+        )
+        return celery_job

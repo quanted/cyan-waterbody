@@ -377,8 +377,7 @@ def aggregate():
     if len(error) > 0:
         return "; ".join(error), 200
     if check_images(year=year, day=day, daily=daily):
-        th = threading.Thread(target=async_aggregate, args=(year, day, daily))
-        th.start()
+        response = celery_handler.start_aggregation(args)
         result = "Waterbody aggregation initiated for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"), 200
     else:
         result = "Unable to execute waterbody aggregation for year: {}, day: {}, {}, no images found".format(year, day, "daily" if daily else "weekly"), 200
