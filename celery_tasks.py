@@ -63,10 +63,7 @@ def test_celery(*args):
 
 
 @celery_instance.task(bind=True)
-def run_aggregation(self, request_obj):
-    year = int(request_obj.get("year"))
-    day = int(request_obj.get("day"))
-    daily = bool(request_obj.get("daily"))
+def run_aggregation(self, year, day, daily):
     async_aggregate(year, day, daily)
 
 
@@ -124,11 +121,11 @@ class CeleryHandler:
             logging.error("revoke_task error: {}".format(e))
             return {"status": "Failed to cancel job"}
 
-    def start_aggregation(self, request_obj):
+    def start_aggregation(self, year: int, day: int, daily: bool):
         """
         Runs aggregation on celery worker.
         """
         celery_job = run_aggregation.apply_async(
-            args=[request_obj], queue="celery"
+            args=[year, day, daily], queue="celery"
         )
         return celery_job
