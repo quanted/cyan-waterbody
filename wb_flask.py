@@ -5,7 +5,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from flask import Flask, request, send_file, make_response, send_from_directory, g
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, \
-    check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, get_waterbody_by_fids, get_elevation
+    check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, \
+    get_waterbody_by_fids, get_elevation, get_wb_reports
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties, get_waterbody_byID
 from flaskr.aggregate import get_waterbody_raster, get_conus_file
 from flaskr.report import generate_report, get_report_path
@@ -591,6 +592,18 @@ def get_report_counties():
 def get_report_tribes():
     tribes = get_all_tribes()
     return {"tribes": tribes}, 200
+
+
+@app.route('/waterbody/report/state/')
+def get_waterbody_reports_data():
+    args = request.args
+    state = None
+    if "state" in args:
+        state = str(args["state"])
+    if not state:
+        return "Missing required state argument, using STUSPS value or Alpine"
+    results = get_wb_reports(state=state)
+    return {"state": state, "reports": results}, 200
 
 
 @app.route('/celery')

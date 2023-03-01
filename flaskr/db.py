@@ -786,6 +786,19 @@ def set_wb_report_file(state, year, month, upload_date, file_url, status):
     conn.close()
 
 
+def get_wb_reports(state):
+    conn = sqlite3.connect(DB_FILE)
+    curr = conn.cursor()
+    query = "SELECT * FROM WaterbodyReport WHERE state = ?"
+    values = (state,)
+    curr.execute(query, values)
+    results = []
+    for r in curr.fetchall():
+        results.append(r)
+    conn.close()
+    return results
+
+
 def set_waterbody_details_table(input_file: str = None):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()

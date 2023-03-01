@@ -282,26 +282,28 @@ def generate_report(
     report_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 1)
 
     if group_type == "State":
-        # upload_status, upload_url = upload_report(file_path=report_file,
-        #                                           directory_path=f"state/{states[0]}/{report_date.year}/"
-        #                                                          f"{report_date.month}",
-        #                                           object_name=f"CyAN-waterbody-report-{states[0]}_{year}-{day}.pdf"
-        #                                           )
-        # # TODO: Add database update function here (write new entry [state, year, month, upload_date, file_url, status]
-        # upload_status = "SUCCESS" if upload_status else "FAILED"
-        # set_wb_report_file(state=states[0], year=report_date.year, month=report_date.month,
-        #                    upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
+        upload_status, upload_url = upload_report(file_path=report_path,
+                                                  directory_path=f"state/{states[0]}/{report_date.year}/"
+                                                                 f"{report_date.month}",
+                                                  object_name=f"CyAN-waterbody-report-{states[0]}_{year}-{day}.pdf"
+                                                  )
+        upload_status = "SUCCESS" if upload_status else "FAILED"
+        set_wb_report_file(state=states[0], year=report_date.year, month=report_date.month,
+                           upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
+        if upload_status:
+            os.remove(report_path)
         logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
     if group_type == "Alpine":
-        # upload_status, upload_url = upload_report(file_path=report_file,
-        #                                           directory_path=f"alpine/{report_date.year}/"
-        #                                                          f"{report_date.month}",
-        #                                           object_name=f"CyAN-waterbody-report-alpine_{year}-{day}.pdf"
-        #                                           )
-        # # TODO: Add database update function here (write new entry [state, year, month, upload_date, file_url, status]
-        # upload_status = "SUCCESS" if upload_status else "FAILED"
-        # set_wb_report_file(state="alpine", year=report_date.year, month=report_date.month,
-        #                    upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
+        upload_status, upload_url = upload_report(file_path=report_path,
+                                                  directory_path=f"alpine/{report_date.year}/"
+                                                                 f"{report_date.month}",
+                                                  object_name=f"CyAN-waterbody-report-alpine_{year}-{day}.pdf"
+                                                  )
+        upload_status = "SUCCESS" if upload_status else "FAILED"
+        set_wb_report_file(state="alpine", year=report_date.year, month=report_date.month,
+                           upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
+        if upload_status:
+            os.remove(report_path)
         logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
     else:
         logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
