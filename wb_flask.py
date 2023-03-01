@@ -594,7 +594,7 @@ def get_report_tribes():
     return {"tribes": tribes}, 200
 
 
-@app.route('/waterbody/report/state/')
+@app.route('/waterbody/report/details/')
 def get_waterbody_reports_data():
     args = request.args
     state = None
