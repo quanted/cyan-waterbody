@@ -6,19 +6,20 @@ services:
     restart: unless-stopped
     container_name: wb-flask
     image: ${WB_API_IMAGE:-ghcr.io/quanted/wb-api:gdit-dev}
+    build: .
     ports:
       - "8085:8080"
     volumes:
-      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+      # - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
       # - ./cyan_rare/mounts/images:/mnts/images
-      # - ../EPA-Cyano/images:/mnts/images
+      - ../EPA-Cyano/missing_images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - ./outputs:/src/outputs
       - ./static/outputs:/src/static/outputs
       - ./static/raster_plots:/src/static/raster_plots
       - ./static/temp:/src/static/temp
-      # - .:/src
+      - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
       - WATERBODY_DB=/mnts/database
@@ -41,16 +42,16 @@ services:
       - wb-redis
       - wb-flask
     volumes:
-      - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
+      # - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
       # - ./cyan_rare/mounts/images:/mnts/images
-      # - ../EPA-Cyano/images:/mnts/images
+      - ../EPA-Cyano/missing_images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - ./outputs:/src/outputs
       - ./static/outputs:/src/static/outputs
       - ./static/raster_plots:/src/static/raster_plots
       - ./static/temp:/src/static/temp
-      # - .:/src
+      - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
       - WATERBODY_DB=/mnts/database
