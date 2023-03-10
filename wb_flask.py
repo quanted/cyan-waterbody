@@ -50,6 +50,10 @@ def status_check():
 
 @app.route('/waterbody/data/')
 def get_data():
+
+    logger.info("HEADERS: {}".format(request.headers))
+
+    
     t0 = time.time()
     args = request.args
     if "OBJECTID" in args:
@@ -319,6 +323,9 @@ def get_image():
 
 @app.route('/waterbody/conus_image/')
 def get_conus_image():
+
+    logger.info("HEADERS: {}".format(request.headers))
+
     t0 = time.time()
     args = request.args
     current_date = datetime.datetime.now()
