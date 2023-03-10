@@ -37,6 +37,7 @@ RUN conda env update -n=$CONDA_ENV -f /src/environment.yml
 RUN conda install -n=$CONDA_ENV -c conda-forge gdal=$GDAL_VERSION -y
 RUN conda install -n=$CONDA_ENV -c conda-forge rasterio fiona
 RUN conda install -n=$CONDA_ENV -c conda-forge geopandas
+RUN conda install -n=$CONDA_ENV -c conda-forge matplotlib=3.3.4
 
 RUN activate $CONDA_ENV
 #RUN conda update conda -y
