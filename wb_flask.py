@@ -38,7 +38,6 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("cyan-waterbody")
 logger.info("CyAN Waterbody Flask App")
 
-# cors = CORS(app, expose_headers=["Content-Disposition"])
 
 celery_handler = CeleryHandler()
 
@@ -53,7 +52,7 @@ def get_data():
 
     logger.info("HEADERS: {}".format(request.headers))
 
-    
+
     t0 = time.time()
     args = request.args
     if "OBJECTID" in args:
