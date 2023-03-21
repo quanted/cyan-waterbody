@@ -92,11 +92,13 @@ class WaterbodyBatch:
 
 	def _make_aggregation_request(self, year: int, day: int, daily: bool):
 		url = self.host_domain + self.aggregation_endpoint
+		print("Aggregation request URL: {}".format(url))
 		response = requests.get(url, params={"year": year, "day": day, "daily": daily}, timeout=60)
 		return self._validate_response(response, year, day, daily)
 
 	def _make_status_request(self, year: int, day: int, daily: bool):
 		url = self.host_domain + self.status_endpoint
+		print("Status request URL: {}".format(url))
 		response = requests.get(url, params={"year": year, "day": day, "daily": daily}, timeout=60)
 		return json.loads(self._validate_response(response, year, day, daily).content)
 
@@ -169,14 +171,18 @@ class WaterbodyBatch:
 		years = [i for i in range(self.start_year, self.end_year + 1)]
 		print("Years for aggregation: {}".format(years))
 
-		days = [i for i in range(self.start_day, self.end_day + 1)]
-		print("Days for aggregation: {}".format(days))
+		days = []
+		if self.data_type == "daily":
+			days = [i for i in range(self.start_day, self.end_day + 1)]
+			daily = True
+		else:
+			days = [i for i in range(self.start_day, self.end_day + 1, 7)]
+			daily = False
 
-		daily = True
+		print("Days for aggregation: {}".format(days))
+		
 		if not self.data_type in self.data_type_options:
 			raise Exception("Data type must be one of the following: {}".format(self.data_type_options))
-		elif self.data_type != "daily":
-			daily = False
 
 		for year in years:
 			for day in days:
