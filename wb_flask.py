@@ -116,17 +116,22 @@ def get_data():
 def get_all_data():
     t0 = time.time()
     args = request.args
-    if "OBJECTID" in args:
-        objectid = args["OBJECTID"]
-    elif "objectid" in args:
-        objectid = args["objectid"]
-    else:
-        return "Missing required waterbody objectid parameter 'OBJECTID'", 200
+    try:
+        if "OBJECTID" in args:
+            objectid = int(args["OBJECTID"])
+        elif "objectid" in args:
+            objectid = int(args["objectid"])
+        else:
+            return "Missing required waterbody objectid parameter 'OBJECTID'", 200
+    except Exception as e:
+        logging.error("data_download exception: {}".format(e))
+        return "Unable to validate waterbody objectid parameter 'OBJECTID'", 200
+
     daily = True
     if "daily" in args:
         daily = (args["daily"] == "True")
 
-    data = get_waterbody_data(objectid=objectid, daily=daily)
+    data = get_waterbody_data(objectid=str(objectid), daily=daily)
     if len(data) == 0:
         return f"No data found for objectid: {objectid}", 200
     _data_df = []
