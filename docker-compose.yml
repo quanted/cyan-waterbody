@@ -6,7 +6,6 @@ services:
     restart: unless-stopped
     container_name: wb-flask
     image: ${WB_API_IMAGE:-ghcr.io/quanted/wb-api:gdit-dev}
-    build: .
     ports:
       - "8085:8080"
     volumes:
@@ -19,7 +18,7 @@ services:
       - ./static/outputs:/src/static/outputs
       - ./static/raster_plots:/src/static/raster_plots
       - ./static/temp:/src/static/temp
-      - .:/src
+      # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
       - WATERBODY_DB=/mnts/database
@@ -51,7 +50,7 @@ services:
       - ./static/outputs:/src/static/outputs
       - ./static/raster_plots:/src/static/raster_plots
       - ./static/temp:/src/static/temp
-      - .:/src
+      # - .:/src
     environment:
       - IMAGE_DIR=/mnts/images
       - WATERBODY_DB=/mnts/database
