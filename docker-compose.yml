@@ -73,3 +73,10 @@ services:
     image: ${WB_REDIS_IMAGE:-ghcr.io/quanted/wb-redis:gdit-dev}
     expose:
       - "6379"
+
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566-4583:4566-4583"
+    volumes: 
+      - ./init-s3-bucket.sh:/etc/localstack/init/ready.d/init-s3-bucket.sh
