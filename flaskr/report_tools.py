@@ -23,13 +23,17 @@ def upload_report(file_path, directory_path, object_name):
     """
     # AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
     # AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
-    base_url = os.getenv("S3_BASE_URL", BASE_URL)
-    bucket_name = os.getenv("S3_BUCKET_NAME", BUCKET_NAME)
+    # base_url = os.getenv("S3_BASE_URL", BASE_URL)
+    # bucket_name = os.getenv("S3_BUCKET_NAME", BUCKET_NAME)
+    base_url = os.getenv("S3_BASE_URL")
+    bucket_name = os.getenv("S3_BUCKET_NAME")
 
     s3_client = boto3.client(
-        's3',
-        # aws_access_key_id=AWS_ACCESS_KEY,
-        # aws_secret_access_key=AWS_SECRET_KEY
+        service_name='s3',
+        region_name=os.getenv("AWS_DEFAULT_REGION"),
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_KEY"),
+        endpoint_url=base_url
     )
     try:
         response = s3_client.upload_file(
