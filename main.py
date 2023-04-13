@@ -10,6 +10,7 @@ from flaskr.aggregate import aggregate, retry_failed, p_aggregate, generate_conu
 from flaskr.report import generate_state_reports, generate_alpinelake_report
 import logging
 import datetime
+from celery_tasks import CeleryHandler
 
 
 logging.basicConfig(level=logging.INFO)
@@ -132,7 +133,10 @@ if __name__ == "__main__":
         if args.year is None or args.day is None:
             print("Generating state reports requires the year and day parameters.")
             exit()
-        generate_state_reports(year=int(args.year), day=int(args.day), parallel=True)
+        
+        ch = CeleryHandler()
+        ch.run_monthly_state_report(year=int(args.year), day=int(args.day), parallel=False)
+
     elif args.generate_alpine_lake_report:
         if args.year is None or args.day is None:
             print("Generating alpine lake report requires the year and day parameters.")

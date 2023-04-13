@@ -55,6 +55,11 @@ def generate_report(self, request_obj):
 
 
 @celery_instance.task(bind=True)
+def run_generate_state_reports(self, request_obj):
+    report.generate_state_reports(**request_obj)
+
+
+@celery_instance.task(bind=True)
 def test_celery(*args):
     logging.warning("Testing celery: {}".format(args))
     sleep(5)
@@ -98,6 +103,16 @@ class CeleryHandler:
             args=[request_obj], queue="celery", task_id=task_id
         )
         return celery_job
+
+    def run_monthly_state_report(self, request_obj):
+        """
+        Runs report generation for states.
+        """
+        celery_job = run_generate_state_reports.apply_async(
+            args=[request_obj], queue="celery"
+        )
+        return celery_job
+
 
     def check_celery_job_status(self, report_id):
         """
