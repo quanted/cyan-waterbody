@@ -76,7 +76,7 @@ services:
 
   localstack:
     image: localstack/localstack:latest
-    ports:
-      - "4566-4583:4566-4583"
+    expose:
+      - "4566"
     volumes: 
       - ./init-s3-bucket.sh:/etc/localstack/init/ready.d/init-s3-bucket.sh
