@@ -11,7 +11,7 @@ import json
 import requests
 
 from flaskr import report
-from main import async_aggregate
+from flaskr import aggregate  # NOTE: moved async_aggregate to aggregate module
 
 
 
@@ -55,8 +55,13 @@ def generate_report(self, request_obj):
 
 
 @celery_instance.task(bind=True)
-def run_generate_state_reports(self, request_obj):
-    report.generate_state_reports(**request_obj)
+def run_generate_state_reports(self, year: int, day: int, parallel: bool = False):
+    report.generate_state_reports(year, day, parallel)
+
+
+@celery_instance.task(bind=True)
+def run_generate_alpinelake_report(self, year: int, day: int, parallel: bool = False):
+    report.generate_alpinelake_report(year, day, parallel)
 
 
 @celery_instance.task(bind=True)
@@ -69,7 +74,7 @@ def test_celery(*args):
 
 @celery_instance.task(bind=True)
 def run_aggregation(self, year, day, daily):
-    async_aggregate(year, day, daily)
+    aggregate.async_aggregate(year, day, daily)
 
 
 class CeleryHandler:
@@ -104,15 +109,23 @@ class CeleryHandler:
         )
         return celery_job
 
-    def run_monthly_state_report(self, request_obj):
+    def start_state_reports(self, year: int, day: int, parallel: bool = False):
         """
         Runs report generation for states.
         """
         celery_job = run_generate_state_reports.apply_async(
-            args=[request_obj], queue="celery"
+            args=[year, day, parallel], queue="celery"
         )
         return celery_job
 
+    def start_alpine_reports(self, year: int, day: int, parallel: bool = False):
+        """
+        Runs report generation for alpine lakes.
+        """
+        celery_job = run_generate_alpinelake_report.apply_async(
+            args=[year, day, parallel], queue="celery"
+        )
+        return celery_job
 
     def check_celery_job_status(self, report_id):
         """

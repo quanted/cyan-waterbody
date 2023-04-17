@@ -328,3 +328,31 @@ def get_conus_file(year: int, day: int, daily: bool, tries: int = 14):
         else:
             new_day = day - 1
         return get_conus_file(new_year, new_day, daily, tries-1)
+
+
+def async_aggregate(year: int, day: int, daily: bool):
+    logger.info("Executing async waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
+    t0 = time.time()
+    try:
+        completed = False
+        offset = None
+        while not completed:
+            if PARALLEL:
+                data, offset, completed = p_aggregate(year, day, daily, offset=offset)
+            else:
+                data, offset, completed = aggregate(year, day, daily, offset=offset)
+            save_data(year, day, data=data, daily=daily)
+        logger.info("Completed processing waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
+    except Exception as e:
+        logger.critical("ERROR processing data for waterbody aggregation. Message: {}".format(e))
+    t1 = time.time()
+    logger.info(f"Completed waterbody {'daily' if daily else 'weekly'} aggregation for year: {year}, day: {day}, runtime: {round(t1 - t0, 4)} sec")
+    generate_conus_image(day=int(day), year=int(year), daily=daily)
+    t2 = time.time()
+    logger.info(f"Completed generating conus {'daily' if daily else 'weekly'} image for year: {year}, day: {day}, runtime: {round(t2 - t1, 4)} sec")
+
+
+def async_retry():
+    retry_failed()
+    retry_failed(daily=False)
+    logger.info("Completed retry failed aggregations.")

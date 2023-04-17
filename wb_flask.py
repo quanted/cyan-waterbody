@@ -8,12 +8,11 @@ from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, 
     check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, \
     get_waterbody_by_fids, get_elevation, get_wb_reports
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties, get_waterbody_byID
-from flaskr.aggregate import get_waterbody_raster, get_conus_file
+from flaskr.aggregate import get_waterbody_raster, get_conus_file, async_aggregate, async_retry
 from flaskr.report import generate_report, get_report_path
 from flaskr.utils import convert_cc, convert_dn
 from flaskr.metrics import calculate_metrics
 from flask_cors import CORS
-from main import async_aggregate, async_retry
 from PIL import Image, ImageCms
 from io import BytesIO
 import pandas as pd
@@ -26,8 +25,6 @@ import time
 import base64
 import rasterio
 from rasterio.io import MemoryFile
-
-
 
 from celery_tasks import CeleryHandler
 
@@ -467,6 +464,7 @@ def get_report():
     objectids = None
     year = None
     day = None
+
     missing = []
     if "county" in args:
         county = list(int(county) for county in args["county"].split(","))
@@ -475,6 +473,7 @@ def get_report():
     if "objectids" in args:
         objectids = list(int(objectid) for objectid in args["objectids"].split(","))
         # objectids = list(args["objectids"].split(","))
+
     if not any([county, tribes, objectids]):
         missing.append("Missing required spatial area of interest. Options include: county, tribe or objectids")
     if "year" in args:
