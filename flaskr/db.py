@@ -777,8 +777,8 @@ def set_wb_report_file(state, year, month, upload_date, file_url, status):
                            ")"
         cur.execute(add_column_query)
         conn.commit()
-    except Exception:
-        print("Waterbody database already has the report table")
+    except Exception as e:
+        print("Waterbody database already has the report table. Exception: {}".format(e))
 
     query = "INSERT INTO WaterbodyReport (state, year, month, upload_date, file_url, status) VALUES (?,?,?,?,?,?)"
     values = (state, year, month, upload_date, file_url, status)
