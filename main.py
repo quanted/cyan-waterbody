@@ -105,7 +105,7 @@ if __name__ == "__main__":
             print("Generating state reports requires the year and day parameters.")
             exit()
         ch = CeleryHandler()
-        ch.start_state_reports(year=int(args.year), day=int(args.day), parallel=False)
+        ch.start_state_reports(year=int(args.year), day=int(args.day), parallel=True)
     elif args.generate_alpine_lake_report:
         if args.year is None or args.day is None:
             print("Generating alpine lake report requires the year and day parameters.")

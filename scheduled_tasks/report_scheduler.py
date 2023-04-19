@@ -59,8 +59,9 @@ class ReportScheduler:
 		print("Generating reports for the previous month: {}".format(prev_month_date))
 
 		year = prev_month_date.year
-		day = current_date.timetuple().tm_yday  # day of year
+		first_day_date = prev_month_date.replace(day=1)  # date of first day of previous month
+		day = first_day_date.timetuple().tm_yday  # day of year
 
 		self.run_scheduled_state_reports(year, day, False)  # runs state report on celery worker
 
-		self.run_scheduled_alpinelake_report(year, day, False)  # runs alpine lake report on celery worker
+		# self.run_scheduled_alpinelake_report(year, day, False)  # runs alpine lake report on celery worker
