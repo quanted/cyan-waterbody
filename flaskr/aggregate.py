@@ -22,6 +22,8 @@ logger = logging.getLogger("cyan-waterbody")
 
 N_LIMIT = 2000      # Set the chunk size for slipping up the features for aggregation, reduces memory requirements
 
+PARALLEL = True
+
 
 def aggregate(year: int, day: int, daily: bool = True, objectid: str = None, offset: int = None):
     """
