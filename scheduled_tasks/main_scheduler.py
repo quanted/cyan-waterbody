@@ -28,21 +28,42 @@ class MainScheduler:
 		"""
 		Aggregation tasks for daily and weekly data.
 		"""
+		# Test job (runs daily every minute)
 		# self.scheduler.add_job(self.aggregation_tasks.scheduled_aggregation, trigger="cron", args=["daily"], minute="*")  # testing job
+
+		# Runs daily aggregation 2x/day:
 		self.scheduler.add_job(
 			self.aggregation_tasks.scheduled_aggregation,
 			trigger="cron",
 			args=["daily"],
-			hour="*/4",
+			hour="9",
 			minute="30"
-		)  # every 4 hours at minute 30
+		)  # every day at 5:30am EST (9:30am UTC)
+		self.scheduler.add_job(
+			self.aggregation_tasks.scheduled_aggregation,
+			trigger="cron",
+			args=["daily"],
+			hour="23",
+			minute="30"
+		)  # every day at 7:30pm EST (11:30pm UTC)
+
+		# Runs weekly aggregation Sunday evening and Monday morning.
 		self.scheduler.add_job(
 			self.aggregation_tasks.scheduled_aggregation,
 			trigger="cron",
 			args=["weekly"],
-			hour="*/8",
-			minute="0"
-		)  # every 8 hours
+			hour="22",
+			minute="30",
+			day_of_week="sun"
+		)  # every sunday evening at 6:30pm EST (10:30pm UTC)
+		self.scheduler.add_job(
+			self.aggregation_tasks.scheduled_aggregation,
+			trigger="cron",
+			args=["weekly"],
+			hour="8",
+			minute="0",
+			day_of_week="mon"
+		)  # every Monday morning at 4:00am EST (8:00am UTC)
 
 	def add_report_tasks(self):
 		"""
