@@ -13,30 +13,11 @@ import dateutil.relativedelta
 from celery_tasks import CeleryHandler
 
 
-class ReportScheduler:
+class ReportTasks:
 
 	def __init__(self):
 		self.celery_handler = CeleryHandler()
 		self.scheduler = None
-		self.start_scheduler()
-
-	def start_scheduler(self):
-
-		# TODO: Create a scheduled task that runs first day of every month that
-		# generates reports for the previous month.
-
-		self.scheduler = BackgroundScheduler(daemon=True, timezone=utc)
-		# self.scheduler.add_job(self.execute_scheduled_reports, trigger="cron", minute="*")  # testing job
-		self.scheduler.add_job(self.execute_scheduled_reports, trigger="cron",
-			second=0,
-			minute=15,
-			hour=4,
-			day=1,
-			month="*",
-			year="*",
-			day_of_week="*"
-		)  # Executes 4:15AM (UTC) on 1st day of every month of every year on any day of the week
-		self.scheduler.start()
 
 	def run_scheduled_state_reports(self, year, day, parallel):
 		logging.info("Running scheduled state reports.")
