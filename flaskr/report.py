@@ -294,7 +294,7 @@ def generate_report(
             logging.info("Removing file from disk: {}".format(report_path))
             os.remove(report_path)
         logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
-    if group_type == "Alpine":
+    if group_type == "Alpine Lakes":
         upload_status, upload_url = upload_report(file_path=report_path,
                                                   directory_path=f"alpine/{report_date.year}/"
                                                                  f"{report_date.month}",
