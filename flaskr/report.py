@@ -306,7 +306,7 @@ def generate_report(
         if upload_status:
             logging.info("Removing file from disk: {}".format(report_path))
             os.remove(report_path)
-        logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
+        logging.info(f"Completed report, report_id: {report_id}, state: alpine, runtime: {round(t1 - t0, 4)} secs")
     else:
         logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
 
