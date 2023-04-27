@@ -783,6 +783,7 @@ def set_wb_report_file(state, year, month, upload_date, file_url, status):
     query = "INSERT INTO WaterbodyReport (state, year, month, upload_date, file_url, status) VALUES (?,?,?,?,?,?)"
     values = (state, year, month, upload_date, file_url, status)
     cur.execute(query, values)
+    conn.commit()
     conn.close()
 
 
