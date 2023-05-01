@@ -3,13 +3,14 @@ import numpy as np
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from flask import Flask, request, send_file, make_response, send_from_directory, g
+from flask import Flask, request, send_file, make_response, send_from_directory, g, Response
 from flaskr.db import get_waterbody_data, get_waterbody_bypoint, get_waterbody, check_status, check_overall_status, \
     check_images, get_all_states, get_all_state_counties, get_all_tribes, get_waterbody_bounds, get_waterbody_fid, \
     get_waterbody_by_fids, get_elevation, get_wb_reports
 from flaskr.geometry import get_waterbody_byname, get_waterbody_properties, get_waterbody_byID
 from flaskr.aggregate import get_waterbody_raster, get_conus_file, async_aggregate, async_retry
 from flaskr.report import generate_report, get_report_path
+from flaskr.report_tools import get_monthly_report_by_date
 from flaskr.utils import convert_cc, convert_dn
 from flaskr.metrics import calculate_metrics
 from flask_cors import CORS
@@ -614,6 +615,51 @@ def get_waterbody_reports_data():
         return "Missing required state argument, using STUSPS value or Alpine"
     results = get_wb_reports(state=state)
     return {"state": state, "reports": results}, 200
+
+
+@app.route('/waterbody/report/monthly')
+def get_monthly_report():
+    """
+    Returns existing monthly state or alpine report
+    from bucket.
+    """
+    args = request.args
+    state = None
+    year = None
+    month = None
+    if "state" in args:
+        state = str(args["state"])
+    else:
+        return "Missing required state argument, using STUSPS value or Alpine"
+    if "year" in args:
+        year = int(args["year"])
+    else:
+        return "Missing required year argument"
+    if "month" in args:
+        month = int(args["month"])
+    else:
+        return "Missing required month argument"
+
+    try:
+        report_name, report_obj = get_monthly_report_by_date(state, year, month)
+
+        if not report_name or not report_obj:
+            return "Could not find report for {}, year={}, day={}".format(state, year, day), 404
+
+        response = Response(
+            report_obj["Body"].read(),
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={report_name}"}
+        )
+
+        return response
+
+    except Exception as e:
+        logger.warning("Exception getting report: {}".format(e))
+        return "Error getting report", 400
+
+
+
 
 
 @app.route('/celery')

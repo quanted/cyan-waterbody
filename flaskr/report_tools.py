@@ -61,7 +61,7 @@ def get_reports_list():
     return bucket_objects.get("Contents")
 
 
-def get_report(report_type: str, year: int, month: int, state: str = None):
+def get_monthly_report_by_date(state: str, year: int, month: int):
     """
     Returns a specific report from the s3 bucket based on its ID.
 
@@ -71,31 +71,53 @@ def get_report(report_type: str, year: int, month: int, state: str = None):
         * bucket name: CyAN-waterbody-report-alpine_{year}-{day}.pdf
     """
     directory_path = None
-    
-    if not report_type in ["state", "alpine"]:
-        raise Exception("Report type must be 'state' or 'alpine'")
-    if not len(state) == 2 or not state.isalpha():
-        raise Exception("'state' must be 2 characters.")
-    if not len(year) == 4:
+
+    if state != "alpine" and not len(state) == 2 or not state.isalpha():
+        raise Exception("'state' must be 2 characters or 'alpine'.")
+    if not len(str(year)) == 4:
         raise Exception("'year' must be 4 digits.")
-    if len(month) > 2 or len(month) < 1:
+    if len(str(month)) > 2 or len(str(month)) < 1:
         raise Exception("'month' must be 1 or 2 digits.")
-    
-    if report_type == "state":
-        key_name = f"state/{state}/{year}/{month}/CyAN-waterbody-report-{state}_{year}-{day}.pdf"
-    elif report_type == "alpine":
-        key_name = f"alpine/{year}/{month}/CyAN-waterbody-report-alpine_{year}-{day}.pdf"
+
+    if state == "state":
+        filename = f"CyAN-waterbody-report-{state}_{year}-{month}.pdf"
+        key_name = f"{state}/{year}/{month}/{filename}"
+    elif state == "alpine":
+        filename = f"CyAN-waterbody-report-alpine_{year}-{month}.pdf"
+        key_name = f"alpine/{year}/{month}/{filename}"
 
     # Example bucket Key: "Key": "state/some_state/2034/03/cyanwb_report_f4664adf-14fc-49c6-abde-527eb75af465.pdf"
 
     s3_client = connect_to_bucket()
 
     try:
-        s3_object = s3_client.get_object(bucket=BUCKET_NAME, Key=key_name)
-        return s3_object
+        s3_object = s3_client.get_object(Bucket=BUCKET_NAME, Key=key_name)
+        return filename, s3_object
     except Exception as e:
         logging.error("Could not find object: {}, exception: {}".format(key_name, e))
-        return
+        return None, None
+
+def create_presigned_url(state: str, year: int, month: int):
+    """
+    Creates temporary url to s3 bucket object.
+    """
+    if state != "alpine" and not len(state) == 2 or not state.isalpha():
+        raise Exception("'state' must be 2 characters or 'alpine'.")
+    if not len(str(year)) == 4:
+        raise Exception("'year' must be 4 digits.")
+    if len(str(month)) > 2 or len(str(month)) < 1:
+        raise Exception("'month' must be 1 or 2 digits.")
+
+    if state == "state":
+        key_name = f"{state}/{year}/{month}/CyAN-waterbody-report-{state}_{year}-{month}.pdf"
+    elif state == "alpine":
+        key_name = f"alpine/{year}/{month}/CyAN-waterbody-report-alpine_{year}-{month}.pdf"
+
+    s3_client = connect_to_bucket()
+    url = s3_client.generate_presigned_url('get_object',
+                                    Params={"Bucket": BUCKET_NAME, "Key": key_name},
+                                    ExpiresIn=15);
+    return url
 
 
 def upload_test():
@@ -131,3 +153,8 @@ def upload_test():
 #                                                  f"{report_date.month}",
 #                                   object_name=f"CyAN-waterbody-report-alpine_{year}-{day}.pdf"
 #                                   )
+
+# Manual testing:
+# import flaskr.report_tools as rt
+# rt.upload_report("outputs/cyano-report_TX_2023-3.pdf", "state/TX/2023/3", "CyAN-waterbody-report-TX_2023-3.pdf")
+# (True, 'http://localstack:4566/wb-dev-local/state/TX/2023/3/CyAN-waterbody-report-TX_2023-3.pdf')
