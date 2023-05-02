@@ -47,10 +47,6 @@ def status_check():
 
 @app.route('/waterbody/data/')
 def get_data():
-
-    logger.info("HEADERS: {}".format(request.headers))
-
-
     t0 = time.time()
     args = request.args
     if "OBJECTID" in args:
@@ -325,9 +321,6 @@ def get_image():
 
 @app.route('/waterbody/conus_image/')
 def get_conus_image():
-
-    logger.info("HEADERS: {}".format(request.headers))
-
     t0 = time.time()
     args = request.args
     current_date = datetime.datetime.now()
@@ -617,7 +610,7 @@ def get_waterbody_reports_data():
     return {"state": state, "reports": results}, 200
 
 
-@app.route('/waterbody/report/monthly')
+@app.route('/waterbody/report/monthly/')
 def get_monthly_report():
     """
     Returns existing monthly state or alpine report
@@ -657,9 +650,6 @@ def get_monthly_report():
     except Exception as e:
         logger.warning("Exception getting report: {}".format(e))
         return "Error getting report", 400
-
-
-
 
 
 @app.route('/celery')
