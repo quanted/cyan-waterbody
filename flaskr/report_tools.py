@@ -79,12 +79,13 @@ def get_monthly_report_by_date(state: str, year: int, month: int):
     if len(str(month)) > 2 or len(str(month)) < 1:
         raise Exception("'month' must be 1 or 2 digits.")
 
-    if state == "state":
-        filename = f"CyAN-waterbody-report-{state}_{year}-{month}.pdf"
-        key_name = f"{state}/{year}/{month}/{filename}"
-    elif state == "alpine":
+    if state == "alpine":
         filename = f"CyAN-waterbody-report-alpine_{year}-{month}.pdf"
         key_name = f"alpine/{year}/{month}/{filename}"
+    else:
+        filename = f"CyAN-waterbody-report-{state}_{year}-{month}.pdf"
+        key_name = f"{state}/{year}/{month}/{filename}"
+        
 
     # Example bucket Key: "Key": "state/some_state/2034/03/cyanwb_report_f4664adf-14fc-49c6-abde-527eb75af465.pdf"
 
