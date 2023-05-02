@@ -637,7 +637,7 @@ def get_monthly_report():
         report_name, report_obj = get_monthly_report_by_date(state, year, month)
 
         if not report_name or not report_obj:
-            return "Could not find report for {}, year={}, day={}".format(state, year, day), 404
+            return "Could not find report for {}, year={}, month={}".format(state, year, month), 404
 
         response = Response(
             report_obj["Body"].read(),
