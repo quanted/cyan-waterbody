@@ -47,23 +47,21 @@ class MainScheduler:
 			minute="30"
 		)  # every day at 7:30pm EST (11:30pm UTC)
 
-		# Runs weekly aggregation Sunday evening and Monday morning.
+		# Runs weekly aggregation every evening:
 		self.scheduler.add_job(
 			self.aggregation_tasks.scheduled_aggregation,
 			trigger="cron",
 			args=["weekly"],
 			hour="22",
-			minute="30",
-			day_of_week="sun"
-		)  # every sunday evening at 6:30pm EST (10:30pm UTC)
-		self.scheduler.add_job(
-			self.aggregation_tasks.scheduled_aggregation,
-			trigger="cron",
-			args=["weekly"],
-			hour="8",
-			minute="0",
-			day_of_week="mon"
-		)  # every Monday morning at 4:00am EST (8:00am UTC)
+			minute="30"
+		)  # every evening at 6:30pm EST (10:30pm UTC)
+		# self.scheduler.add_job(
+		# 	self.aggregation_tasks.scheduled_aggregation,
+		# 	trigger="cron",
+		# 	args=["weekly"],
+		# 	hour="8",
+		# 	minute="0"
+		# )  # every morning at 4:00am EST (8:00am UTC)
 
 	def add_report_tasks(self):
 		"""
