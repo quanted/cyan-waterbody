@@ -1,11 +1,18 @@
 stages:
   - Image Copy
 
+
 include:
   - project: 'DSO/DASTScanner'
     file: '.gitlab-ci.yml'
   - remote: 'https://gitlab.com/prismacloud-public/shift-left/extension/-/raw/master/.pcs.gitlab-ci.yml'
+
+
+variables:
+  wb_api_tag: image-test-61c4ad9b5d5c63d58ccdd92a87ca914f8d842f2e  # GHCR tag
+  wb_redis_tag: gdit-dev
   
+
 CopyDevImages:
   stage: Image Copy
   tags:
@@ -16,5 +23,5 @@ CopyDevImages:
     entrypoint: [ "" ]
   script:
     - crane auth login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - crane copy "ghcr.io/quanted/wb-api:${WB_API_IMAGE_TAG:-gdit-dev}" "$CI_REGISTRY_IMAGE/wb-api:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
-    - crane copy "ghcr.io/quanted/wb-redis:${WB_REDIS_IMAGE_TAG:-gdit-dev}" "$CI_REGISTRY_IMAGE/wb-redis:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    - crane copy "ghcr.io/quanted/wb-api:$wb_api_tag" "$CI_REGISTRY_IMAGE/wb-api:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    - crane copy "ghcr.io/quanted/wb-redis:$wb_redis_tag" "$CI_REGISTRY_IMAGE/wb-redis:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"

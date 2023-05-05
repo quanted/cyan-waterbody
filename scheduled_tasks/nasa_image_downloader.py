@@ -48,7 +48,8 @@ class NasaImageDownloads:
         }
         self.image_path = os.getenv("NASA_IMAGE_PATH", PROJECT_ROOT) if output_path is None else output_path
         self.creds_file = creds_file
-
+        self.max_retries = 2
+        self.retries = 0
         self.period = None
         self.previous_daily = None
         self.previous_weekly = None
@@ -130,15 +131,57 @@ class NasaImageDownloads:
 
             username, password = self._load_creds()
 
-            subprocess.run([
+            self.retries = 0
+            result = self.make_wget_request(image_url)
+
+            time.sleep(self.request_delay)
+
+    def make_wget_request(self, image_url):
+        """
+        Executes wget with subprocess library.
+        """
+        username, password = self._load_creds()
+        result =  subprocess.run(
+            [
                 "wget",
+                "--server-response",
                 "--user", username,
                 "--password", password,
                 "--auth-no-challenge", "on",
                 "--directory-prefix", self.image_path,
                 image_url
-            ])
-            time.sleep(self.request_delay)
+            ], 
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+
+        valid_response = self.check_response_headers(result)
+
+        if not valid_response and self.retries < self.max_retries:
+            self.retries += 1
+            logging.info("Retrying request for {}.\nAttempt #{}".format(image_url, self.retries))
+            self.make_wget_request(image_url)
+        else:
+            return result
+
+
+    def check_response_headers(self, result):
+        """
+        Checks response headers from subprocess wget stdout.
+        """
+        status = None
+        for line in result.stdout.split("\n"):
+            if line.strip().startswith("HTTP/"):
+                status = line.split()[1]
+                break
+
+        logging.info("Status code: {}".format(status))
+
+        if status == 200:
+            return True
+        else:
+            return False
 
     def main(self, period, start_date=None, end_date=None):
         """

@@ -11,9 +11,11 @@ import json
 import requests
 
 from flaskr import report
-from main import async_aggregate
+from flaskr import aggregate  # NOTE: moved async_aggregate to aggregate module
+from scheduled_tasks.notifications import Notifications
 
 
+notify = Notifications()
 
 redis_hostname = os.environ.get("REDIS_HOSTNAME", "localhost")
 redis_port = os.environ.get("REDIS_PORT", 6379)
@@ -55,6 +57,43 @@ def generate_report(self, request_obj):
 
 
 @celery_instance.task(bind=True)
+def run_generate_state_reports(self, year: int, day: int, parallel: bool = False):
+    report_status = {
+        "year": year,
+        "day": day,
+        "type": "state",
+        "status": ""
+    }
+    try:
+        report.generate_state_reports(year, day, parallel)
+        report_status["status"] = "State reports generated for year {}, day {}.".format(year, day)
+    except Exception as e:
+        logging.critical("Error generating state reports: {}".format(e))
+        report_status["status"] = "Error generating state reports for year {}, day {}.".format(year, day)
+    
+    notify.send_monthly_report_status_email(report_status)
+
+
+
+@celery_instance.task(bind=True)
+def run_generate_alpinelake_report(self, year: int, day: int, parallel: bool = False):
+    report_status = {
+        "year": year,
+        "day": day,
+        "type": "alpine",
+        "status": ""
+    }
+    try:
+        report.generate_alpinelake_report(year, day, parallel)
+        report_status["status"] = "Alpine lake report generated for year {}, day {}.".format(year, day)
+    except Exception as e:
+        logging.critical("Error generating alpine lake report: {}".format(e))
+        report_status["status"] = "Error generating alpine lake report for year {}, day {}.".format(year, day)
+
+    notify.send_monthly_report_status_email(report_status)
+
+
+@celery_instance.task(bind=True)
 def test_celery(*args):
     logging.warning("Testing celery: {}".format(args))
     sleep(5)
@@ -64,7 +103,15 @@ def test_celery(*args):
 
 @celery_instance.task(bind=True)
 def run_aggregation(self, year, day, daily):
-    async_aggregate(year, day, daily)
+    """
+    agg_status = {
+        "aggregation": "", <- status of aggregation
+        "conus": "" <- status of conus image generation
+    }
+    """
+    agg_status = aggregate.async_aggregate(year, day, daily)
+    notify.send_aggregation_status_email(agg_status)
+
 
 
 class CeleryHandler:
@@ -96,6 +143,24 @@ class CeleryHandler:
         # Runs job on celery worker:
         celery_job = generate_report.apply_async(
             args=[request_obj], queue="celery", task_id=task_id
+        )
+        return celery_job
+
+    def start_state_reports(self, year: int, day: int, parallel: bool = False):
+        """
+        Runs report generation for states.
+        """
+        celery_job = run_generate_state_reports.apply_async(
+            args=[year, day, parallel], queue="celery"
+        )
+        return celery_job
+
+    def start_alpine_reports(self, year: int, day: int, parallel: bool = False):
+        """
+        Runs report generation for alpine lakes.
+        """
+        celery_job = run_generate_alpinelake_report.apply_async(
+            args=[year, day, parallel], queue="celery"
         )
         return celery_job
 

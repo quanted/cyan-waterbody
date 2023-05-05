@@ -291,9 +291,10 @@ def generate_report(
         set_wb_report_file(state=states[0], year=report_date.year, month=report_date.month,
                            upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
         if upload_status:
+            logging.info("Removing file from disk: {}".format(report_path))
             os.remove(report_path)
         logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
-    if group_type == "Alpine":
+    if group_type == "Alpine Lakes":
         upload_status, upload_url = upload_report(file_path=report_path,
                                                   directory_path=f"alpine/{report_date.year}/"
                                                                  f"{report_date.month}",
@@ -303,8 +304,9 @@ def generate_report(
         set_wb_report_file(state="alpine", year=report_date.year, month=report_date.month,
                            upload_date=str(datetime.today()), file_url=upload_url, status=upload_status)
         if upload_status:
+            logging.info("Removing file from disk: {}".format(report_path))
             os.remove(report_path)
-        logging.info(f"Completed report, report_id: {report_id}, state: {states[0]}, runtime: {round(t1 - t0, 4)} secs")
+        logging.info(f"Completed report, report_id: {report_id}, state: alpine, runtime: {round(t1 - t0, 4)} secs")
     else:
         logging.info(f"Completed report, report_id: {report_id}, runtime: {round(t1 - t0, 4)} secs")
 
@@ -1161,7 +1163,7 @@ def generate_alpinelake_report(year: int, day: int, parallel: bool = True):
     t0 = time.time()
     generate_report(year=year, day=day, alpine=True, parallel=parallel)
     t1 = time.time()
-    print(f"Completed all state reports, runtime: {t1 - t0} sec")
+    print(f"Completed all alpine lake reports, runtime: {t1 - t0} sec")
     return
 
 

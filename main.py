@@ -7,9 +7,9 @@ import time
 from flaskr.db import p_set_geometry_tiles, set_geometry_tiles, save_data, get_waterbody_data, set_tile_bounds, set_waterbody_details_table, export_waterbody_details_table
 from flaskr.utils import p_update_geometry_bounds, update_waterbody_fids
 from flaskr.aggregate import aggregate, retry_failed, p_aggregate, generate_conus_image
-from flaskr.report import generate_state_reports, generate_alpinelake_report
 import logging
 import datetime
+from celery_tasks import CeleryHandler
 
 
 logging.basicConfig(level=logging.INFO)
@@ -36,34 +36,6 @@ parser.add_argument('--file', type=str, help="File path for input or output depe
 parser.add_argument('--generate_conus_image', action='store_true', help='Test generating cyan image for day/year for all CONUS masking out all non-wb pixels.')
 
 PARALLEL = True
-
-
-def async_aggregate(year: int, day: int, daily: bool):
-    logger.info("Executing async waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
-    t0 = time.time()
-    try:
-        completed = False
-        offset = None
-        while not completed:
-            if PARALLEL:
-                data, offset, completed = p_aggregate(year, day, daily, offset=offset)
-            else:
-                data, offset, completed = aggregate(year, day, daily, offset=offset)
-            save_data(year, day, data=data, daily=daily)
-        logger.info("Completed processing waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
-    except Exception as e:
-        logger.critical("ERROR processing data for waterbody aggregation. Message: {}".format(e))
-    t1 = time.time()
-    logger.info(f"Completed waterbody {'daily' if daily else 'weekly'} aggregation for year: {year}, day: {day}, runtime: {round(t1 - t0, 4)} sec")
-    generate_conus_image(day=int(day), year=int(year), daily=daily)
-    t2 = time.time()
-    logger.info(f"Completed generating conus {'daily' if daily else 'weekly'} image for year: {year}, day: {day}, runtime: {round(t2 - t1, 4)} sec")
-
-
-def async_retry():
-    retry_failed()
-    retry_failed(daily=False)
-    logger.info("Completed retry failed aggregations.")
 
 
 if __name__ == "__main__":
@@ -132,12 +104,14 @@ if __name__ == "__main__":
         if args.year is None or args.day is None:
             print("Generating state reports requires the year and day parameters.")
             exit()
-        generate_state_reports(year=int(args.year), day=int(args.day), parallel=True)
+        ch = CeleryHandler()
+        ch.start_state_reports(year=int(args.year), day=int(args.day), parallel=False)
     elif args.generate_alpine_lake_report:
         if args.year is None or args.day is None:
             print("Generating alpine lake report requires the year and day parameters.")
             exit()
-        generate_alpinelake_report(year=int(args.year), day=int(args.day), parallel=True)
+        ch = CeleryHandler()
+        ch.start_alpine_reports(year=int(args.year), day=int(args.day), parallel=False)   
     elif args.generate_conus_image:
         daily = True
         year = None

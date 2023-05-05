@@ -22,6 +22,8 @@ logger = logging.getLogger("cyan-waterbody")
 
 N_LIMIT = 2000      # Set the chunk size for slipping up the features for aggregation, reduces memory requirements
 
+PARALLEL = True
+
 
 def aggregate(year: int, day: int, daily: bool = True, objectid: str = None, offset: int = None):
     """
@@ -328,3 +330,54 @@ def get_conus_file(year: int, day: int, daily: bool, tries: int = 14):
         else:
             new_day = day - 1
         return get_conus_file(new_year, new_day, daily, tries-1)
+
+
+def async_aggregate(year: int, day: int, daily: bool):
+    logger.info("Executing async waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
+    
+    agg_status = {
+        "aggregation": None,  # status of aggregation
+        "conus": None,  # status of conus image generation
+    }
+
+    t0 = time.time()
+    try:
+        completed = False
+        offset = None
+        while not completed:
+            if PARALLEL:
+                data, offset, completed = p_aggregate(year, day, daily, offset=offset)
+            else:
+                data, offset, completed = aggregate(year, day, daily, offset=offset)
+            save_data(year, day, data=data, daily=daily)
+        logger.info("Completed processing waterbody aggregation for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"))
+    except Exception as e:
+        agg_status["aggregation"] = "ERROR processing data for waterbody aggregation. Message: {}".format(e)
+        logger.critical(agg_status["aggregation"])
+        return agg_status
+    
+    t1 = time.time()
+
+    agg_status["aggregation"] = f"Completed waterbody {'daily' if daily else 'weekly'} aggregation for year: {year}, day: {day}, runtime: {round(t1 - t0, 4)} sec"
+    
+    logger.info(agg_status["aggregation"])
+
+    try:
+        generate_conus_image(day=int(day), year=int(year), daily=daily)
+    except Exception as e:
+        agg_status["conus"] = "ERROR generating {} conus image for {}-{}. Message: {}".format(daily, year, day, e)
+        logger.critical(agg_status["conus"])
+        return agg_status
+
+    t2 = time.time()
+
+    agg_status["conus"] = f"Completed generating conus {'daily' if daily else 'weekly'} image for year: {year}, day: {day}, runtime: {round(t2 - t1, 4)} sec"
+    logger.info(agg_status["conus"])
+
+    return agg_status
+
+
+def async_retry():
+    retry_failed()
+    retry_failed(daily=False)
+    logger.info("Completed retry failed aggregations.")

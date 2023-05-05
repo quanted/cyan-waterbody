@@ -11,7 +11,7 @@ services:
     volumes:
       - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
       # - ./cyan_rare/mounts/images:/mnts/images
-      # - ../EPA-Cyano/images:/mnts/images
+      # - ../EPA-Cyano/missing_images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - ./outputs:/src/outputs
@@ -36,14 +36,14 @@ services:
     restart: unless-stopped
     container_name: wb-celery
     image: ${WB_API_IMAGE:-ghcr.io/quanted/wb-api:gdit-dev}
-    command: celery -A celery_worker.celery worker -P threads --loglevel=INFO -c 1
+    command: celery -A celery_worker.celery worker -P threads --loglevel=INFO -c 2
     depends_on:
       - wb-redis
       - wb-flask
     volumes:
       - /var/lib/docker/volumes/cyan_admin_media/_data/data:/mnts/images
       # - ./cyan_rare/mounts/images:/mnts/images
-      # - ../EPA-Cyano/images:/mnts/images
+      # - ../EPA-Cyano/missing_images:/mnts/images
       - ./cyan_rare/mounts/database:/mnts/database
       - ./cyan_rare/mounts/geometry:/mnts/geometry
       - ./outputs:/src/outputs
@@ -73,3 +73,10 @@ services:
     image: ${WB_REDIS_IMAGE:-ghcr.io/quanted/wb-redis:gdit-dev}
     expose:
       - "6379"
+
+  localstack:
+    image: localstack/localstack:latest
+    expose:
+      - "4566"
+    volumes: 
+      - ./init-s3-bucket.sh:/etc/localstack/init/ready.d/init-s3-bucket.sh

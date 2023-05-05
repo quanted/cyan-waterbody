@@ -13,7 +13,7 @@ from scheduled_tasks.nasa_image_downloader import NasaImageDownloads
 from scheduled_tasks.upload_images import AdminLogin
 
 
-class AggScheduler:
+class AggregationTasks:
 
 	def __init__(self):
 		self.scheduler = None
@@ -27,15 +27,6 @@ class AggScheduler:
 		self.image_path = os.getenv("NASA_IMAGE_PATH")  # path where images reside for WB and Cyano
 		self.nasa_image_downloader = NasaImageDownloads()
 		self.admintool = AdminLogin()
-
-		self.start_scheduler()
-
-	def start_scheduler(self):
-		self.scheduler = BackgroundScheduler(daemon=True, timezone=utc)
-		# self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["daily"], minute="*")  # testing job
-		self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["daily"], hour="*/4", minute="30")  # every 4 hours at minute 30
-		self.scheduler.add_job(self.scheduled_aggregation, trigger="cron", args=["weekly"], hour="*/8", minute="0")  # every 8 hours
-		self.scheduler.start()
 
 	def run_nasa_image_downloader(self, year, day, data_type):
 		"""
