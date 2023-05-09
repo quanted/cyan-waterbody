@@ -117,6 +117,10 @@ def get_all_data():
             objectid = int(args["objectid"])
         else:
             return "Missing required waterbody objectid parameter 'OBJECTID'", 200
+
+        if objectid < 908 or objectid > 18832137:
+            return "OBJECTID out of range", 200
+
     except Exception as e:
         logging.error("data_download exception: {}".format(e))
         return "Unable to validate waterbody objectid parameter 'OBJECTID'", 200
@@ -154,6 +158,7 @@ def get_all_data():
     response = make_response(data_csv)
     response.headers["Content-Disposition"] = f"attachment; filename={objectid}_data.csv"
     response.headers["Content-Type"] = "text/csv"
+    response.headers["X-Content-Type-Options"] = "nosniff"
     t1 = time.time()
     print(f"Waterbody Data Download Request complete, objectid: {objectid}, runtime: {round(t1-t0, 4)} sec")
     return response
@@ -379,6 +384,7 @@ def aggregate():
         error.append("Missing required day parameter 'day'")
     if len(error) > 0:
         return "; ".join(error), 200
+
     if check_images(year=year, day=day, daily=daily):
         response = celery_handler.start_aggregation(year, day, daily)
         result = "Waterbody aggregation initiated for year: {}, day: {}, {}".format(year, day, "daily" if daily else "weekly"), 200
