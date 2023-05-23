@@ -134,7 +134,8 @@ def convert_dn(dn, round=2):
         dn = np.array(dn, dtype=np.int64)
         if np.max(dn) > 255:
             print(f"DN value greater than acceptable max, dn: {np.max(dn)}")
-    cell_con = np.around(np.power(10, (3 / 250) * dn - 4.2) * 10 ** 8, round)
+    # cell_con = np.around(np.power(10, (3 / 250) * dn - 4.2) * 10 ** 8, round)
+    cell_con = np.around(np.power(10, (dn * 0.011714 - 4.1870866)))
     return cell_con
 
 
@@ -144,7 +145,8 @@ def convert_cc(cell_concentration):
     elif cell_concentration == 0:
         return 0
     else:
-        dn = round((np.log10(cell_concentration/10**8)+4.2) * (250/3))
+        # dn = round((np.log10(cell_concentration/10**8)+4.2) * (250/3))
+        dn = round((np.log10(cell_concentration/10**8)+4.1870866) * (1/0.011714))
         return dn
 
 def update_waterbody_fids():
