@@ -370,7 +370,8 @@ def p_set_geometry_tiles(year: int, day: int, objectid: int = None):
         features, crs = get_waterbody()
     images = get_images(year, day)
 
-    cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    # cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    cpus = 2
     pool = mp.Pool(cpus)
     logger.info("Running async, cores: {}".format(cpus))
 
@@ -818,7 +819,8 @@ def set_waterbody_details_table(input_file: str = None):
 
     waterbody_dict = get_waterbody_fids(return_dict=True)
 
-    cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    # cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    cpus = 2
     pool = mp.Pool(cpus)
     fid_dict = {}
     j = 500

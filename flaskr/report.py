@@ -145,7 +145,8 @@ def generate_report(
 
     cpus = 1
     if parallel:
-        cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        # cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        cpus = 2
         pool = mp.Pool(cpus)
 
     if group_type == "State":
@@ -1138,7 +1139,8 @@ def generate_state_reports(year: int, day: int, parallel: bool = True):
     # states = [["","MI"], ["","MN"], ["","ND"], ["","TX"], ["","TN"], ["","CO"]]
     if parallel:
         generate_all_wb_rasters(year=year, day=day, parallel=parallel)
-        cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        # cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        cpus = 2
         pool = mp.Pool(cpus)
         states1 = states
         results_objects = [
@@ -1170,7 +1172,8 @@ def generate_alpinelake_report(year: int, day: int, parallel: bool = True):
 def generate_all_wb_rasters(year: int, day: int, parallel: bool = True):
     objectids = get_waterbody_objectids()
     if parallel:
-        cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        # cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+        cpus = 2
         pool = mp.Pool(cpus)
         results_objects = [pool.apply_async(get_report_waterbody_raster,
                                             kwds={'year': year, 'day': day, 'report_id': "", 'objectid': oid}) for oid

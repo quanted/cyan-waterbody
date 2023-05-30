@@ -95,7 +95,8 @@ def p_update_geometry_bounds(day: int, year: int):
     cur.execute(query)
     objectids = cur.fetchall()
 
-    cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    # cpus = mp.cpu_count() - 2 if mp.cpu_count() - 2 >= 2 else mp.cpu_count()
+    cpus = 2
     pool = mp.Pool(cpus)
     logger.info("Running async, cores: {}".format(cpus))
     results = {}
