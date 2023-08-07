@@ -128,12 +128,9 @@ class NasaImageDownloads:
         logger.info("Number of images available: {}".format(len(files_list)))
         for image_url in files_list:
             logger.info("Downloading file: {}".format(image_url))
-
             username, password = self._load_creds()
-
             self.retries = 0
             result = self.make_wget_request(image_url)
-
             time.sleep(self.request_delay)
 
     def make_wget_request(self, image_url):
@@ -141,27 +138,36 @@ class NasaImageDownloads:
         Executes wget with subprocess library.
         """
         username, password = self._load_creds()
-        result =  subprocess.run(
-            [
-                "wget",
-                "--server-response",
-                "--user", username,
-                "--password", password,
-                "--auth-no-challenge", "on",
-                "--directory-prefix", self.image_path,
-                image_url
-            ], 
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True
-        )
+        try:
+            result =  subprocess.run(
+                [
+                    "wget",
+                    "--server-response",
+                    "--user", username,
+                    "--password", password,
+                    "--auth-no-challenge", "on",
+                    "--directory-prefix", self.image_path,
+                    image_url
+                ], 
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+
+        except Exception as e:
+            logging.error("Exception downloading nasa image: {}.\n{}".format(image_url, e))
+            time.sleep(self.request_delay)
+            self.retries += 1
+            this.make_wget_request(image_url)
 
         valid_response = self.check_response_headers(result)
 
         if not valid_response and self.retries < self.max_retries:
+            time.sleep(self.request_delay)
             self.retries += 1
             logging.info("Retrying request for {}.\nAttempt #{}".format(image_url, self.retries))
             self.make_wget_request(image_url)
+
         else:
             return result
 
@@ -170,11 +176,19 @@ class NasaImageDownloads:
         """
         Checks response headers from subprocess wget stdout.
         """
+        print("Result: {}".format(result))
+
         status = None
+        failed_status = None
         for line in result.stdout.split("\n"):
             if line.strip().startswith("HTTP/"):
                 status = line.split()[1]
                 break
+
+        if "timed out" in result.lower():
+            return False
+        elif "Network is unreachable" in result.lower():
+            return False
 
         logging.info("Status code: {}".format(status))
 
