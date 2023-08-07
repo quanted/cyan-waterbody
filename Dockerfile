@@ -8,7 +8,7 @@ RUN apt-get update --fix-missing
 RUN apt-get install -y wget bzip2 ca-certificates \
     libglib2.0-0 libxext6 libsm6 libxrender1 \
     python3-pip software-properties-common build-essential \
-    make sqlite3 gfortran python-dev \
+    make sqlite3 gfortran python-dev-is-python3 \
     git mercurial subversion
 
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.12.0-Linux-x86_64.sh -O ~/miniconda.sh && \
@@ -27,7 +27,7 @@ RUN apt-get install -y curl grep sed dpkg vim && \
 
 RUN apt update -y && apt install -y --fix-missing --no-install-recommends \
     python3-pip software-properties-common build-essential \
-    cmake sqlite3 gfortran python-dev
+    cmake sqlite3 gfortran python-dev-is-python3
 
 # gdal vesion restriction due to fiona not supporting gdal>2.4.3
 ARG GDAL_VERSION=3.1.4
