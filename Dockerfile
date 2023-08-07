@@ -1,4 +1,5 @@
-FROM python:3.8
+# FROM python:3.8
+FROM python:3.10.12
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH /opt/conda/bin:/opt/conda/envs/env/bin:$PATH
