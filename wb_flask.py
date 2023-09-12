@@ -128,7 +128,7 @@ def get_all_data():
             columns.append(f"CC={convert_dn(n, round=1)}")
     for d, l in data.items():
         _d = d.split(" ")
-        data_row = [datetime.datetime(year=int(_d[0]), month=1, day=1) + datetime.timedelta(days=int(_d[1])), objectid]
+        data_row = [datetime.datetime(year=int(_d[0]), month=1, day=1) + datetime.timedelta(days=int(_d[1])-1), objectid]
         data_row.extend(l)
         _data_df.append(data_row)
     data_df = pd.DataFrame(_data_df, columns=columns)
