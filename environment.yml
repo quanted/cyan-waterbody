@@ -1,8 +1,9 @@
-name: cyan-waterbody
+name: base
 channels:
   - conda-forge
   - defaults
 dependencies:
+  - python=3.10
   - rasterio=1.3.7
   - geopandas=0.13.2
   - numpy=1.25.2
@@ -20,3 +21,6 @@ dependencies:
   - APScheduler=3.10.4
   - boto3=1.28.45
   - jinja2=3.1.2
+  - uwsgi
+  - matplotlib
+  - gdal

@@ -1,65 +1,36 @@
-# FROM python:3.8
-FROM python:3.10.12
+FROM mambaorg/micromamba:1.5.1-alpine
+
+USER root
+RUN addgroup -S cyano && adduser -S -G cyano cyano
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-ENV PATH /opt/conda/bin:/opt/conda/envs/env/bin:$PATH
+ENV PATH /opt/conda/bin:/opt/conda/envs/env/bin:/opt/micromamba/bin:/opt/micromamba/envs/env/bin:$PATH
 
-RUN apt-get update --fix-missing
-RUN apt-get install -y wget bzip2 ca-certificates \
-    libglib2.0-0 libxext6 libsm6 libxrender1 \
-    python3-pip software-properties-common build-essential \
-    make sqlite3 gfortran python-dev-is-python3 \
-    git mercurial subversion
+RUN apk add --upgrade apk-tools
+RUN apk upgrade --available
 
-# RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.12.0-Linux-x86_64.sh -O ~/miniconda.sh && \
-#     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-#     rm ~/miniconda.sh && \
-#     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-#     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-#     echo "conda activate base" >> ~/.bashrc
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py310_23.5.2-0-Linux-x86_64.sh -O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh && \
-    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate base" >> ~/.bashrc
+RUN apk add wget bzip2 ca-certificates \
+    py3-pip make sqlite gfortran git \
+    mercurial subversion gdal geos
 
-ARG TINI_VERSION=0.19.0
-RUN apt-get install -y curl grep sed dpkg vim && \
-    curl -L "https://github.com/krallin/tini/releases/download/v$TINI_VERSION/tini_$TINI_VERSION.deb" > tini.deb && \
-    dpkg -i tini.deb && \
-    rm tini.deb && \
-    apt-get clean
-
-RUN apt update -y && apt install -y --fix-missing --no-install-recommends \
-    python3-pip software-properties-common build-essential \
-    cmake sqlite3 gfortran python-dev-is-python3
-
-# gdal vesion restriction due to fiona not supporting gdal>2.4.3
-ARG GDAL_VERSION=3.1.4
 ARG CONDA_ENV="base"
+ARG GDAL_VERSION=3.7.1
 
 COPY environment.yml /src/environment.yml
-RUN conda env update -n=$CONDA_ENV -f /src/environment.yml
-RUN conda install -n=$CONDA_ENV -c conda-forge gdal=$GDAL_VERSION -y
-RUN conda install -n=$CONDA_ENV -c conda-forge rasterio fiona
-RUN conda install -n=$CONDA_ENV -c conda-forge geopandas
-RUN conda install -n=$CONDA_ENV -c conda-forge matplotlib=3.3.4
-
-RUN activate $CONDA_ENV
-#RUN conda update conda -y
-RUN conda info
+RUN micromamba install -n $CONDA_ENV -f /src/environment.yml
 
 COPY . /src/
 
 RUN chmod 755 /src/start_flask.sh
+RUN micromamba clean --all --yes
 
-# Updating Anaconda packages
-RUN conda install -n=$CONDA_ENV -c conda-forge uwsgi
 COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
 
 WORKDIR /src
 EXPOSE 8080
+RUN chown -R cyano:cyano /src
 
-# CMD ["python", "wb_flask.py"]
+USER cyano
+
+#ENTRYPOINT ["tail", "-f", "/dev/null"]
 CMD ["sh", "start_flask.sh"]
