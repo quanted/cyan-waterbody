@@ -30,7 +30,16 @@ WORKDIR /src
 EXPOSE 8080
 RUN chown -R cyano:cyano /src
 
-USER cyano
+# Security Issues Mitigations
+# ------------------------- #
+RUN apk del gfortran
+RUN rm -R /opt/conda/pkgs/redis*
+RUN rm -R /opt/conda/bin/redis*
+RUN rm -R /opt/conda/pkgs/postgres*
+RUN rm -R /opt/conda/bin/postgres*
+# ------------------------- #
 
-#ENTRYPOINT ["tail", "-f", "/dev/null"]
-CMD ["sh", "start_flask.sh"]
+#USER cyano
+
+ENTRYPOINT ["tail", "-f", "/dev/null"]
+#CMD ["sh", "start_flask.sh"]
