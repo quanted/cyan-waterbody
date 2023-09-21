@@ -10,7 +10,7 @@ include:
 
 
 variables:
-  wb_api_ghcr_tag: image-test-61c4ad9b5d5c63d58ccdd92a87ca914f8d842f2e  # GHCR tag
+  wb_api_ghcr_tag: image-test-cfabed7da7ab0368f5b5edf9e4a5e8034dc04ada  # GHCR tag
   wb_redis_ghcr_tag: gdit-dev
   
 
