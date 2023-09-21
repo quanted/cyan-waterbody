@@ -37,9 +37,12 @@ RUN rm -R /opt/conda/pkgs/redis*
 RUN rm -R /opt/conda/bin/redis*
 RUN rm -R /opt/conda/pkgs/postgres*
 RUN rm -R /opt/conda/bin/postgres*
+RUN find /opt/conda/pkgs/future* -name "*.pem" -delete
+RUN find /opt/conda/lib/python3.10/site-packages/future -name "*.pem" -delete
+RUN find /opt/conda -name "*test.key" -delete
 # ------------------------- #
 
-#USER cyano
+USER cyano
 
-ENTRYPOINT ["tail", "-f", "/dev/null"]
-#CMD ["sh", "start_flask.sh"]
+#ENTRYPOINT ["tail", "-f", "/dev/null"]
+CMD ["sh", "start_flask.sh"]
