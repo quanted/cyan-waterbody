@@ -18,17 +18,29 @@ ARG GDAL_VERSION=3.7.1
 
 COPY environment.yml /src/environment.yml
 RUN micromamba install -n $CONDA_ENV -f /src/environment.yml
+RUN micromamba clean -p -t -l --trash -y
 
 COPY . /src/
 
 RUN chmod 755 /src/start_flask.sh
-RUN micromamba clean --all --yes
 
 COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
 
 WORKDIR /src
 EXPOSE 8080
 RUN chown -R cyano:cyano /src
+
+# Security Issues Mitigations
+# ------------------------- #
+RUN apk del gfortran
+RUN rm -R /opt/conda/pkgs/redis*
+RUN rm -R /opt/conda/bin/redis*
+RUN rm -R /opt/conda/pkgs/postgres*
+RUN rm -R /opt/conda/bin/postgres*
+RUN find /opt/conda/pkgs/future* -name "*.pem" -delete || true
+RUN find /opt/conda/lib/python3.10/site-packages/future -name "*.pem" -delete || true
+RUN find /opt/conda -name "*test.key" -delete || true
+# ------------------------- #
 
 USER cyano
 
