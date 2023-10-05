@@ -75,7 +75,8 @@ services:
       - "6379"
 
   localstack:
-    image: localstack/localstack:latest
+    # image: localstack/localstack:latest
+    image: ghcr.io/quanted/wb-localstack:image-test
     expose:
       - "4566"
     volumes: 
