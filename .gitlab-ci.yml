@@ -27,7 +27,7 @@ CopyDevImages:
     - crane auth login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - crane copy "ghcr.io/quanted/wb-api:$wb_api_ghcr_tag" "$CI_REGISTRY_IMAGE/wb-api:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
     - crane copy "ghcr.io/quanted/wb-redis:$wb_redis_ghcr_tag" "$CI_REGISTRY_IMAGE/wb-redis:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
-    - crane copy "ghcr.io/quanted/wb-redis:$wb_localstack_ghcr_tag" "$CI_REGISTRY_IMAGE/wb-localstack:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    - crane copy "ghcr.io/quanted/wb-localstack:$wb_localstack_ghcr_tag" "$CI_REGISTRY_IMAGE/wb-localstack:$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
 
 ApiImageScan:
   stage: Image Scan
