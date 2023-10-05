@@ -10,8 +10,8 @@ include:
 
 
 variables:
-  wb_api_ghcr_tag: image-test-cfabed7da7ab0368f5b5edf9e4a5e8034dc04ada  # GHCR tag
-  wb_redis_ghcr_tag: gdit-dev
+  wb_api_ghcr_tag: $WB_API_TAG  # GHCR tag, env var set in Gitlab Variables
+  wb_redis_ghcr_tag: $WB_REDIS_TAG  # GHCR tag, env var set in Gitlab Variables
   
 
 CopyDevImages:
