@@ -1,7 +1,8 @@
 FROM localstack/localstack:latest
 
-COPY init-s3-bucket.sh /src/init-s3-bucket.sh
+# COPY init-s3-bucket.sh /src/init-s3-bucket.sh
+COPY init-s3-bucket.sh /etc/localstack/init/ready.d/init-s3-bucket.sh
 
-RUN chmod 755 /src/init-s3-bucket.sh
+RUN chmod 755 /etc/localstack/init/ready.d/init-s3-bucket.sh
 
-CMD ["sh", "/src/init-s3-bucket.sh"]
+# CMD ["sh", "/src/init-s3-bucket.sh"]

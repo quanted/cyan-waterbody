@@ -7,6 +7,7 @@ env:
   REGISTRY: ghcr.io
   API_IMAGE: quanted/wb-api
   REDIS_IMAGE: quanted/wb-redis
+  LOCALSTACK_IMAGE: quanted/wb-localstack
 
 jobs:
 
@@ -171,6 +172,40 @@ jobs:
         with:
           context: .
           file: Dockerfile_Redis
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  build-localstack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.LOCALSTACK_IMAGE }}
+          tags: |
+            type=raw,value=${{github.ref_name}}
+
+      - name: Build and push cyan-waterbody localstack image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: Dockerfile_localstack
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
