@@ -6,7 +6,8 @@ def get_columns():
     all_columns = [f"DN={i}" for i in range(0, 254)]
     return detect_columns, all_columns
 
-def get_data()
+def get_data():
+    pass
 
 
 class MetricsCalculationMethods(unittest.TestCase):
