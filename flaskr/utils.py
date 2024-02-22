@@ -126,7 +126,7 @@ def p_get_geometry_bounds(objectid, day, year):
 
 def convert_dn(dn, round=2):
     if type(dn) == int or type(dn) == np.int64:
-        np.int(64)
+        np.int_(64)
         if dn == 0:
             return 0
         if dn > 255:

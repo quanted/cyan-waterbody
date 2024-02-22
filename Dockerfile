@@ -17,8 +17,7 @@ ARG CONDA_ENV="base"
 ARG GDAL_VERSION=3.7.1
 
 COPY environment.yml /src/environment.yml
-RUN micromamba install -n $CONDA_ENV -f /src/environment.yml
-RUN micromamba clean -p -t -l --trash -y
+RUN micromamba install -n $CONDA_ENV -f /src/environment.ymlRUN micromamba clean -p -t -l --trash -y
 
 COPY . /src/
 

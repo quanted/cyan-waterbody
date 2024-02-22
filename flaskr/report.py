@@ -19,6 +19,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import geopandas as gpd
@@ -181,7 +182,7 @@ def generate_report(
                         'frequency': wb_metrics["Frequency by Waterbody"][objectid],
                         # 'magnitude': wb_metrics["Magnitude by Waterbody"][objectid],
                         # 'mag_area_norm': wb_metrics["Area Normalized Magnitude"][objectid],
-                        # 'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid],
+                        'chia_area_norm': wb_metrics["Chia Normalized Magnitude"][objectid],
                         'p_days': report_day}) for objectid in wbs
                                        ]
                     for r in results_objects:
@@ -198,7 +199,7 @@ def generate_report(
                                                              frequency=wb_metrics["Frequency by Waterbody"][objectid],
                                                              # magnitude=wb_metrics["Magnitude by Waterbody"][objectid],
                                                              # mag_area_norm=wb_metrics["Area Normalized Magnitude"][objectid],
-                                                             # chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],
+                                                             chia_area_norm=wb_metrics["Chia Normalized Magnitude"][objectid],
                                                              p_days=report_day)
                         wbs_html[i_name] = i_html
                 # TODO: Add sorting by magnitude option
@@ -229,7 +230,7 @@ def generate_report(
                     'frequency': group_metrics["Frequency by Waterbody"][objectid],
                     # 'magnitude': group_metrics["Magnitude by Waterbody"][objectid],
                     # 'mag_area_norm': group_metrics["Area Normalized Magnitude"][objectid],
-                    # 'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid],
+                    'chia_area_norm': group_metrics["Chia Normalized Magnitude"][objectid],
                     'p_days': report_day}) for objectid in ids
                                    ]
                 for r in results_objects:
@@ -246,7 +247,7 @@ def generate_report(
                                                          frequency=group_metrics["Frequency by Waterbody"][objectid],
                                                          # magnitude=group_metrics["Magnitude by Waterbody"][objectid],
                                                          # mag_area_norm=group_metrics["Area Normalized Magnitude"][objectid],
-                                                         # chia_area_norm=group_metrics["Chia Normalized Magnitude"][objectid],
+                                                         chia_area_norm=group_metrics["Chia Normalized Magnitude"][objectid],
                                                          p_days=report_day
                                                          )
                     wbs_html[i_name] = i_html
@@ -584,6 +585,7 @@ def get_report_waterbody_raster(objectid: int, report_id: str, day: int, year: i
     # plt.show()
     plt.axis('off')
     plt.savefig(image_path)
+    fig.clf()
     plt.close(fig)
     return image_path
 
@@ -683,6 +685,7 @@ def get_waterbody_collection_raster(groupname: str, grouptype: str, group_id: st
     # plt.show()
     plt.tight_layout()
     plt.savefig(image_path, dpi=140)
+    fig.clf()
     plt.close('all')
     return image_path
 

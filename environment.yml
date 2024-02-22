@@ -13,7 +13,7 @@ dependencies:
   - fiona=1.9.4
   - libspatialindex
   - flask-cors=4.0.0
-  - xhtml2pdf
+  - xhtml2pdf=0.2.6
   - plotly=5.16.1
   - python-kaleido
   - celery=5.3.4
