@@ -481,9 +481,9 @@ def get_waterbody_block(year: int, day: int, objectid: int, report_id: str, rang
     waterbody_properties_cleaned["Elevation (m)"] = get_elevation(objectid=objectid, meters=True)
     waterbody_properties_cleaned["Bloom Extent"] = f"{extent} %"
     waterbody_properties_cleaned["Bloom Frequency"] = f"{frequency} %"
-    waterbody_properties_cleaned["Bloom Magnitude"] = f"{magnitude} cell concentration"
-    waterbody_properties_cleaned["Bloom Area Normalized Magnitude"] = f"{mag_area_norm} cells/km^2"
-    waterbody_properties_cleaned["Bloom Chia Area Normalized Magnitude"] = f"{chia_area_norm} kg*km^-2"
+    # waterbody_properties_cleaned["Bloom Magnitude"] = f"{magnitude} cell concentration"
+    # waterbody_properties_cleaned["Bloom Area Normalized Magnitude"] = f"{mag_area_norm} cells/km^2"
+    waterbody_properties_cleaned["Bloom Chia Area Normalized Magnitude"] = f"{chia_area_norm} mg*m^-3"
 
     waterbody_raster = get_report_waterbody_raster(objectid=objectid, day=day, year=year, report_id=report_id)
     waterbody_plots, data_table = get_waterbody_plots(objectid=objectid, day=day, year=year, report_id=report_id,
@@ -731,7 +731,7 @@ def get_collection_history30(stacked_data, object_list, color_mapping, report_id
                                         'xanchor': 'center', 'yanchor': 'top',
                                         'font': {'size': 26}},
                                  xaxis_title="Date", yaxis_title="Percent by Category",
-                                 width=1200, height=600
+                                 width=1200, height=600, yaxis_tickformat='.2%'
                                  )
     # history_30_fig.show()
     history_30 = f"{groupid}-{year}-{day}-history30.{IMAGE_FORMAT}"
@@ -916,8 +916,8 @@ def get_waterbody_pie(data, ranged_data, report_root, objectid: int, day: int, y
 def get_waterbody_30bar(ranged_data, report_root, objectid: int, day: int, year: int, area: float, color_mapping,
                         p_days: int = 30):
     current_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 31)
-    all_columns = ["Date", "Low (sqkm)", "Medium (sqkm)", "High (sqkm)", "Very High (sqkm)", "Below Detection (sqkm)",
-                   "Land (sqkm)", "No Data (sqkm)", f"Pixel Area<br>(sqkm)", "Geometry<br>Area<br>(sqkm)",
+    all_columns = ["Date", "Low Count", "Medium Count", "High Count", "Very High Count", "Below Detection Count",
+                   "Land Count", "No Data Count", "Total Count", "Geometry<br>Area<br>(sqkm)",
                    "Low (%)", "Medium (%)", "High (%)", "Very High (%)", "Below Detection (%)", "Land (%)",
                    "No Data (%)"]
     bold_columns = []
@@ -980,8 +980,8 @@ def get_waterbody_30bar(ranged_data, report_root, objectid: int, day: int, year:
 def get_waterbody_30day_html(ranged_data, report_root, objectid: int, day: int, year: int, area: float, color_mapping,
                              p_days: int = 30):
     current_date = datetime(year=year, month=1, day=1) + timedelta(days=day - 31)
-    all_columns = ["Date", "Low (sqkm)", "Medium (sqkm)", "High (sqkm)", "Very High (sqkm)", "Below Detection (sqkm)",
-                   "Land (sqkm)", "No Data (sqkm)", f"Pixel Area<br>(sqkm)", "Geometry<br>Area<br>(sqkm)",
+    all_columns = ["Date", "Low Count", "Medium Count", "High Count", "Very High Count", "Below Detection Count",
+                   "Land Count", "No Data Count", "Total Count", "Geometry<br>Area<br>(sqkm)",
                    "Low (%)", "Medium (%)", "High (%)", "Very High (%)", "Below Detection (%)", "Land (%)",
                    "No Data (%)"]
     bold_columns = []
@@ -1010,8 +1010,8 @@ def get_waterbody_30day_html(ranged_data, report_root, objectid: int, day: int, 
             percentages = np.around(100 * (np.divide(ranged_data[i_k], int(np.sum(ranged_data[i_k])))), 2)
             stacked_csv.append(
                 [f"{current_date.year}-{current_date.month}-{current_date.day}",
-                 *np.around(0.09 * np.array(ranged_data[i_k]), 4),
-                 np.around(0.09 * np.sum(ranged_data[i_k]), 4), round(area, 2), *percentages])
+                 *np.around(np.array(ranged_data[i_k]), 4),
+                 np.round(np.sum(ranged_data[i_k]), 0), round(area, 2), *percentages])
         # current_date = current_date + timedelta(days=1)
     orig_csv = copy.copy(stacked_csv)
     stacked_csv = [*zip(*stacked_csv)]  # transposing 2d matrix

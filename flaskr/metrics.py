@@ -90,7 +90,7 @@ def calculate_metrics(objectids: list, year: int, day: int, historic_days: int =
             "extent_units": "%",
             # "magnitude_units": "cell concentration",
             # "area_normalized_magnitude_units": "cells/km^2",
-            "chia_normalized_magnitude_units": "kg*km^-2"
+            "chia_normalized_magnitude_units": "mg*m^-2"
         }
     t1 = time.time()
     print(f"Metric calculation runtime: {round(t1 - t0, 3)} sec")
@@ -143,7 +143,10 @@ def calculate_extent(data: pd.DataFrame, detect_columns: list, all_columns: list
     all_cells = data[all_columns].sum(axis=1)
     extent_i = (detections / all_cells).to_numpy()
     extent = extent_i[extent_i.nonzero()]
-    extent_mean = np.round(100 * np.mean(extent), 2)
+    if len(extent) == 0:
+        extent_mean = 0.0
+    else:
+        extent_mean = np.round(100 * np.mean(extent), 2)
 
     # objectids = [int(oid) for oid in list(data.OBJECTID.unique())]
     #
@@ -153,7 +156,11 @@ def calculate_extent(data: pd.DataFrame, detect_columns: list, all_columns: list
         detects = data[detect_columns].sum(axis=1)
         oid_cells = data[all_columns].sum(axis=1)
         oid_extent_i = (detects/oid_cells).to_numpy()
-        oid_extent = np.round(100 * np.mean(oid_extent_i[oid_extent_i.nonzero()]), 2)
+        oid_extent_i = oid_extent_i[oid_extent_i.nonzero()]
+        if len(oid_extent_i) == 0:
+            oid_extent = 0.0
+        else:
+            oid_extent = np.round(100 * np.mean(oid_extent_i), 2)
         oid_extent = oid_extent if not np.isnan(oid_extent) else 0.0
         wb_extent[int(oid)] = oid_extent
     # for oid in objectids:
@@ -206,7 +213,7 @@ def calculate_magnitude(data: pd.DataFrame, detect_columns: list, all_columns: l
     for comid in objectids:
         wb_data = get_waterbody_by_fids(waterbody_fids[comid])
         wb_area = wb_data[0][0]['properties']['AREASQKM']
-        pixel_area = 0.9            # 900sqmeters -> 0.9sqkm
+        pixel_area = 0.009            # 300sqmeters -> 0.3sqkm
         area_normalized_magnitude[int(comid)] = round((pixel_area/wb_area) * magnitude_wb[str(comid)], 2)
 
     chia_area_normalized_bloom = {}
