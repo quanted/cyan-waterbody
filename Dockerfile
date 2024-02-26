@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5.1-alpine
+FROM mambaorg/micromamba:1.5.6-alpine3.19
 
 USER root
 RUN addgroup -S cyano && adduser -S -G cyano cyano
