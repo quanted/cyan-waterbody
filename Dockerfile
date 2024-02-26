@@ -16,14 +16,17 @@ RUN apk add wget bzip2 ca-certificates \
 ARG CONDA_ENV="base"
 ARG GDAL_VERSION=3.7.1
 
+USER cyano
+
 COPY environment.yml /src/environment.yml
 RUN micromamba install -n $CONDA_ENV -f /src/environment.yml
 RUN micromamba clean -p -t -l --trash -y
+RUN pip uninstall -y xhtml2pdf && pip install xhtml2pdf
 
 COPY . /src/
 
+USER root
 RUN chmod 755 /src/start_flask.sh
-
 COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
 
 WORKDIR /src
