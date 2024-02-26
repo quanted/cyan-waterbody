@@ -72,7 +72,7 @@ def calculate_metrics(objectids: list, year: int, day: int, historic_days: int =
             "Extent Units": "%",
             # "Magnitude Units": "cell concentration",
             # "Area Normalized Magnitude Units": "cells/km^2",
-            "Chia Normalized Magnitude Units": "kg*km^-2"
+            "Chia Normalized Magnitude Units": "mg*m^-3"
         }
     else:
         if summary:
@@ -90,7 +90,7 @@ def calculate_metrics(objectids: list, year: int, day: int, historic_days: int =
             "extent_units": "%",
             # "magnitude_units": "cell concentration",
             # "area_normalized_magnitude_units": "cells/km^2",
-            "chia_normalized_magnitude_units": "mg*m^-2"
+            "chia_normalized_magnitude_units": "mg*m^-3"
         }
     t1 = time.time()
     print(f"Metric calculation runtime: {round(t1 - t0, 3)} sec")
@@ -176,7 +176,7 @@ def calculate_chla(ci):
 
 
 def calculate_magnitude(data: pd.DataFrame, detect_columns: list, all_columns: list):
-    # bloom magnitude = 1/M * SUM(m=1->M) * 1/T * SUM(t=1->T) * SUM(p=1->P) * CI_cyano
+    # bloom magnitude = 1/M * SUM(m=1->M) 1/T * SUM(t=1->T) SUM(p=1->P) CI_cyano
     # p: represent the number of valid pixels in a lake or waterbody
     # t: the number of composite time sequence in a season or annual study period
     # M: the number of months in a season or annual
