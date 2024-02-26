@@ -44,4 +44,4 @@ RUN find /opt/conda -name "*test.key" -delete || true
 USER cyano
 
 #ENTRYPOINT ["tail", "-f", "/dev/null"]
-CMD ["sh", "start_flask.sh"]
+# CMD ["sh", "start_flask.sh"]
