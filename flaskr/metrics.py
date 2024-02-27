@@ -110,60 +110,68 @@ def calculate_frequency(data: pd.DataFrame, detect_columns: list, all_columns: l
     # valid pixel DN=[0:253]
 
     # For all the dates in the range,
-    # detections = data[detect_columns].sum(axis=0).sum()
-    # all_cells = data[all_columns].sum(axis=0).sum()
-    # frequency = round(detections.sum() / all_cells.sum(), 4)
+    detections1 = data[detect_columns].sum(axis=0).sum()
+    all_cells1 = data[all_columns].sum(axis=0).sum()
+    frequency = round(100 * (detections1 / all_cells1), 2)
 
     # For all dates in the timespan, how many dates was there any detection.
     # That count is divided by the total number of days.
-    detections0 = np.count_nonzero(data[detect_columns].sum(axis=1).to_numpy())
-    all_cells0 = data[all_columns].sum(axis=1).size
-    frequency = round(100 * (detections0 / all_cells0), 2)
+    # detections0 = np.count_nonzero(data[detect_columns].sum(axis=1).to_numpy())
+    # all_cells0 = data[all_columns].sum(axis=1).size
+    # frequency = round(100 * (detections0 / all_cells0), 2)
 
-    # wb_detections = data.groupby(by='OBJECTID')[detect_columns].sum().sum(axis=1)
-    # wb_all_cells = data.groupby(by='OBJECTID')[all_columns].sum().sum(axis=1)
-    # wb_frequency = dict(wb_detections / wb_all_cells)
-
-    # _wb_frequency = {}
-    # for k, v in wb_frequency.items():
-    #     _wb_frequency[int(k)] = round(v * 100, 2)
+    wb_detections = data.groupby(by='OBJECTID')[detect_columns].sum().sum(axis=1)
+    wb_all_cells = data.groupby(by='OBJECTID')[all_columns].sum().sum(axis=1)
+    wb_frequency = dict(wb_detections / wb_all_cells)
 
     _wb_frequency = {}
-    for object_id, y in data.groupby(by='OBJECTID')[detect_columns]:
-        _wb_frequency[int(object_id)] = round(100 * (np.count_nonzero(y.sum(axis=1).to_numpy())/y.shape[0]), 2)
+    for k, v in wb_frequency.items():
+        _wb_frequency[int(k)] = round(v * 100, 2)
+
+    # _wb_frequency = {}
+    # for object_id, y in data.groupby(by='OBJECTID')[detect_columns]:
+    #     _wb_frequency[int(object_id)] = round(100 * (np.count_nonzero(y.sum(axis=1).to_numpy())/y.shape[0]), 2)
 
     return frequency, _wb_frequency
 
 
 def calculate_extent(data: pd.DataFrame, detect_columns: list, all_columns: list):
 
+    detections0 = data.groupby('date')[detect_columns].sum().sum(axis=1)
+    all_cells0 = data.groupby('date')[all_columns].sum().sum(axis=1)
+    extent_i0 = (detections0 / all_cells0).to_numpy()
+    # extent_0 = np.round(100 * np.mean(extent_i0[extent_i0.nonzero()]), 2)
+    extent_mean = np.round(100 * np.mean(extent_i0), 2)
+
     # Extent is the average extent of detections over the timespan.
     # Calculated by the average of (# of detection pixels on that date)/(total # of pixels) over the timespan.
-    detections = data[detect_columns].sum(axis=1)
-    all_cells = data[all_columns].sum(axis=1)
-    extent_i = (detections / all_cells).to_numpy()
-    extent = extent_i[extent_i.nonzero()]
-    if len(extent) == 0:
-        extent_mean = 0.0
-    else:
-        extent_mean = np.round(100 * np.mean(extent), 2)
+    # detections = data[detect_columns].sum(axis=1)
+    # all_cells = data[all_columns].sum(axis=1)
+    # extent_i = (detections / all_cells).to_numpy()
+    # extent = extent_i[extent_i.nonzero()]
+    # if len(extent) == 0:
+    #     extent_mean = 0.0
+    # else:
+    #     extent_mean = np.round(100 * np.mean(extent), 2)
 
     # objectids = [int(oid) for oid in list(data.OBJECTID.unique())]
     #
     # oid_groups = data.groupby(by='OBJECTID')
+
     wb_extent = {}
     for oid, data in data.groupby(by='OBJECTID'):
         detects = data[detect_columns].sum(axis=1)
         oid_cells = data[all_columns].sum(axis=1)
         oid_extent_i = (detects/oid_cells).to_numpy()
-        oid_extent_i = oid_extent_i[oid_extent_i.nonzero()]
-        if len(oid_extent_i) == 0:
-            oid_extent = 0.0
-        else:
-            oid_extent = np.round(100 * np.mean(oid_extent_i), 2)
+        oid_extent = np.round(100 * np.mean(oid_extent_i), 2)
+        # oid_extent_i = oid_extent_i[oid_extent_i.nonzero()]
+        # if len(oid_extent_i) == 0:
+        #     oid_extent = 0.0
+        # else:
+        #     oid_extent = np.round(100 * np.mean(oid_extent_i), 2)
         oid_extent = oid_extent if not np.isnan(oid_extent) else 0.0
         wb_extent[int(oid)] = oid_extent
-    # for oid in objectids:
+    # for oid     in objectids:
     #     oid_df = oid_groups.get_group(str(oid))
     #     detects = oid_df[detect_columns].sum(axis=1)
     #     all_cells = oid_df[all_columns].sum(axis=1)
