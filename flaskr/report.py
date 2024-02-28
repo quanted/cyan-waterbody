@@ -42,7 +42,7 @@ DISCLAIMER_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "t
 REFERENCES_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "templates", "references.txt")
 DEBUG = False
 
-VERSION = "v0.1.0"
+VERSION = "v0.1.1"
 KEEP_PROPERTIES = {
     "OBJECTID": ["Object ID", int],
     "GNIS_ID": ["GNIS ID", str],
@@ -207,7 +207,6 @@ def generate_report(
                     html += wbs_html[wb]
                 i += 1
             logging.info(f"Report: {report_id}, completed group: {k}")
-            # Add refs
     else:
         i = 0
         for k, ids in waterbodies.items():
@@ -254,7 +253,6 @@ def generate_report(
             for wb in sorted(wbs_html.keys()):
                 html += wbs_html[wb]
             logging.info(f"Report: {report_id}, completed group: {k}")
-            # Add refs
             i += 1
     html += get_references(j_env=j_env)
     html += get_closing(j_env=j_env)
