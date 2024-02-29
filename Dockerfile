@@ -14,15 +14,16 @@ RUN apk add wget bzip2 ca-certificates \
     mercurial subversion gdal geos
 RUN apk upgrade --available
 
-ARG CONDA_ENV="base"
+ARG CONDA_ENV="pyenv"
 ARG GDAL_VERSION=3.7.1
 
 USER cyano
 
 COPY environment.yml /src/environment.yml
-RUN micromamba install -n $CONDA_ENV -f /src/environment.yml
+RUN micromamba create -n $CONDA_ENV -c conda-forge python=3.10
+RUN micromamba install -n $CONDA_ENV -c conda-forge -f /src/environment.yml
 RUN micromamba clean -p -t -l --trash -y
-RUN pip uninstall -y xhtml2pdf && pip install xhtml2pdf
+RUN micromamba run -n $CONDA_ENV pip uninstall -y xhtml2pdf && micromamba run -n $CONDA_ENV pip install xhtml2pdf
 
 COPY . /src/
 
@@ -38,9 +39,9 @@ RUN chown -R cyano:cyano /src
 # ------------------------- #
 RUN apk del gfortran
 RUN rm -R /opt/conda/pkgs/redis*
-RUN rm -R /opt/conda/bin/redis*
+#RUN rm -R /opt/conda/bin/redis*
 RUN rm -R /opt/conda/pkgs/postgres*
-RUN rm -R /opt/conda/bin/postgres*
+#RUN rm -R /opt/conda/bin/postgres*
 RUN find /opt/conda/pkgs/future* -name "*.pem" -delete || true
 RUN find /opt/conda/lib/python3.10/site-packages/future -name "*.pem" -delete || true
 RUN find /opt/conda -name "*test.key" -delete || true
@@ -53,4 +54,6 @@ RUN find /opt/conda/ -name 'password_protected.pem' -delete || true
 USER cyano
 
 #ENTRYPOINT ["tail", "-f", "/dev/null"]
-CMD ["sh", "start_flask.sh"]
+#CMD ["sh", "start_flask.sh"]
+ENV START_COMMAND="micromamba run -n $CONDA_ENV sh start_flask.sh"
+CMD ${START_COMMAND}
