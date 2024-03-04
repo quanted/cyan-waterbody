@@ -17,7 +17,7 @@ dependencies:
   - plotly=5.16.1
   - python-kaleido
   - celery=5.3.4
-  - redis=5.0.3
+  - redis
   - APScheduler=3.10.4
   - boto3=1.28.45
   - jinja2=3.1.2

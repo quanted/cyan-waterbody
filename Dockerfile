@@ -30,6 +30,7 @@ COPY . /src/
 USER root
 RUN chmod 755 /src/start_flask.sh
 COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
+RUN apk --update add redis
 
 WORKDIR /src
 EXPOSE 8080
@@ -44,6 +45,7 @@ RUN rm -R /opt/conda/pkgs/postgres*
 #RUN rm -R /opt/conda/bin/postgres*
 RUN find /opt/conda/pkgs/future* -name "*.pem" -delete || true
 RUN find /opt/conda/lib/python3.10/site-packages/future -name "*.pem" -delete || true
+RUN find /opt/conda/envs/pyenv -name "*.pem" -delete || true
 RUN find /opt/conda -name "*test.key" -delete || true
 RUN find /opt/conda/ -name 'test.key' -delete || true
 RUN find /opt/conda/ -name 'localhost.key' -delete || true
