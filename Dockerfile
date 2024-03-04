@@ -11,7 +11,7 @@ RUN apk upgrade --available
 
 RUN apk add wget bzip2 ca-certificates \
     py3-pip make sqlite gfortran git \
-    mercurial subversion gdal geos
+    mercurial subversion gdal geos redis
 RUN apk upgrade --available
 
 ARG CONDA_ENV="pyenv"
@@ -30,7 +30,6 @@ COPY . /src/
 USER root
 RUN chmod 755 /src/start_flask.sh
 COPY uwsgi.ini /etc/uwsgi/uwsgi.ini
-RUN apk --update add redis
 
 WORKDIR /src
 EXPOSE 8080
