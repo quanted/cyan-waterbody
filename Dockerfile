@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5.6-alpine3.19
+FROM mambaorg/micromamba:1.5.7-alpine3.19
 
 USER root
 RUN addgroup -S cyano && adduser -S -G cyano cyano
@@ -38,6 +38,7 @@ RUN chown -R cyano:cyano /src
 # Security Issues Mitigations
 # ------------------------- #
 RUN apk del gfortran
+RUN apk del py3-pip
 RUN rm -R /opt/conda/pkgs/redis*
 #RUN rm -R /opt/conda/bin/redis*
 RUN rm -R /opt/conda/pkgs/postgres*
