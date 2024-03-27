@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5.7-alpine3.19
+FROM mambaorg/micromamba:1.5.8-alpine3.19
 
 USER root
 RUN addgroup -S cyano && adduser -S -G cyano cyano
@@ -7,11 +7,11 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH /opt/conda/bin:/opt/conda/envs/env/bin:/opt/micromamba/bin:/opt/micromamba/envs/env/bin:$PATH
 
 RUN apk add --upgrade apk-tools
-RUN apk upgrade --available
 
 RUN apk add wget bzip2 ca-certificates \
     py3-pip make sqlite gfortran git \
     mercurial subversion gdal geos redis
+RUN apk update
 RUN apk upgrade --available
 
 ARG CONDA_ENV="pyenv"
