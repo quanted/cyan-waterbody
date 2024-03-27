@@ -52,6 +52,7 @@ RUN find /opt/conda/ -name 'localhost.key' -delete || true
 RUN find /opt/conda/ -name 'server.pem' -delete || true
 RUN find /opt/conda/ -name 'client.pem' -delete || true
 RUN find /opt/conda/ -name 'password_protected.pem' -delete || true
+RUN find /opt -name 'redis-server' -delete
 # ------------------------- #
 USER cyano
 
