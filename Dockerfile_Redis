@@ -2,9 +2,8 @@ FROM redis:7.2.4-alpine
 
 RUN apk add --upgrade apk-tools
 RUN apk upgrade --available
-
-#------ vulnerability fixes ------#
-RUN apk del go
-COPY --from=tianon/gosu /gosu /usr/local/bin/
-RUN find /usr/lib -name *.pem -delete
-#---------------------------------#
+COPY redis-docker-entrypoint.sh /usr/local/bin/
+RUN mv /usr/local/bin/redis-docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN apk add --no-cache su-exec
+RUN rm /usr/local/bin/gosu

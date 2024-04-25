@@ -43,6 +43,8 @@ RUN rm -R /opt/conda/pkgs/redis*
 #RUN rm -R /opt/conda/bin/redis*
 RUN rm -R /opt/conda/pkgs/postgres*
 #RUN rm -R /opt/conda/bin/postgres*
+RUN rm -R /opt/conda/envs/pyenv/lib/python3.10/site-packages/pip
+RUN rm -R /opt/conda/envs/pyenv/lib/python3.10/site-packages/pip-24.0-py3.12.egg-info
 RUN find /opt/conda/pkgs/future* -name "*.pem" -delete || true
 RUN find /opt/conda/lib/python3.10/site-packages/future -name "*.pem" -delete || true
 RUN find /opt/conda/envs/pyenv -name "*.pem" -delete || true
