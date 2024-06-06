@@ -180,7 +180,7 @@ def calculate_extent(data: pd.DataFrame, detect_columns: list, all_columns: list
 
 
 def calculate_chla(ci):
-    return 6620.0 * ci
+    return np.round(6620.0 * ci, 2)
 
 
 def calculate_magnitude(data: pd.DataFrame, detect_columns: list, all_columns: list):

@@ -42,7 +42,7 @@ DISCLAIMER_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "t
 REFERENCES_PATH = os.path.join(Path(os.path.abspath(__file__)).parent.parent, "templates", "references.txt")
 DEBUG = False
 
-VERSION = "v0.1.1"
+VERSION = "v0.1.3"
 KEEP_PROPERTIES = {
     "OBJECTID": ["Object ID", int],
     "GNIS_ID": ["GNIS ID", str],
@@ -808,7 +808,7 @@ def get_waterbody_histogram(data, report_root, objectid: int, day: int, year: in
             std_n += c
     std_actual = int(np.sqrt((1 / std_n) * std_term)) if std_n > 0 else 0
     std_con = convert_dn(std_actual)
-    day_metrics_names = ["Min (cells/mL)", "Max (cells/mL)", "Average (cells/mL)", "Standard Deviation (cells/mL)"]
+    day_metrics_names = ["Min (chla)", "Max (chla)", "Average (chla)", "Standard Deviation (chla)"]
     day_metrics_values = [round(min_con, 2), round(max_con, 2), round(mean_con, 2), round(std_con, 2)]
     range_blocks_x = {
         "low": cell_ranges[ranges[0][0]:ranges[0][1]],
@@ -867,7 +867,7 @@ def get_waterbody_histogram(data, report_root, objectid: int, day: int, year: in
         cells=dict(values=day_metrics_values, align='center', font=dict(size=18), height=30)), row=2, col=1
     )
     current_fig.update_layout(**layout, yaxis_title="Pixel Count",
-                              title={"text": "Cell Concentration Histogram (cell/mL)",
+                              title={"text": "Number of Chlorophyll a Histogram (chla)",
                                      'y': 0.9, 'x': 0.5,
                                      'xanchor': 'center', 'yanchor': 'top'}, )
     current_fig.update_xaxes(tickvals=x_tick_value, ticktext=x_tick_text)

@@ -40,7 +40,9 @@
                 <tr>
                     <td class="descript-left">
                         <div class="legend-title">OLCI Satellite Raster Legend</div>
-                        <img src="{{STATIC_ROOT}}legend.png" class="waterbody-raster-legend" alt="Satellite data legend">
+<!--                        <img src="{{STATIC_ROOT}}legend.png" class="waterbody-raster-legend" alt="Satellite data legend">-->
+                            <img src="{{STATIC_ROOT}}CyANColorbar2024.png" class="waterbody-raster-legend" alt="CyAN Colorbar">
+
                     </td>
                     <td class="descript-right">
                         <div class="legend-description">
@@ -73,9 +75,9 @@
                             <tr class="dn-table-header dn-labels">
                                 <td class="dn-border"></td>
                                 <td><b>DN</b></td>
-                                <td class="dn-border"><b>Cell Concentration (cell/mL)</b></td>
+                                <td class="dn-border"><b>Number of Chlorophyll a (Chla)</b></td>
                                 <td><b>DN</b></td>
-                                <td><b>Cell Concentration (cell/mL)</b></td>
+                                <td><b>Number of Chlorophyll a (Chla)</b></td>
                             </tr>
                             {% for level, values in CONVERSION_TABLE.items() %}
                                 <tr class="dn-table-row">

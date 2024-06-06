@@ -124,7 +124,7 @@ def p_get_geometry_bounds(objectid, day, year):
     return values
 
 
-def convert_dn(dn, round=2):
+def convert_dn(dn, round=2, to_chla=True):
     if type(dn) == int or type(dn) == np.int64:
         np.int_(64)
         if dn == 0:
@@ -136,8 +136,9 @@ def convert_dn(dn, round=2):
         if np.max(dn) > 255:
             print(f"DN value greater than acceptable max, dn: {np.max(dn)}")
     cell_con = np.around(np.power(10, (3 / 250) * dn - 4.2) * 10 ** 8, round)
+    if to_chla:
+        return np.round(6620.0 * cell_con, 2)
     return cell_con
-
 
 def convert_cc(cell_concentration):
     if cell_concentration < 6000:
