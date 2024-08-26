@@ -35,31 +35,31 @@ WORKDIR /src
 EXPOSE 8080
 RUN chown -R cyano:cyano /src
 
-# Security Issues Mitigations
-# ------------------------- #
-RUN apk del gfortran
-RUN apk del py3-pip
-RUN rm -R /opt/conda/pkgs/redis*
-#RUN rm -R /opt/conda/bin/redis*
-RUN rm -R /opt/conda/pkgs/postgres*
-#RUN rm -R /opt/conda/bin/postgres*
-RUN rm -R /opt/conda/envs/pyenv/lib/python3.10/site-packages/pip
-RUN rm -R /opt/conda/envs/pyenv/lib/python3.10/site-packages/pip-24.0-py3.12.egg-info
-RUN rm -R /home/cyano/.cache/pip
-RUN rm -R /opt/conda/envs/pyenv/bin/pip
-RUN rm -R //opt/conda/pkgs/pip-24.0*
-RUN find /opt/conda/pkgs/future* -name "*.pem" -delete || true
-RUN find /opt/conda/lib/python3.10/site-packages/future -name "*.pem" -delete || true
-RUN find /opt/conda/envs/pyenv -name "*.pem" -delete || true
-RUN find /opt/conda -name "*test.key" -delete || true
-RUN find /opt/conda/ -name 'test.key' -delete || true
-RUN find /opt/conda/ -name 'localhost.key' -delete || true
-RUN find /opt/conda/ -name 'server.pem' -delete || true
-RUN find /opt/conda/ -name 'client.pem' -delete || true
-RUN find /opt/conda/ -name 'password_protected.pem' -delete || true
-RUN find /opt/conda/ -type f -name 'pip*' -delete || true
-RUN find /opt -name 'redis-server' -delete
-# ------------------------- #
+# # Security Issues Mitigations
+# # ------------------------- #
+# RUN apk del gfortran
+# RUN apk del py3-pip
+# RUN rm -R /opt/conda/pkgs/redis*
+# #RUN rm -R /opt/conda/bin/redis*
+# RUN rm -R /opt/conda/pkgs/postgres*
+# #RUN rm -R /opt/conda/bin/postgres*
+# RUN rm -R /opt/conda/envs/pyenv/lib/python3.10/site-packages/pip
+# RUN rm -R /opt/conda/envs/pyenv/lib/python3.10/site-packages/pip-24.0-py3.12.egg-info
+# RUN rm -R /home/cyano/.cache/pip
+# RUN rm -R /opt/conda/envs/pyenv/bin/pip
+# RUN rm -R /opt/conda/pkgs/pip-24.0*
+# RUN find /opt/conda/pkgs/future* -name "*.pem" -delete || true
+# RUN find /opt/conda/lib/python3.10/site-packages/future -name "*.pem" -delete || true
+# RUN find /opt/conda/envs/pyenv -name "*.pem" -delete || true
+# RUN find /opt/conda -name "*test.key" -delete || true
+# RUN find /opt/conda/ -name 'test.key' -delete || true
+# RUN find /opt/conda/ -name 'localhost.key' -delete || true
+# RUN find /opt/conda/ -name 'server.pem' -delete || true
+# RUN find /opt/conda/ -name 'client.pem' -delete || true
+# RUN find /opt/conda/ -name 'password_protected.pem' -delete || true
+# RUN find /opt/conda/ -type f -name 'pip*' -delete || true
+# RUN find /opt -name 'redis-server' -delete
+# # ------------------------- #
 USER cyano
 
 #ENTRYPOINT ["tail", "-f", "/dev/null"]
