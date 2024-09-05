@@ -131,7 +131,6 @@ class CeleryHandler:
         # self.cyano_request_timeout = 30  # seconds
 
     def test_celery(self):
-        logging.warning("CALLING CELERY TASK")
         celery_job = test_celery.apply_async(queue="celery")
         return {"status": "test celery called"}
 
