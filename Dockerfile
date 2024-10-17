@@ -23,7 +23,7 @@ COPY environment.yml /src/environment.yml
 RUN micromamba create -n $CONDA_ENV -c conda-forge python=3.10
 RUN micromamba install -n $CONDA_ENV -c conda-forge -f /src/environment.yml
 RUN micromamba clean -p -t -l --trash -y
-RUN micromamba run -n $CONDA_ENV pip uninstall -y xhtml2pdf && micromamba run -n $CONDA_ENV pip install xhtml2pdf
+RUN micromamba run -n $CONDA_ENV pip uninstall -y xhtml2pdf && micromamba run -n $CONDA_ENV pip install xhtml2pdf redis
 
 COPY . /src/
 
